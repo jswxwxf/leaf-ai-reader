@@ -7,6 +7,7 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		LEAF_BOOK_DB: D1Database;
+		LEAF_BOOK_BUCKET: R2Bucket;
 	}
 }
 interface Env extends Cloudflare.Env {}

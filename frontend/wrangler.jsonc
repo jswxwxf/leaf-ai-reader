@@ -38,5 +38,11 @@
 			"database_id": "f50f21cc-74e3-419a-abdd-c6c51f92d4f7",
 			"migrations_dir": "../book-worker/migrations"
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "LEAF_BOOK_BUCKET",
+			"bucket_name": "leaf-book-bucket"
+		}
 	]
 }
