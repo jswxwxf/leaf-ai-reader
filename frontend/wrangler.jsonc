@@ -7,7 +7,10 @@
 	"name": "leaf-ai-reader",
 	"main": ".open-next/worker.js",
 	"compatibility_date": "2025-03-07",
-	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".open-next/assets"
@@ -27,5 +30,13 @@
 	],
 	"observability": {
 		"enabled": true
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "LEAF_BOOK_DB",
+			"database_name": "leaf-book-db",
+			"database_id": "f50f21cc-74e3-419a-abdd-c6c51f92d4f7",
+			"migrations_dir": "../book-worker/migrations"
+		}
+	]
 }

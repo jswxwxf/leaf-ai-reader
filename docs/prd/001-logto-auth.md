@@ -7,7 +7,7 @@
 
 - [x] **Logto 代理配置**: 在 Logto Console 创建 Protected App 并指向当前 Worker 域名。
 - [x] **身份校验中间件**: 实现基础的 Header 验证 (校验来自 Logto 的密钥)。
-- [x] **用户资料获取**: 在 Next.js 中通过 `headers()` 读取并解析 `Logto-ID-Token` (JWT)。
+- [x] **用户退出登录**: 实现登出功能。
 
 ---
 
