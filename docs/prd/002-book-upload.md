@@ -1,53 +1,53 @@
-# PRD-002: 上传图书（MVP）
+# PRD-002: 上传图书（MVP - 异步增强版）
 
 ## 1. 目标
 
-让用户能够从 Dashboard 上传一本 EPUB 文件，上传后图书出现在书架上。
+提供一个极速响应、实时进度感知的图书上传体验。用户上传后无需长时间阻塞等待，可即刻回到 Dashboard 观察解析进展。
 
-## 2. 方案
+## 2. 方案：异步解耦与进度追踪
 
-由于 Cloudflare Pages/Workers 上部署 Next.js (通过 OpenNext) 在免费版中有脚本大小和一些中间件限制（如 1MB 限制），我们将核心后端逻辑搬迁到一个独立的 **Cloudflare Worker (`book-worker`)**。
+利用 Route Handler 的灵活性，实现“秒传+异步处理”的体验。
 
-前端通过 **Server Action** 作为一个轻量级代理，通过 **Service Binding** 调用 `book-worker`。
+### 核心链路
+1.  **上传接口 (POST `/api/books/upload`)**
+    *   **鉴权 & 并发控制**: 检查用户身份。
+    *   **I/O 操作**: 流式写入 R2 存储桶。
+    *   **写占位符**: 在 D1 中创建书籍记录（STATUS: 'processing', PROGRESS: 0）。
+    *   **立刻返回**: 返回 `bookId` 和 `202 Accepted`。
+    *   **后台触发**: 响应返回后，利用 `event.waitUntil()` 或 Service Binding 无阻塞地触发 `book-worker`。
 
-```
-用户在 Modal 选择 EPUB 文件（Client Component）
-  -> 调用 Server Action uploadBook(formData)
-  -> Server Action 获取文件，通过 Service Binding 发送给 book-worker
-  -> book-worker (Worker) 处理以下逻辑：
-      1. 写入 R2 存储桶
-      2. 在 D1 记录图书元数据
-      3. 异步触发 EPUB 解析 (见 PRD-003)
-  -> 前端收到结果，刷新书架
-```
+2.  **解析逻辑 (book-worker)**
+    *   分步骤解析书籍。
+    *   **更新状态**: 每完成一个关键点（如封面提取、元数据写入），立即更新 D1 中的 `PROGRESS` 值。
+    *   **最终归档**: 完成后将状态改为 `ready`。
 
-> **为何使用 Service Binding?**
-> 1. **零成本**: 内部调用不产生额外计费。
-> 2. **安全**: 不暴露 API 端口到公网。
-> 3. **高性能**: 直接在 Cloudflare 内部路由，低延迟。
-> 4. **解耦**: 避开 Next.js 运行时的脚本大小上限，让后端逻辑更自由。
+3.  **查询接口 (GET `/api/books/[id]/status`)**
+    *   前端根据 `bookId` 自动开启轮询。
+    *   返回数值型的 `progress` (0-100) 和 `status` 描述。
+
+### 为何改回 Route Handler?
+1.  **非阻塞请求**: Server Action 往往需要等函数执行完才返回。Route Handler 可以通过特定的流响应或在返回结果后执行后台任务，体验更顺畅。
+2.  **API 语义化**: 上传就是 POST，查询就是 GET，符合标准的 RESTful 规范，方便以后扩展（如集成移动端）。
 
 ## 3. 基础设施前置条件
 
-- [ ] 创建 R2 存储桶 `leaf-books`
-- [ ] 创建 D1 数据库 `leaf-db`
-- [ ] **创建 `book-worker` Worker**: 独立的代码仓库或子目录
-- [ ] **配置 Binding**:
-    - `book-worker`: 绑定 `BOOKS_BUCKET` (R2) 和 `DB` (D1)
-    - Next.js 应用: 绑定 `LEAF_API` (Service Binding) 到 `book-worker` Worker
+- [ ] **R2/D1 Binding**: 同前（绑定在 `frontend/wrangler.jsonc`）。
+- [ ] **Service Binding**: 关键！必须通过 Service Binding 异步触发解析逻辑。
+- [ ] **D1 架构设计**: 在书籍表中增加 `status` (string) 和 `progress` (integer) 字段。
 
 ## 4. 任务清单
 
-- [ ] **基础设施部署**: 完成 R2, D1 和 `book-worker` 的初始配置
-- [ ] **book-worker 开发**: 实现 `POST /books/upload` 接口，处理文件存储与数据库记录
-- [ ] **Next.js Server Action**: 实现 `uploadBook(formData)`，调用 `env.LEAF_API.fetch()`
-- [ ] **前端 Modal**: 实现上传弹窗（文件选择 + 拖拽 + 上传中转圈），仅接受 `.epub`
-- [ ] **UI 联动**: 点击 Dashboard 中的上传卡片触发 Modal
-- [ ] **书架更新**: 上传完成后通过 `revalidatePath` 刷新状态
-
-> MVP 已知限制：上传过程中关闭窗口会导致上传中断，不支持断点续传。EPUB 文件体积小，此限制可接受，后续有需要再引入 TUS 或 S3 Multipart Upload。
+- [ ] **D1 Schema 更新**: 运行 SQL 增加书籍状态与进度追踪字段。
+- [ ] **配置更新**: 在 `frontend/wrangler.jsonc` 实现全 Binding。
+- [ ] **Upload API**: 开发 `src/app/api/books/upload/route.ts`。
+- [ ] **Status API**: 开发 `src/app/api/books/[id]/status/route.ts`。
+- [ ] **book-worker**: 核心解析逻辑与 D1 进度反馈。
+- [ ] **前端体验**: 
+    - 实现上传 Modal。
+    - 展示进度条 (Progress Bar) 或状态标记 (Processing Tag)。
+    - 实现轮询机制 (Polling) 或使用 SWR 等钩子自动同步状态。
 
 ## 5. 进度
 
 - **状态**: 待开始 (Pending)
-- **依赖**: PRD-001（已完成）
+- **架构确认**: **Route Handler (异步上传) + 后台解析 + 进度轮询**。这是当前云原生环境下用户体验最优的空间方案。
