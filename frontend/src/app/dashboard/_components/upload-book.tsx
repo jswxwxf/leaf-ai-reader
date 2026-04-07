@@ -1,45 +1,119 @@
+'use client'
+
 import { Plus } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { request } from '@/lib/request';
+import { useBooks } from '../_context/books-context';
 
 interface Props {
 	variant?: 'hero' | 'compact';
-	onClick?: () => void;
 }
+
+interface UploadResponse {
+	success: boolean;
+	bookId: string;
+}
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 /**
  * 上传图书卡片组件
- * 支持两种变体：
- * - hero: 用于空状态下的巨型居中卡片
- * - compact: 用于列表状态下展示在图书列表前面的紧凑型卡片
  */
-export function UploadBook({ variant = 'compact', onClick }: Props) {
+export function UploadBook({ variant = 'compact' }: Props) {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [isUploading, setIsUploading] = useState(false);
+	const { refreshBooks } = useBooks();
+
+	const handleClick = () => {
+		if (isUploading) return;
+		fileInputRef.current?.click();
+	};
+
+	const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (!file) return;
+
+		// 基础校验
+		if (!file.name.toLowerCase().endsWith('.epub')) {
+			alert('请选择以 .epub 结尾的图书文件');
+			return;
+		}
+
+		if (file.size > MAX_FILE_SIZE) {
+			alert('文件大小不能超过 50MB');
+			return;
+		}
+
+		console.log('准备开始上传文件:', file.name, file.size);
+		setIsUploading(true);
+
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+
+			// 使用全局请求工具。如果失败，它会通过抛错自动跳到 finally，不再往下运行。
+			const response = await request<UploadResponse>('/api/books/upload', {
+				method: 'POST',
+				body: formData,
+			});
+
+			// 只要运行到这里，说明请求一定是成功的
+			alert(`已成功创建上传任务！书籍 ID: ${response.bookId}\n系统正在后台完成上传并解析内容，请稍后在列表中查看。`);
+			
+			// 触发 Dashboard 刷新逻辑
+			refreshBooks();
+		} finally {
+			// 无论请求是否成功，甚至是代码内部运行报错，都确保状态重置
+			setIsUploading(false);
+			if (fileInputRef.current) {
+				fileInputRef.current.value = '';
+			}
+		}
+	};
+
 	if (variant === 'hero') {
 		return (
-			<div
-				onClick={onClick}
-				className="card bg-base-100 border-2 border-dashed border-base-300 hover:border-primary transition-all cursor-pointer group p-12 w-full max-w-md text-center shadow-sm hover:shadow-md"
+			<div 
+				onClick={handleClick}
+				className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
 			>
-				<div className="flex flex-col items-center gap-4 text-base-content/50 group-hover:text-primary">
-					<div className="bg-base-200 p-6 rounded-full group-hover:bg-primary/10 transition-colors">
-						<Plus className="w-12 h-12" />
-					</div>
-					<div>
-						<h3 className="font-bold text-lg text-base-content">开始你的阅读之旅</h3>
-						<p className="text-sm opacity-60 mt-2">上传你的第一本 EPUB 图书</p>
-					</div>
-					<button className="btn btn-primary mt-4 px-8">立即上传</button>
+				<input 
+					type="file" 
+					ref={fileInputRef}
+					onChange={handleFileChange}
+					accept=".epub"
+					className="hidden" 
+				/>
+				<div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+					<Plus className="w-8 h-8 text-blue-600" />
 				</div>
+				<h3 className="text-xl font-semibold mb-2">上传你的第一本书</h3>
+				<p className="text-gray-500">支持 EPUB 格式，最大 50MB</p>
+				{isUploading && <p className="mt-4 text-blue-500 animate-pulse">正在处理上传中...</p>}
 			</div>
 		);
 	}
 
 	return (
-		<div
-			onClick={onClick}
-			className="card bg-base-100 border-2 border-dashed border-base-300 hover:border-primary transition-colors cursor-pointer group flex flex-row items-center justify-center p-6 gap-4 min-h-[180px]"
+		<div 
+			onClick={handleClick}
+			className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-4 group"
 		>
-			<div className="flex flex-col items-center gap-2 text-base-content/50 group-hover:text-primary">
-				<Plus className="w-8 h-8" />
-				<span className="font-medium text-sm">上传新图书</span>
+			<input 
+				type="file" 
+				ref={fileInputRef}
+				onChange={handleFileChange}
+				accept=".epub"
+				className="hidden" 
+			/>
+			<div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition-colors">
+				<Plus className="w-6 h-6 text-gray-400 group-hover:text-blue-500" />
+			</div>
+			<div>
+				<h3 className="font-medium">添加图书</h3>
+				<p className="text-sm text-gray-500">
+					{isUploading ? '正在上传请求...' : '点击上传 EPUB 文件'}
+				</p>
 			</div>
 		</div>
 	);

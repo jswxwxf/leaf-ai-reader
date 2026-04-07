@@ -46,10 +46,9 @@ export const config = {
   matcher: [
     /*
      * 匹配所有路径，除了:
-     * 1. /api/* (API 路由)
-     * 2. /_next/* (Next.js 内部资源)
-     * 3. /static/*, /favicon.ico 等 (静态资源)
+     * 1. /_next/* (Next.js 内部资源)
+     * 2. /static/*, /favicon.ico 等 (静态资源)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

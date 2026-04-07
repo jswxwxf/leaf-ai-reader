@@ -12,6 +12,7 @@ declare namespace Cloudflare {
 		NEXTJS_ENV: string;
 		WORKER_SELF_REFERENCE: Service<typeof import("./.open-next/worker").default>;
 		LEAF_BOOK_BUCKET: R2Bucket;
+		BOOK_WORKER: Service<import("../../book-worker/src/index").default>;
 	}
 }
 interface CloudflareEnv extends Cloudflare.Env {}
