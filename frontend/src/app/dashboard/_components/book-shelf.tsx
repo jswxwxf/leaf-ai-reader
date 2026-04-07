@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Book } from './book';
 import { UploadBook } from './upload-book';
 import { useBooks } from '../_context/books-context';
+import { useBookPolling } from '../_hooks/use-book-polling';
 
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)
@@ -12,14 +12,12 @@ import { useBooks } from '../_context/books-context';
 export function BookShelf() {
 	const { books, isLoading, refreshBooks } = useBooks();
 
-	useEffect(() => {
-		// 初始加载及未来的轮询逻辑入口
-		refreshBooks();
-	}, [refreshBooks]);
+	// 监听书籍状态并自动刷新轮询
+	useBookPolling(books, refreshBooks);
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">
-			{isLoading ? (
+			{isLoading && books.length === 0 ? (
 				/* 加载中状态 */
 				<div className="flex-1 flex items-center justify-center p-12">
 					<div className="flex flex-col items-center gap-4">

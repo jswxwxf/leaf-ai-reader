@@ -4,17 +4,20 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
+    "dev": "wrangler dev --persist-to ../frontend/.wrangler/state",
+    "start": "wrangler dev --persist-to ../frontend/.wrangler/state",
     "test": "vitest",
-    "cf-typegen": "wrangler types",
-    "setup:db": "rm -rf .wrangler && ln -s ../frontend/.wrangler .wrangler"
+    "cf-typegen": "wrangler types"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.12.4",
     "@types/node": "^25.5.2",
     "typescript": "^5.5.2",
     "vitest": "~3.2.0",
-    "wrangler": "^4.80.0"
+    "wrangler": "^4.81.0"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.5.10",
+    "fflate": "^0.8.2"
   }
 }

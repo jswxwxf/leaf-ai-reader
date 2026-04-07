@@ -2,7 +2,19 @@
 
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getCurrentUser } from './auth';
-import { BookData } from '@/app/dashboard/_components/book';
+/**
+ * 书籍数据模型接口
+ */
+export interface BookData {
+	id: string;
+	title: string;
+	author?: string;
+	published_at?: string;
+	status: 'uploading' | 'processing' | 'ready' | 'error';
+	cover_r2_key?: string | null;
+	total_chapters?: number;
+	created_at: number;
+}
 
 /**
  * 获取当前登录用户的所有书籍列表 (Server Action)

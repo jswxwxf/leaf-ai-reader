@@ -6,6 +6,7 @@ CREATE TABLE books (
   user_id TEXT NOT NULL,
   title TEXT,
   author TEXT,
+  published_at TEXT,
   cover_r2_key TEXT,
   total_chapters INTEGER,
   status TEXT DEFAULT 'processing', -- processing | ready | error

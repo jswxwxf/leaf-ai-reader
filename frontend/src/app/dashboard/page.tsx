@@ -11,14 +11,14 @@ export default async function DashboardPage() {
 	const initialBooks = await getBooks();
 
 	return (
-		<div className="min-h-screen bg-base-200 flex flex-col">
-			<BooksProvider initialBooks={initialBooks}>
+		<BooksProvider initialBooks={initialBooks}>
+			<div className="min-h-screen bg-base-200 flex flex-col">
 				{/* 整体导航区域 (服务端渲染) */}
 				<Header />
-				
+
 				{/* 列表与交互区域 (客户端注水) */}
 				<BookShelf />
-			</BooksProvider>
-		</div>
+			</div>
+		</BooksProvider>
 	);
 }

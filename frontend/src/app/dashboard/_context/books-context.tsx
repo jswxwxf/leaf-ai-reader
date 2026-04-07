@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, use, useState, useCallback, PropsWithChildren } from 'react';
-import { BookData } from '../_components/book';
+import { BookData } from '@/lib/book';
 import { request } from '@/lib/request';
 
 interface BooksContextType {

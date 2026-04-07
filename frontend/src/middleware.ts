@@ -27,13 +27,16 @@ export default async function proxy(request: NextRequest) {
     if (isDev) {
       return NextResponse.next();
     }
-    return new NextResponse('Unauthorized: No token provided.', { status: 401 });
+    // 未携带 ID Token, 引导强制登录
+    return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
   // 对 Token 进行真实的签名与 Issuer 校验 (Zero Trust)
   const user = await verifyLogtoIdToken(idToken);
   if (!user) {
-    return new NextResponse('Forbidden: Invalid or forged token.', { status: 403 });
+    // ID Token 校验失败 (可能伪造或失效), 强制执行退出并重新登录
+    // 这里跳转到 sign-out，Logto 后端会清除 Session 并自动带去重新登录
+    return NextResponse.redirect(new URL('/sign-out', request.url));
   }
 
   return NextResponse.next();
@@ -48,7 +51,8 @@ export const config = {
      * 匹配所有路径，除了:
      * 1. /_next/* (Next.js 内部资源)
      * 2. /static/*, /favicon.ico 等 (静态资源)
+     * 3. /sign-in 和 /sign-out (权限相关特殊路径，避免重定向循环)
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sign-in|sign-out).*)',
   ],
 };

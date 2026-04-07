@@ -57,9 +57,6 @@ export function UploadBook({ variant = 'compact' }: Props) {
 				body: formData,
 			});
 
-			// 只要运行到这里，说明请求一定是成功的
-			alert(`已成功创建上传任务！书籍 ID: ${response.bookId}\n系统正在后台完成上传并解析内容，请稍后在列表中查看。`);
-			
 			// 触发 Dashboard 刷新逻辑
 			refreshBooks();
 		} finally {
@@ -73,16 +70,16 @@ export function UploadBook({ variant = 'compact' }: Props) {
 
 	if (variant === 'hero') {
 		return (
-			<div 
+			<div
 				onClick={handleClick}
 				className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
 			>
-				<input 
-					type="file" 
+				<input
+					type="file"
 					ref={fileInputRef}
 					onChange={handleFileChange}
 					accept=".epub"
-					className="hidden" 
+					className="hidden"
 				/>
 				<div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
 					<Plus className="w-8 h-8 text-blue-600" />
@@ -95,16 +92,16 @@ export function UploadBook({ variant = 'compact' }: Props) {
 	}
 
 	return (
-		<div 
+		<div
 			onClick={handleClick}
 			className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-4 group"
 		>
-			<input 
-				type="file" 
+			<input
+				type="file"
 				ref={fileInputRef}
 				onChange={handleFileChange}
 				accept=".epub"
-				className="hidden" 
+				className="hidden"
 			/>
 			<div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition-colors">
 				<Plus className="w-6 h-6 text-gray-400 group-hover:text-blue-500" />

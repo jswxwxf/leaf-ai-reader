@@ -44,7 +44,7 @@ export function createHandler<T>(logic: HandlerLogic<T>) {
 			}, request);
 
 			// 4. 根据业务层返回结果封装响应
-			if (result instanceof NextResponse) {
+			if (result instanceof Response) {
 				return result;
 			}
 			return NextResponse.json(result);

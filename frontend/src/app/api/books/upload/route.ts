@@ -50,9 +50,8 @@ export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, req
 
 			console.log(`[Route API] Successfully uploaded book to R2: ${bookId}`);
 
-			// 调用 book-worker 进行 RPC 测试
-			const result = await env.BOOK_WORKER.add(1, 1);
-			console.log(`[Route API] [Worker RPC] Result from book-worker: ${result}`);
+			// 调用 book-worker 进行图书处理
+			await env.BOOK_WORKER.processBook(userId, bookId);
 		} catch (error) {
 			console.error("[Route API] R2 upload error:", error);
 			await env.LEAF_BOOK_DB.prepare(
