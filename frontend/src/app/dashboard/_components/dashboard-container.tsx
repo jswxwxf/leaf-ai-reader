@@ -2,6 +2,7 @@
 
 import { useBookStore } from '../_store/book-store';
 import { BookShelf } from './book-shelf';
+import { ArticleList } from './article-list';
 
 /**
  * DashboardContainer (仪表盘视图容器)
@@ -19,14 +20,7 @@ export function DashboardContainer() {
 
 			{/* 文章视图 */}
 			<div className={view === 'articles' ? 'block' : 'hidden'}>
-				<main className="p-4 md:p-6 w-full flex-1">
-					<div className="flex items-center justify-center py-20 bg-base-100 rounded-xl shadow-sm border border-base-300">
-						<div className="text-center">
-							<h3 className="text-xl font-bold mb-2">文章收藏正在建设中</h3>
-							<p className="opacity-60">未来你可以在这里管理从网页采集的精彩内容</p>
-						</div>
-					</div>
-				</main>
+				<ArticleList />
 			</div>
 		</>
 	);
