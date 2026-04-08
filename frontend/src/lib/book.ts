@@ -37,3 +37,53 @@ export async function getBooks(): Promise<BookData[]> {
 
 	return (results || []) as unknown as BookData[];
 }
+
+/**
+ * 删除书籍 (Server Action / 内部逻辑)
+ * 同步删除数据库记录，并在后台异步删除 R2 关联文件
+ */
+export async function deleteBook(id: string): Promise<{ success: boolean }> {
+	// 1. 鉴权
+	const user = await getCurrentUser();
+	const userId = user?.sub;
+	if (!userId) {
+		throw new Error('Unauthorized');
+	}
+
+	// 2. 获取 Cloudflare 上下文
+	const { env, ctx } = getCloudflareContext();
+
+	// 3. 执行 D1 数据库删除并校验所有权
+	// 如果不是当前用户的书，SQL 里的 WHERE 就会滤掉它，导致 meta.changes === 0
+	const { meta } = await env.LEAF_BOOK_DB.prepare(
+		"DELETE FROM books WHERE id = ? AND user_id = ?"
+	).bind(id, userId).run();
+
+	if (meta.changes === 0) {
+		throw new Error('Book not found or unauthorized');
+	}
+
+	// 4. 定义异步后台清理任务 (删除 R2 上的所有关联文件)
+	const cleanupTask = async () => {
+		try {
+			const prefix = `books/${userId}/${id}/`;
+			
+			// 列表查询该前缀下的所有文件
+			const listed = await env.LEAF_BOOK_BUCKET.list({ prefix });
+			const keys = listed.objects.map(o => o.key);
+
+			if (keys.length > 0) {
+				// 批量删除
+				await env.LEAF_BOOK_BUCKET.delete(keys);
+				console.log(`[lib/book] Successfully cleaned up ${keys.length} R2 files for book: ${id}`);
+			}
+		} catch (error) {
+			console.error("[lib/book] Failed to cleanup R2 files:", error);
+		}
+	};
+
+	// 使用 ctx.waitUntil 让清理任务在响应返回后继续在后台运行
+	ctx.waitUntil(cleanupTask());
+
+	return { success: true };
+}

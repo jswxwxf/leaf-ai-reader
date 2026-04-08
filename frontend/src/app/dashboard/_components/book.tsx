@@ -1,8 +1,10 @@
 "use client";
 
-import { AlertCircle, Loader2, Book as BookIcon } from 'lucide-react';
+import { AlertCircle, Loader2, Book as BookIcon, X } from 'lucide-react';
 import Image from 'next/image';
-import { BookData } from '@/lib/book';
+import { BookData, deleteBook } from '@/lib/book';
+import { useBooks } from '../_context/books-context';
+import { hideFullScreenLoading, showFullScreenLoading } from '@/app/full-screen-loading';
 
 interface Props {
 	book: BookData;
@@ -13,11 +15,38 @@ interface Props {
  * 职责：展示单本书籍的核心卡片 UI。
  */
 export function Book({ book }: Props) {
+	const { refreshBooks } = useBooks();
+
 	// 简化判断：直接通过 cover_r2_key 作为查询参数，API 侧会根据用户 ID 校验该 key
 	const coverUrl = book.cover_r2_key ? `/api/books/cover?key=${encodeURIComponent(book.cover_r2_key)}` : null;
 
+	const handleDelete = async (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!confirm(`确定要从书架移除《${book.title}》吗？`)) return;
+
+		try {
+			showFullScreenLoading()
+			await deleteBook(book.id);
+			await refreshBooks();
+		} catch (error) {
+			alert('删除失败，请稍后重试');
+			console.error('[handleDelete Error]', error);
+		} finally {
+			hideFullScreenLoading()
+		}
+	};
+
 	return (
 		<div className="card card-side bg-base-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden border border-base-200 group h-[180px] relative">
+			{/* 删除按钮 (仅在悬停时显示) */}
+			<button
+				className="absolute top-2 right-2 z-20 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
+				onClick={handleDelete}
+				title="删除书籍"
+			>
+				<X className="w-3 h-3 text-white" />
+			</button>
+
 			{/* 状态徽章 (仅在非 ready 状态显示) */}
 			{book.status !== 'ready' && (
 				<div className="absolute bottom-4 right-4 z-10">

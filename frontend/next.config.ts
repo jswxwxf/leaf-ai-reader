@@ -6,7 +6,11 @@ import type { NextConfig } from "next";
 initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
-	/* config options here */
+	experimental: {
+		serverActions: {
+			allowedOrigins: ['leaf-ai-reader.protected.app'],
+		},
+	},
 };
 
 export default nextConfig;

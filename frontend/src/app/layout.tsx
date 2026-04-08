@@ -17,17 +17,23 @@ export const metadata: Metadata = {
 	description: "极简、高效的智能 EPUB 阅读器",
 };
 
+import { FullScreenLoading } from "@/app/full-screen-loading";
+import { PropsWithChildren } from "react";
+
 export default function RootLayout({
 	children,
-}: Readonly<{
-	children: React.ReactNode;
-}>) {
+}: Readonly<PropsWithChildren>) {
 	return (
 		<html lang="en" data-theme="light">
 			<head>
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml"></link>
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+				<div>
+					{children}
+				</div>
+				<FullScreenLoading />
+			</body>
 		</html>
 	);
 }
