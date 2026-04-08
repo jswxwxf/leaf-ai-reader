@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import { FullScreenLoading } from "@/app/full-screen-loading";
 import { PropsWithChildren } from "react";
+import { GlobalModals } from "./global-modals";
 
 export default function RootLayout({
 	children,
@@ -33,6 +34,7 @@ export default function RootLayout({
 					{children}
 				</div>
 				<FullScreenLoading />
+				<GlobalModals />
 			</body>
 		</html>
 	);

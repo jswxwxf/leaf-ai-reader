@@ -4,7 +4,8 @@ import { AlertCircle, Loader2, Book as BookIcon, X } from 'lucide-react';
 import Image from 'next/image';
 import { BookData, deleteBook } from '@/lib/book';
 import { useBooks } from '../_context/books-context';
-import { hideFullScreenLoading, showFullScreenLoading } from '@/app/full-screen-loading';
+import { showLoading, hideLoading } from '@/app/full-screen-loading';
+import { showAlert, showConfirm } from '@/app/global-modals';
 
 interface Props {
 	book: BookData;
@@ -22,17 +23,21 @@ export function Book({ book }: Props) {
 
 	const handleDelete = async (e: React.MouseEvent) => {
 		e.stopPropagation();
-		if (!confirm(`确定要从书架移除《${book.title}》吗？`)) return;
+		await showConfirm({
+			message: `确定要从书架移除《${book.title}》吗？`,
+		});
 
 		try {
-			showFullScreenLoading()
+			showLoading()
 			await deleteBook(book.id);
 			await refreshBooks();
 		} catch (error) {
-			alert('删除失败，请稍后重试');
+			showAlert({
+				message: '删除失败，请稍后重试',
+			});
 			console.error('[handleDelete Error]', error);
 		} finally {
-			hideFullScreenLoading()
+			hideLoading()
 		}
 	};
 
