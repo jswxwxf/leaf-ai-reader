@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { AlertCircle, Loader2, Book as BookIcon, X } from 'lucide-react';
 import Image from 'next/image';
 import { BookData, deleteBook } from '@/lib/book';
-import { useBooks } from '../_context/books-context';
+import { useBookStore } from '../_store/book-store';
 import { showLoading, hideLoading } from '@/app/full-screen-loading';
 import { showAlert, showConfirm } from '@/app/global-modals';
 
@@ -17,7 +17,8 @@ interface Props {
  * 职责：展示单本书籍的核心卡片 UI。
  */
 export function Book({ book }: Props) {
-	const { refreshBooks } = useBooks();
+	const refreshBooks = useBookStore((s) => s.refreshBooks);
+
 
 	// 简化判断：直接通过 cover_r2_key 作为查询参数，API 侧会根据用户 ID 校验该 key
 	const coverUrl = book.cover_r2_key ? `/api/books/cover?key=${encodeURIComponent(book.cover_r2_key)}` : null;

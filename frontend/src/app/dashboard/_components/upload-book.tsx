@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { request } from '@/lib/request';
-import { useBooks } from '../_context/books-context';
+import { useBookStore } from '../_store/book-store';
 
 interface Props {
 	variant?: 'hero' | 'compact';
@@ -22,7 +22,8 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 export function UploadBook({ variant = 'compact' }: Props) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isUploading, setIsUploading] = useState(false);
-	const { refreshBooks } = useBooks();
+	const refreshBooks = useBookStore((s) => s.refreshBooks);
+
 
 	const handleClick = () => {
 		if (isUploading) return;

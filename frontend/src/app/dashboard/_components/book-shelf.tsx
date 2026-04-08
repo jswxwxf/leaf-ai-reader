@@ -3,17 +3,26 @@
 import { Loader2 } from 'lucide-react';
 import { Book } from './book';
 import { UploadBook } from './upload-book';
-import { useBooks } from '../_context/books-context';
+import { useShallow } from 'zustand/react/shallow';
+import { useBookStore } from '../_store/book-store';
 import { useBookPolling } from '../_hooks/use-book-polling';
 
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)
  */
 export function BookShelf() {
-	const { books, isLoading, refreshBooks } = useBooks();
+	const { books, isLoading, refreshBooks } = useBookStore(
+		useShallow((s) => ({
+			books: s.books,
+			isLoading: s.isLoading,
+			refreshBooks: s.refreshBooks,
+		}))
+	);
+
 
 	// 监听书籍状态并自动刷新轮询
 	useBookPolling(books, refreshBooks);
+
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">
