@@ -3,9 +3,9 @@
 本项目采用“需求驱动开发”模式。下表是当前正在进行的特性：
 
 - [x] **PRD-001: Logto 极简集成** ([001-logto-auth.md](./001-logto-auth.md))
-- [ ] **PRD-002: 上传图书** ([002-book-upload.md](./002-book-upload.md)) — 前端 Modal + Presigned URL 上传至 R2
-- [ ] **PRD-003: EPUB 结构解析** ([003-epub-indexing.md](./003-epub-indexing.md)) — 上传后立即提取元数据、章节列表、图片/CSS
-- [ ] **PRD-004: 懒加载章节渲染** ([004-lazy-chapter-render.md](./004-lazy-chapter-render.md)) — 按需提取章节 HTML，阅读页面渲染
+- [x] **PRD-002: 上传及管理图书** ([002-book-upload.md](./002-book-upload.md)) — 已支持 Modal 上传、R2 存储及删除管理
+- [x] **PRD-003: EPUB 结构解析** ([003-epub-indexing.md](./003-epub-indexing.md)) — 已打通 R2 元数据提取与 TOC 索引生成
+- [/] **PRD-004: 阅读页与章节渲染** ([004-lazy-chapter-render.md](./004-lazy-chapter-render.md)) — 已完成 UI 框架与目录树集成，正开发实时解压与清洗引擎
 
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*

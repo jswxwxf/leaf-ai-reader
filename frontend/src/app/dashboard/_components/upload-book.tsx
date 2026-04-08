@@ -94,7 +94,7 @@ export function UploadBook({ variant = 'compact' }: Props) {
 	return (
 		<div
 			onClick={handleClick}
-			className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-4 group"
+			className="p-6 bg-base-100 rounded-xl shadow-sm border border-base-200 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center gap-4 group text-center h-[180px]"
 		>
 			<input
 				type="file"
@@ -103,13 +103,13 @@ export function UploadBook({ variant = 'compact' }: Props) {
 				accept=".epub"
 				className="hidden"
 			/>
-			<div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition-colors">
-				<Plus className="w-6 h-6 text-gray-400 group-hover:text-blue-500" />
+			<div className="w-12 h-12 bg-base-200 rounded-full flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+				<Plus className="w-6 h-6 text-base-content/40 group-hover:text-primary" />
 			</div>
 			<div>
 				<h3 className="font-medium">添加图书</h3>
-				<p className="text-sm text-gray-500">
-					{isUploading ? '正在上传请求...' : '点击上传 EPUB 文件'}
+				<p className="text-[11px] opacity-60 mt-1">
+					{isUploading ? '正在上传中...' : '点击上传 EPUB 文件'}
 				</p>
 			</div>
 		</div>

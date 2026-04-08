@@ -29,27 +29,6 @@
   -> 更新 books 表状态为 'ready'
 ```
 
-### 阅读时的请求流程 (getChapter/getResource)
-
-1. **获取目录 (getTOC)**
-   - 前端通过书 ID 请求目录。
-   - Worker 从 R2 读取该书目录下的 `toc.json` 并返回。
-
-2. **获取章节内容 (getChapter)**
-   - 前端根据 `toc.json` 中的 `internal_path` 或章节标识请求特定内容。
-   - Worker 从 R2 读取原始 EPUB 并定位到对应的 HTML 文件。
-   - **内容清洗 (Streaming Cleanse)**：使用 Cloudflare `HTMLRewriter` 进行流式处理：
-     - **标签解包 (Unwrap)**：移除 `<span>`、`<font>` 等内联标签的外壳，解决碎片化内容问题。
-     - **冗余剔除**：移除所有的 `<link>`、`<style>`、`<script>` 标签。
-     - **样式清理**：移除标签上的 `class`、`id` 和内联 `style` 属性。
-     - **资源映射**：重写 `<img>` 标签的 `src`，转换为预览代理地址。
-   - 返回清洗后的“纯净版”HTML 片段。
-
-3. **获取具体资源 (getResource/Asset Strategy)**
-   - 前端根据 HTML 里的链接请求资源 (img, css, fonts)。
-   - Worker 优先尝试从 R2 缓存目录 `assets/` 读取。
-   - 若不存在缓存：从 R2 读取 `original.epub` 并解压特定资源文件，流式回传并异步写入 R2 缓存。
-
 ### R2 存储路径规范
 
 ```
@@ -147,17 +126,18 @@ CREATE TABLE books (
 ```
 
 ## 5. 任务清单
-
-- [ ] **EPUB 核心库引入**: 引入 `jszip` 和 `fast-xml-parser`
-- [ ] **轻量化解析逻辑**: 实现元数据和封面图提取
-- [ ] **TOC 解析与生成**: 递归解析目录并生成 `toc.json`
-- [ ] **R2 写入服务**: 实现 `toc.json` 和封面图的上传统一接口
-- [ ] **实时解压接口**: 实现 `getChapter(bookId, path)` 方法
-- [ ] **内容清洗引擎**: 利用 `HTMLRewriter` 实现流式 HTML 清洗与资源路径替换
-- [ ] **资源代理接口**: 实现 `getResource(bookId, path)` 并支持 R2 缓存逻辑
-- [ ] **D1 更新**: 更新 book 状态及元数据
-
+ 
+- [x] **EPUB 核心库引入**: 引入 `fflate` 和 `fast-xml-parser` (Done in `utils/epub.ts`)
+- [x] **轻量化解析逻辑**: 实现元数据和封面图提取 (Done in `index.ts`)
+- [x] **TOC 解析与生成**: 递归解析目录并生成 `toc.json` (Done in `epub.ts`, supports NCX & Nav)
+- [x] **R2 写入服务**: 实现 `toc.json` 和封面图的上传统一接口 (Done in `index.ts`)
+- [x] **D1 更新**: 更新 book 状态及元数据 (Done in `index.ts`)
+ 
 ## 6. 进度
-
-- **状态**: 正在进行 (In Progress)
+ 
+- **状态**: 已完成 (Completed)
+- **总结**:
+  - `EpubParser` 完成了核心的 ZIP 操作、XML 结构分析及多级目录解析。
+  - `book-worker` 实现了处理流并将关键索引 (`toc.json`) 存储于 R2，极大降低了 D1 的负载。
+  - 后续的实时解压与 HTML 清洗逻辑已移至 **PRD-004: 阅读页与章节渲染**。
 - **依赖**: PRD-002（上传图书）

@@ -5,57 +5,43 @@
 实现章节阅读页面。用户点击书架上的图书后，进入阅读界面，直接从 R2 读取已处理好的章节 HTML 渲染展示。
 
 ## 2. 方案
-
-PRD-003 已完成全量解压，章节 HTML 已存入 R2，图片路径已替换为 R2 URL。本 PRD 只需：
-
-1. 从 D1 查询章节的 `r2_key`
-2. 从 R2 读取对应 HTML 文件
-3. 渲染到页面
-
-无需处理 ZIP，无需懒加载，无并发安全问题。
+ 
+基于 PRD-003 生成的 `toc.json`，采用“**按需实时解压 (On-demand Extraction)**”模式。
+ 
+1. **获取目录**: 前端通过 API 获取 R2 中的 `toc.json`，渲染递归目录树。
+2. **实时解压**: 当用户进入特定章节时，Worker 从 R2 读取原始 EPUB，实时提取对应 HTML 片段。
+3. **流式清洗**: 利用 `HTMLRewriter` 实时剔除冗余标签 (`span`, `font`, `style`)，重写图片资源路径。
+4. **资源缓存**: 提取的图片资源异步缓存至 R2 `assets/` 目录，下次请求直接读取缓存。
 
 ## 3. 阅读页面路由
-
-```
-/reader/[bookId]/[chapterIndex]
-```
-
-使用 Next.js Server Component 直接渲染，无需额外 API 层：
-
-```typescript
-// app/reader/[bookId]/[chapterIndex]/page.tsx
-export default async function ReaderPage({ params }) {
-  const chapter = await getChapter(params.bookId, params.chapterIndex);
-  const html = await getChapterHtml(chapter.r2_key); // 从 R2 读取
-  return <ReaderView html={html} />;
-}
-```
-
-### 页面结构
-
-```
-/reader/[bookId]/[chapterIndex]
-├── 顶部导航栏（书名 + 上一章 / 下一章 按钮）
-├── 章节内容区（渲染 HTML，应用自定义阅读样式）
-└── 底部进度条（当前章节 / 总章节数）
-```
-
+ 
+目前为客户端路由交互，URL 结构建议：
+`/reader?book_id={id}`
+ 
 ## 4. 安全性
-
+ 
 EPUB HTML 内容需过滤后渲染，防止 XSS：
-- 使用白名单标签方式清理（`DOMPurify` 或服务端等价实现）
+- 使用白名单标签方式清理（`HTMLRewriter` 或 `DOMPurify`）
 - 允许标签：常见排版标签（`p`、`h1-h6`、`img`、`em`、`strong` 等）
-- 图片 src 仅允许指向 R2 域名
-
+- 图片 src 仅允许指向 R2 预览代理域名
+ 
 ## 5. 任务清单
-
-- [ ] **数据读取函数**: 实现 `getChapter(bookId, chapterIndex)` 从 D1 查询，`getChapterHtml(r2Key)` 从 R2 读取
-- [ ] **阅读页面路由**: 创建 `/reader/[bookId]/[chapterIndex]/page.tsx`
-- [ ] **HTML 安全渲染**: 实现内容清理 + 渲染组件
-- [ ] **阅读页面 UI**: 导航栏、内容区（自适应字体/行高）、章节导航按钮
-- [ ] **Dashboard 联动**: 图书卡片点击后跳转到 `/reader/[bookId]/0`
-
+ 
+- [ ] **实时解压 API**: 在 `book-worker` 中支持 `/api/books/:id/chapters/*` 接口解压 HTML
+- [ ] **流式清洗引擎**: 利用 `HTMLRewriter` 实现 HTML 纯净化与资源路径替换
+- [ ] **资源存储策略**: 实现 `getResource` 并支持 R2 自动缓存逻辑
+- [x] **阅读页 UI 框架**: 实现上中下布局、固定边栏标题、独立滚动区域 (Done in `src/app/reader/page.tsx`)
+- [x] **递归目录树渲染**: 支持无限层级的 `toc.json` 渲染，并实现自动展开逻辑 (Done)
+- [ ] **章节平滑切换**: 实现“下一句/上一句”的朗读聚焦与章节间的自动跳转
+- [x] **书架入口联动**: 图书卡片点击后携带 `book_id` 跳转至阅读页 (Done)
+ 
 ## 6. 进度
-
-- **状态**: 待开始 (Pending)
-- **依赖**: PRD-003（EPUB 解析与资源提取）
+ 
+- **状态**: 正在进行 (InProgress)
+- **已完成**:
+  - 完成了高度可定制化的阅读页静态布局。
+  - 完成了递归章节树数据驱动展示。
+- **当前瓶颈**:
+  - `book-worker` 尚未开放实时解压 HTML 的接口，目前正文为占位内容。
+ 
+- **依赖**: PRD-003（已完成：EPUB 元数据解析与索引生成）

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { AlertCircle, Loader2, Book as BookIcon, X } from 'lucide-react';
 import Image from 'next/image';
 import { BookData, deleteBook } from '@/lib/book';
@@ -23,6 +24,7 @@ export function Book({ book }: Props) {
 
 	const handleDelete = async (e: React.MouseEvent) => {
 		e.stopPropagation();
+		e.preventDefault(); // 额外防止 Link 跳转
 		await showConfirm({
 			message: `确定要从书架移除《${book.title}》吗？`,
 		});
@@ -42,7 +44,10 @@ export function Book({ book }: Props) {
 	};
 
 	return (
-		<div className="card card-side bg-base-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden border border-base-200 group h-[180px] relative">
+		<Link
+			href={`/reader?book_id=${book.id}`}
+			className="card card-side bg-base-100 shadow-sm hover:shadow-md active:scale-[0.98] active:bg-base-200 transition-all cursor-pointer overflow-hidden border border-base-200 group h-[180px] relative"
+		>
 			{/* 删除按钮 (仅在悬停时显示) */}
 			<button
 				className="absolute top-2 right-2 z-20 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
@@ -109,6 +114,6 @@ export function Book({ book }: Props) {
 					)}
 				</div>
 			</div>
-		</div>
+		</Link>
 	);
 }
