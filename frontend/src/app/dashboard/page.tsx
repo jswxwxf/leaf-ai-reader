@@ -1,23 +1,37 @@
-import { BookShelf } from './_components/book-shelf';
 import { Header } from './_components/header';
 import { getBooks } from '@/lib/book';
-import { BookStoreProvider } from './_store/book-store';
+import { BookStoreProvider, InitialState } from './_store/book-store';
+import { DashboardContainer } from './_components/dashboard-container';
+
+type Props = {
+	searchParams: Promise<{
+		view?: string;
+	}>;
+};
 
 /**
  * 仪表盘主页：这是一个异步的服务端组件 (Server Component)
  */
-export default async function DashboardPage() {
-	// 1. 服务端预取数据
+export default async function DashboardPage({
+	searchParams,
+}: Props) {
+	// 1. 服务端预取数据与参数
 	const initialBooks = await getBooks();
+	const { view = 'books' } = await searchParams;
 
 	return (
-		<BookStoreProvider initialBooks={initialBooks}>
+		<BookStoreProvider
+			initialState={{
+				books: initialBooks,
+				view
+			} as InitialState}
+		>
 			<div className="min-h-screen bg-base-200 flex flex-col">
-				{/* 整体导航区域 (服务端渲染) */}
+				{/* 整体导航区域 (客户端控制 URL) */}
 				<Header />
 
-				{/* 列表与交互区域 (客户端注水) */}
-				<BookShelf />
+				{/* 列表与交互区域 (根据 Store 显隐) */}
+				<DashboardContainer />
 			</div>
 		</BookStoreProvider>
 	);

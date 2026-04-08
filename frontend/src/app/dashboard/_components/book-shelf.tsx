@@ -19,10 +19,8 @@ export function BookShelf() {
 		}))
 	);
 
-
 	// 监听书籍状态并自动刷新轮询
 	useBookPolling(books, fetchBooks);
-
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">

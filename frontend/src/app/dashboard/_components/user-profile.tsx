@@ -10,12 +10,12 @@ export async function UserProfile() {
 			<span className="text-sm font-medium opacity-70 hidden sm:inline-block">
 				{displayName}
 			</span>
-			<a 
+			<a
 				href={LOGTO_LOGOUT_URL}
 				className="btn btn-ghost btn-sm text-error"
 			>
 				<LogOut className="w-4 h-4" />
-				Logout
+				退出
 			</a>
 		</div>
 	);

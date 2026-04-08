@@ -1,23 +1,27 @@
 'use client';
 
-import React, { createContext, useContext, useRef } from 'react';
+import React, { createContext, useRef, use } from 'react';
 import { createStore, useStore } from 'zustand';
 import { BookData } from '@/lib/book';
 import { request } from '@/lib/request';
 
-interface BookState {
+export interface BookState {
 	books: BookData[];
 	isLoading: boolean;
+	view: 'books' | 'articles'; // 当前视图：图书或文章
 	setBooks: (books: BookData[]) => void;
 	fetchBooks: () => Promise<void>;
+	setView: (view: 'books' | 'articles') => void;
 }
 
-export type BookStore = ReturnType<typeof createBookStore>;
+export type InitialState = Partial<Pick<BookState, 'books' | 'view'>>;
 
-const createBookStore = (initialBooks: BookData[] = []) => {
+const createBookStore = (initialState: InitialState = {}) => {
+	const { books = [], view = 'books' } = initialState;
 	return createStore<BookState>((set) => ({
-		books: initialBooks,
+		books,
 		isLoading: false,
+		view,
 		setBooks: (books) => set({ books }),
 		fetchBooks: async () => {
 			set({ isLoading: true });
@@ -30,22 +34,25 @@ const createBookStore = (initialBooks: BookData[] = []) => {
 				set({ isLoading: false });
 			}
 		},
+		setView: (view) => set({ view }),
 	}));
 };
+
+export type BookStore = ReturnType<typeof createBookStore>;
 
 const BookStoreContext = createContext<BookStore | null>(null);
 
 type Props = {
-	initialBooks?: BookData[];
+	initialState?: InitialState;
 };
 
 export function BookStoreProvider({
 	children,
-	initialBooks = []
+	initialState = {}
 }: React.PropsWithChildren<Props>) {
 	const storeRef = useRef<BookStore>(null);
 	if (!storeRef.current) {
-		storeRef.current = createBookStore(initialBooks);
+		storeRef.current = createBookStore(initialState);
 	}
 
 	return (
@@ -59,11 +66,9 @@ export function BookStoreProvider({
  * 更加推荐的用法：支持 selector，避免不必要的重渲染
  */
 export function useBookStore<T>(selector: (state: BookState) => T): T {
-	const context = useContext(BookStoreContext);
+	const context = use(BookStoreContext);
 	if (!context) {
 		throw new Error('useBookStore must be used within a BookStoreProvider');
 	}
 	return useStore(context, selector);
 }
-
-
