@@ -21,8 +21,8 @@ export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		// const url = new URL(request.url);
 		// if (url.pathname === "/debug") {
-		// 	const userId = "jlypxopvhn7o";
-		// 	const bookId = "a342efab-00e4-458e-8657-6b74e107c575";
+		// 	const userId = "local-dev";
+		// 	const bookId = "8c1988bc-9c76-4034-aded-1eeb7aa1e75e";
 		// 	try {
 		// 		const result = await this.processBook(userId, bookId);
 		// 		return Response.json(result);
@@ -43,7 +43,6 @@ export default class extends WorkerEntrypoint<Env> {
 	 */
 	async processBook(userId: string, bookId: string) {
 		const epubKey = `books/${userId}/${bookId}/original.epub`;
-		const coverR2Key = `books/${userId}/${bookId}/cover.jpg`;
 
 		console.log(`[Indexer] Starting to process book ${bookId} for user ${userId}`);
 
@@ -61,22 +60,40 @@ export default class extends WorkerEntrypoint<Env> {
 		const metadata = await parser.parse();
 
 		// 3. 提取并保存封面图 (如果存在)
+		let updatedCoverKey: string | null = null;
 		if (metadata.coverPath) {
 			const coverBuffer = await parser.getFile(metadata.coverPath, "uint8array");
 			if (coverBuffer) {
+				// 根据 MIME 类型确定扩展名
+				const mimeMap: Record<string, string> = {
+					"image/jpeg": "jpg",
+					"image/png": "png",
+					"image/gif": "gif",
+					"image/webp": "webp",
+					"image/svg+xml": "svg",
+				};
+				const extension = mimeMap[metadata.coverMime || ""] || "jpg";
+				const coverR2Key = `books/${userId}/${bookId}/cover.${extension}`;
+
 				await this.env.LEAF_BOOK_BUCKET.put(coverR2Key, coverBuffer, {
-					httpMetadata: { contentType: "image/jpeg" },
+					httpMetadata: { contentType: metadata.coverMime || "image/jpeg" },
 				});
-				console.log(`[Indexer] Extracted and saved cover to ${coverR2Key}`);
+				updatedCoverKey = coverR2Key;
+				console.log(`[Indexer] Extracted and saved cover to ${coverR2Key} as ${metadata.coverMime}`);
 			}
 		}
 
 		console.log(`[Indexer] Successfully parsed book: ${metadata.title}`);
 
-		// 4. 更新数据库状态
-		// 在元数据解析和封面提取之后，执行 D1 更新
-		const updatedCoverKey = metadata.coverPath ? coverR2Key : null;
+		// 4.1 上传目录 (TOC) 到 R2 并获取总章节数
+		const totalCount = this.countChapters(metadata.chapters);
+		const tocR2Key = `books/${userId}/${bookId}/toc.json`;
+		await this.env.LEAF_BOOK_BUCKET.put(tocR2Key, JSON.stringify(metadata.chapters), {
+			httpMetadata: { contentType: "application/json" },
+		});
+		console.log(`[Indexer] Successfully uploaded toc.json to ${tocR2Key}, total chapters: ${totalCount}`);
 
+		// 4.2 更新书籍元数据
 		try {
 			await this.env.LEAF_BOOK_DB.prepare(
 				`UPDATE books 
@@ -91,15 +108,14 @@ export default class extends WorkerEntrypoint<Env> {
 				metadata.title,
 				metadata.author,
 				metadata.publishDate,
-				metadata.chapters.length,
+				totalCount,
 				updatedCoverKey,
 				bookId,
 				userId
 			).run();
-
-			console.log(`[Indexer] Successfully updated database for book ${bookId}`);
+			console.log(`[Indexer] Database update successful for book ${bookId}`);
 		} catch (e: any) {
-			console.error(`[Indexer] Failed to update database for book ${bookId}: ${e.message}`);
+			console.error(`[Indexer] Database update failed for book ${bookId}: ${e.message}`);
 			throw new Error(`Database update failed: ${e.message}`);
 		}
 
@@ -109,9 +125,26 @@ export default class extends WorkerEntrypoint<Env> {
 				title: metadata.title,
 				author: metadata.author,
 				publishedAt: metadata.publishDate,
-				chaptersCount: metadata.chapters.length,
+				chaptersCount: totalCount,
 				coverR2Key: updatedCoverKey,
 			}
 		};
+	}
+
+	/**
+	 * 统计所有嵌套章节的总数
+	 */
+	private countChapters(chapters: any[]): number {
+		let count = 0;
+		const traverse = (items: any[]) => {
+			for (const item of items) {
+				count++;
+				if (item.children && item.children.length > 0) {
+					traverse(item.children);
+				}
+			}
+		};
+		traverse(chapters);
+		return count;
 	}
 }

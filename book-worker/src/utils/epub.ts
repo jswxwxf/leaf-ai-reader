@@ -5,6 +5,14 @@ import { XMLParser } from "fast-xml-parser";
  * EPUB 解析器：负责从 EPUB 文件中提取元数据、封面路径和章节列表
  * 使用 fflate 替换 JSZip，以获得更好的性能和更小的体积，满足 Cloudflare Workers 限制
  */
+export interface Chapter {
+	id?: string;
+	title: string;
+	path: string;
+	level: number;
+	children: Chapter[];
+}
+
 export class EpubParser {
 	private data: Uint8Array | null = null;
 	private parser: XMLParser;
@@ -57,10 +65,13 @@ export class EpubParser {
 			? opfData.package.spine.itemref
 			: [opfData.package.spine.itemref];
 
-		// 建立 Manifest 映射 (ID -> Href)
-		const manifestMap = new Map<string, string>();
+		// 建立 Manifest 映射 (ID -> { Href, MediaType })
+		const manifestMap = new Map<string, { href: string; mediaType: string }>();
 		manifestItems.forEach((item: any) => {
-			manifestMap.set(item["@_id"], item["@_href"]);
+			manifestMap.set(item["@_id"], {
+				href: item["@_href"],
+				mediaType: item["@_media-type"]
+			});
 		});
 
 		// 3. 提取元数据
@@ -68,14 +79,73 @@ export class EpubParser {
 		const author = this.extractValue(metadata["dc:creator"]);
 		const publishDate = this.extractValue(metadata["dc:date"]);
 
-		// 4. 寻找封面图路径
+		// 4. 寻找 TOC 文件
+		let tocFile = "";
+		let tocType: "ncx" | "nav" | null = null;
+
+		// 优先查找 EPUB 3 的 NAV 导航 (在 manifest 中查找具有 properties="nav" 的项)
+		const navItem = manifestItems.find((item: any) => item["@_properties"] === "nav");
+		if (navItem) {
+			tocFile = rootDir + navItem["@_href"];
+			tocType = "nav";
+		} else {
+			// 查找 EPUB 2 的 NCX 导航 (从 spine 的 toc 属性获取 ID，再从 manifest 中查找)
+			const tocId = opfData.package.spine["@_toc"];
+			const ncxItem = manifestItems.find((item: any) => item["@_id"] === tocId);
+			if (ncxItem) {
+				tocFile = rootDir + ncxItem["@_href"];
+				tocType = "ncx";
+			}
+		}
+
+		// 5. 提取嵌套章节结构
+		let chapters: Chapter[] = [];
+		if (tocFile && tocType) {
+			try {
+				const tocDataRaw = fflate.unzipSync(this.data!, { filter: (file) => file.name === tocFile });
+				const tocXml = this.decoder.decode(tocDataRaw[tocFile]);
+				if (tocXml) {
+					const tocParsed = this.parser.parse(tocXml);
+					if (tocType === "ncx") {
+						chapters = this.parseNcx(tocParsed);
+					} else {
+						chapters = this.parseNav(tocParsed);
+					}
+				}
+			} catch (e) {
+				console.warn(`[EpubParser] Failed to parse TOC file ${tocFile}: ${e}`);
+			}
+		}
+
+		// 6. 如果目录为空，则退而求其次使用 Spine 列表 (扁平)
+		if (chapters.length === 0) {
+			chapters = spineItems
+				.map((ref: any) => {
+					const idref = ref["@_idref"];
+					const href = manifestMap.get(idref);
+					if (!href) return null;
+					return {
+						title: idref,
+						path: rootDir + href,
+						level: 0,
+						children: [],
+					};
+				})
+				.filter(Boolean) as Chapter[];
+		}
+
+		// 7. 提取封面图 (保持原有)
 		let coverPath = "";
+		let coverMime = "";
 		const metaItems = Array.isArray(metadata.meta) ? metadata.meta : [metadata.meta];
 		const coverMeta = metaItems.find((m: any) => m && m["@_name"] === "cover");
 		if (coverMeta) {
 			const coverId = coverMeta["@_content"];
-			const href = manifestMap.get(coverId);
-			if (href) coverPath = rootDir + href;
+			const item = manifestMap.get(coverId);
+			if (item) {
+				coverPath = rootDir + item.href;
+				coverMime = item.mediaType;
+			}
 		}
 
 		if (!coverPath) {
@@ -85,29 +155,89 @@ export class EpubParser {
 			);
 			if (coverItem) {
 				coverPath = rootDir + coverItem["@_href"];
+				coverMime = coverItem["@_media-type"];
 			}
 		}
-
-		// 5. 提取章节列表 (遵循 Spine 顺序)
-		const chapters = spineItems
-			.map((ref: any) => {
-				const idref = ref["@_idref"];
-				const href = manifestMap.get(idref);
-				if (!href) return null;
-				return {
-					id: idref,
-					path: rootDir + href,
-				};
-			})
-			.filter(Boolean);
 
 		return {
 			title: title || "Unknown Title",
 			author: author || "Unknown Author",
 			publishDate: publishDate || "",
 			coverPath,
+			coverMime,
 			chapters,
 		};
+	}
+
+	/**
+	 * 递归解析 NCX 导航文件
+	 */
+	private parseNcx(data: any, level = 0): Chapter[] {
+		const navPoints = data.ncx?.navMap?.navPoint;
+		if (!navPoints) return [];
+
+		const transform = (point: any, currentLevel: number): Chapter => {
+			const src = point.content?.["@_src"] || "";
+			const children = point.navPoint 
+				? (Array.isArray(point.navPoint) 
+					? point.navPoint.map((p: any) => transform(p, currentLevel + 1))
+					: [transform(point.navPoint, currentLevel + 1)])
+				: [];
+
+			return {
+				title: this.extractValue(point.navLabel?.text) || "Untitled",
+				path: src.split("#")[0],
+				level: currentLevel,
+				children: children
+			};
+		};
+
+		return Array.isArray(navPoints) 
+			? navPoints.map(p => transform(p, level))
+			: [transform(navPoints, level)];
+	}
+
+	/**
+	 * 递归解析 NAV 导航文件 (简化版)
+	 */
+	private parseNav(data: any): Chapter[] {
+		// EPUB 3 的 NAV 结构通常是 <nav><ol><li><a href="...">...</a><ol>...</ol></li></ol></nav>
+		const findNav = (node: any): any => {
+			if (!node) return null;
+			if (node.nav) return node.nav;
+			for (const key in node) {
+				if (typeof node[key] === "object") {
+					const res = findNav(node[key]);
+					if (res) return res;
+				}
+			}
+			return null;
+		};
+
+		const navNode = findNav(data.html?.body || data);
+		if (!navNode) return [];
+
+		const parseList = (ol: any, level: number): Chapter[] => {
+			if (!ol || !ol.li) return [];
+			const items = Array.isArray(ol.li) ? ol.li : [ol.li];
+			
+			return items.map((li: any) => {
+				const a = li.a;
+				const title = a ? this.extractValue(a) : "Untitled";
+				const href = a ? a["@_href"] : "";
+				const subOl = li.ol;
+				
+				return {
+					title,
+					path: href.split("#")[0],
+					level,
+					children: subOl ? parseList(subOl, level + 1) : []
+				};
+			});
+		};
+
+		const topOl = navNode.ol;
+		return topOl ? parseList(topOl, 0) : [];
 	}
 
 	/**
