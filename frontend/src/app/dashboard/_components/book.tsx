@@ -17,8 +17,7 @@ interface Props {
  * 职责：展示单本书籍的核心卡片 UI。
  */
 export function Book({ book }: Props) {
-	const refreshBooks = useBookStore((s) => s.refreshBooks);
-
+	const fetchBooks = useBookStore((s) => s.fetchBooks);
 
 	// 简化判断：直接通过 cover_r2_key 作为查询参数，API 侧会根据用户 ID 校验该 key
 	const coverUrl = book.cover_r2_key ? `/api/books/cover?key=${encodeURIComponent(book.cover_r2_key)}` : null;
@@ -33,7 +32,7 @@ export function Book({ book }: Props) {
 		try {
 			showLoading()
 			await deleteBook(book.id);
-			await refreshBooks();
+			await fetchBooks();
 		} catch (error) {
 			showAlert({
 				message: '删除失败，请稍后重试',

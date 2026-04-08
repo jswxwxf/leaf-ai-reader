@@ -22,7 +22,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 export function UploadBook({ variant = 'compact' }: Props) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isUploading, setIsUploading] = useState(false);
-	const refreshBooks = useBookStore((s) => s.refreshBooks);
+	const fetchBooks = useBookStore((s) => s.fetchBooks);
 
 
 	const handleClick = () => {
@@ -59,7 +59,7 @@ export function UploadBook({ variant = 'compact' }: Props) {
 			});
 
 			// 触发 Dashboard 刷新逻辑
-			refreshBooks();
+			fetchBooks();
 		} finally {
 			// 无论请求是否成功，甚至是代码内部运行报错，都确保状态重置
 			setIsUploading(false);

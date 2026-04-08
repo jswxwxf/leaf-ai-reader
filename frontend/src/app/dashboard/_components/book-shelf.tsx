@@ -11,17 +11,17 @@ import { useBookPolling } from '../_hooks/use-book-polling';
  * BookShelf (书架) 是一个客户端容器 (Client Component)
  */
 export function BookShelf() {
-	const { books, isLoading, refreshBooks } = useBookStore(
+	const { books, isLoading, fetchBooks } = useBookStore(
 		useShallow((s) => ({
 			books: s.books,
 			isLoading: s.isLoading,
-			refreshBooks: s.refreshBooks,
+			fetchBooks: s.fetchBooks,
 		}))
 	);
 
 
 	// 监听书籍状态并自动刷新轮询
-	useBookPolling(books, refreshBooks);
+	useBookPolling(books, fetchBooks);
 
 
 	return (

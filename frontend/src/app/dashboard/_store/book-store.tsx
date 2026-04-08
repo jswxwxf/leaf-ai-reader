@@ -9,7 +9,7 @@ interface BookState {
 	books: BookData[];
 	isLoading: boolean;
 	setBooks: (books: BookData[]) => void;
-	refreshBooks: () => Promise<void>;
+	fetchBooks: () => Promise<void>;
 }
 
 export type BookStore = ReturnType<typeof createBookStore>;
@@ -19,13 +19,13 @@ const createBookStore = (initialBooks: BookData[] = []) => {
 		books: initialBooks,
 		isLoading: false,
 		setBooks: (books) => set({ books }),
-		refreshBooks: async () => {
+		fetchBooks: async () => {
 			set({ isLoading: true });
 			try {
 				const res = await request<{ books: BookData[] }>('/api/books');
 				set({ books: res.books });
 			} catch (error) {
-				console.error('[BookStore] Failed to refresh books:', error);
+				console.error('[BookStore] Failed to fetch books:', error);
 			} finally {
 				set({ isLoading: false });
 			}
