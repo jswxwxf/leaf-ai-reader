@@ -17,10 +17,6 @@ export function ViewSwitcher() {
 
 	const handleViewChange = (newView: 'books' | 'articles') => {
 		setView(newView);
-		// 使用原生 API 更新 URL 而不触发 Next.js 的服务端重渲染
-		const url = new URL(window.location.href);
-		url.searchParams.set('view', newView);
-		window.history.replaceState(null, '', url.toString());
 	};
 
 	return (

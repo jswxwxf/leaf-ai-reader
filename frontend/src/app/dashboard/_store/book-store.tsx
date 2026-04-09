@@ -1,47 +1,83 @@
 'use client';
 
-import React, { createContext, useRef, use } from 'react';
+import React, { createContext, use, useState } from 'react';
 import { createStore, useStore } from 'zustand';
-import { combine } from 'zustand/middleware';
+import { combine, persist, createJSONStorage } from 'zustand/middleware';
 import { BookData } from '@/lib/book';
 import { request } from '@/lib/request';
+import { createUrlSearchStorage } from '@/lib/zustand-helpers';
 
 export type InitialState = {
 	books?: BookData[];
 	view?: 'books' | 'articles';
 };
 
+/**
+ * 状态定义（数据）
+ */
+export interface BookState {
+	isLoading: boolean;
+	view: 'books' | 'articles';
+	books: BookData[];
+}
+
+/**
+ * 动作定义（方法）
+ */
+export interface BookActions {
+	setView: (view: 'books' | 'articles') => void;
+	setBooks: (books: BookData[]) => void;
+	fetchBooks: () => Promise<void>;
+}
+
+/**
+ * 完整的 Store 状态类型
+ * 先定义“因”（类型契约），再产生“果”（具体实现）
+ */
+export type BookStoreState = BookState & BookActions;
+
 const createBookStore = (initialState: InitialState = {}) => {
 	const { books = [], view = 'books' } = initialState;
 
-	return createStore(
-		combine(
-			{
-				isLoading: false,
-				view,
-				books,
-			},
-			(set) => ({
-				setView: (view: 'books' | 'articles') => set({ view }),
-				setBooks: (books: BookData[]) => set({ books }),
-				fetchBooks: async () => {
-					set({ isLoading: true });
-					try {
-						const res = await request<{ books: BookData[] }>('/api/books');
-						set({ books: res.books });
-					} catch (error) {
-						console.error('[BookStore] Failed to fetch books:', error);
-					} finally {
-						set({ isLoading: false });
-					}
+	return createStore<BookStoreState>()(
+		persist(
+			combine<BookState, BookActions>(
+				{
+					// 状态实现 - 必须符合 BookState 接口
+					isLoading: false,
+					view,
+					books,
 				},
-			})
+				(set) => ({
+					// 动作实现 - 必须符合 BookActions 接口
+					setView: (view) => set({ view }),
+					setBooks: (books) => set({ books }),
+					fetchBooks: async () => {
+						set({ isLoading: true });
+						try {
+							const res = await request<{ books: BookData[] }>('/api/books');
+							set({ books: res.books });
+						} finally {
+							set({ isLoading: false });
+						}
+					},
+				})
+			),
+			{
+				name: 'dashboard-storage',
+				storage: createJSONStorage(() => createUrlSearchStorage('view')),
+				partialize: (state) => ({ view: state.view }), // 仅持久化 view 字段
+				// 关键：合并策略，确保服务端传入的 initialState 优先
+				merge: (persistedState, currentState) => ({
+					...currentState,
+					...(persistedState as any),
+				}),
+			}
 		)
 	);
 };
 
 export type BookStore = ReturnType<typeof createBookStore>;
-export type BookStoreState = ReturnType<BookStore['getState']>;
 
 const BookStoreContext = createContext<BookStore | null>(null);
 
@@ -53,13 +89,10 @@ export function BookStoreProvider({
 	children,
 	initialState = {}
 }: React.PropsWithChildren<Props>) {
-	const storeRef = useRef<BookStore>(null);
-	if (!storeRef.current) {
-		storeRef.current = createBookStore(initialState);
-	}
+	const [store] = useState(() => createBookStore(initialState));
 
 	return (
-		<BookStoreContext value={storeRef.current}>
+		<BookStoreContext value={store}>
 			{children}
 		</BookStoreContext>
 	);
