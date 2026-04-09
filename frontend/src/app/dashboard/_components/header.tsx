@@ -9,7 +9,7 @@ import { ViewSwitcher } from './view-switcher';
  */
 export function Header() {
 	return (
-		<header className="navbar bg-base-100 shadow-sm px-4 md:px-8 flex items-center gap-2 sticky top-0 z-50">
+		<header className="navbar bg-base-100 shadow-sm px-4 md:px-8 flex items-center gap-2 sticky top-0 z-20">
 			<div className="flex-1">
 				<a className="text-xl font-bold flex items-center gap-2 shrink-0">
 					<BookOpen className="w-6 h-6 text-primary" />

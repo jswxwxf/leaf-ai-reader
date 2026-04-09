@@ -21,9 +21,14 @@ import { FullScreenLoading } from "@/app/full-screen-loading";
 import { PropsWithChildren } from "react";
 import { GlobalModals } from "./global-modals";
 
+type Props = PropsWithChildren<{
+	reader: React.ReactNode;
+}>;
+
 export default function RootLayout({
 	children,
-}: Readonly<PropsWithChildren>) {
+	reader,
+}: Props) {
 	return (
 		<html lang="en" data-theme="light">
 			<head>
@@ -33,6 +38,7 @@ export default function RootLayout({
 				<div>
 					{children}
 				</div>
+				{reader}
 				<FullScreenLoading />
 				<GlobalModals />
 			</body>
