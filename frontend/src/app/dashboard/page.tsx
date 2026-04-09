@@ -1,6 +1,6 @@
 import { Header } from './_components/header';
 import { getBooks } from '@/lib/book';
-import { BookStoreProvider, InitialState } from './_store/book-store';
+import { BookStoreProvider, InitialState } from './book/_store/book-store';
 import { DashboardContainer } from './_components/dashboard-container';
 
 type Props = {

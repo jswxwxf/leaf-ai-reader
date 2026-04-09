@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { request } from '@/lib/request';
-import { useBookStore } from '../../_store/book-store';
+import { useBookStore } from './_store/book-store';
 
 interface Props {
 	variant?: 'hero' | 'compact';

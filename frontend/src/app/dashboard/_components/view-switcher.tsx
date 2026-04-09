@@ -1,7 +1,7 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import { useBookStore } from '../_store/book-store';
+import { useBookStore } from '../book/_store/book-store';
 
 /**
  * ViewSwitcher (视图切换器)
