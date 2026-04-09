@@ -12,24 +12,25 @@
  */
 
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { EpubParser } from "./utils/epub";
+import { EpubParser } from "./epub";
+import { crawlArticle } from "./article";
 
 export default class extends WorkerEntrypoint<Env> {
 	/**
 	 * 处理 HTTP 请求，防止部署报错并支持基础的状态验证。
 	 */
 	async fetch(request: Request): Promise<Response> {
-		// const url = new URL(request.url);
-		// if (url.pathname === "/debug") {
-		// 	const userId = "local-dev";
-		// 	const bookId = "8c1988bc-9c76-4034-aded-1eeb7aa1e75e";
-		// 	try {
-		// 		const result = await this.processBook(userId, bookId);
-		// 		return Response.json(result);
-		// 	} catch (e: any) {
-		// 		return new Response(e.message, { status: 500 });
-		// 	}
-		// }
+		const url = new URL(request.url);
+		if (url.pathname === "/debug") {
+			const userId = "local-dev";
+			const articleId = "df97fd0b-ae47-4441-b02d-0c891e2f625f";
+			try {
+				const result = await this.processArticle(userId, articleId);
+				return Response.json(result);
+			} catch (e: any) {
+				return new Response(e.message, { status: 500 });
+			}
+		}
 
 		return new Response("Leaf Book Worker is running.", {
 			headers: { "Content-Type": "text/plain;charset=UTF-8" },
@@ -146,5 +147,58 @@ export default class extends WorkerEntrypoint<Env> {
 		};
 		traverse(chapters);
 		return count;
+	}
+
+	async processArticle(userId: string, articleId: string) {
+		console.log(`[Worker] Received article process request: user=${userId}, articleId=${articleId}`);
+
+		// 1. 从 D1 获取文章记录
+		const article = await this.env.LEAF_BOOK_DB.prepare(
+			"SELECT * FROM articles WHERE id = ? AND user_id = ?"
+		).bind(articleId, userId).first();
+
+		if (!article) {
+			throw new Error(`[Worker] Article ${articleId} not found in D1 for user ${userId}`);
+		}
+
+		console.log(`[Worker] Starting crawl for: ${article.source_url}`);
+
+		try {
+			// 2. 调用重构后的爬虫工具函数
+			const parsedArticle = await crawlArticle(article.source_url as string);
+
+			if ((this.env as any).NODE_ENV === 'development') {
+				console.log("[Worker] Parsed Article JSON:", JSON.stringify(parsedArticle, null, 2));
+			}
+
+			console.log(`[Worker] Successfully extracted article: ${parsedArticle.title}`);
+
+			// 3. 更新 D1 状态为 ready
+			await this.env.LEAF_BOOK_DB.prepare(
+				"UPDATE articles SET title = ?, content = ?, source = ?, status = 'ready' WHERE id = ?"
+			).bind(
+				parsedArticle.title || article.title,
+				parsedArticle.content,
+				parsedArticle.source,
+				articleId
+			).run();
+
+			console.log(`[Worker] Article ${articleId} processed and updated in D1`);
+
+			return {
+				title: parsedArticle.title,
+				contentLength: parsedArticle.content.length
+			};
+
+		} catch (e: any) {
+			console.error(`[Worker] Error processing article ${articleId}: ${e.message}`);
+
+			// 更新 D1 状态为 error
+			await this.env.LEAF_BOOK_DB.prepare(
+				"UPDATE articles SET status = 'error' WHERE id = ?"
+			).bind(articleId).run();
+
+			throw e;
+		}
 	}
 }

@@ -1,4 +1,5 @@
 import { Article } from './article';
+import { UploadArticle } from './upload-article';
 
 const DUMMY_ARTICLES: { id: number; title: string; source: string; url: string; status?: 'ready' | 'processing' | 'error' }[] = [
 	{ id: 1, title: '如何构建高性能的 AI Web 应用', source: '机器之心', url: '#', status: 'processing' },
@@ -32,17 +33,8 @@ export function ArticleList() {
 		<main className="w-full flex-1">
 			{/* 模拟地址栏 - 吸顶 */}
 			<div className="sticky top-[65px] z-40 bg-base-200/95 backdrop-blur-sm px-4 md:px-6 py-4 border-b border-base-300 mb-1">
-				<div className="max-w-3xl mx-auto">
-					<div className="join w-full shadow-sm hover:shadow-md transition-shadow">
-						<input
-							type="text"
-							placeholder="输入文章网址"
-							className="input input-bordered join-item w-full focus:outline-none focus:border-primary border-r-0"
-						/>
-						<button className="btn btn-primary join-item px-8 text-base">
-							阅读
-						</button>
-					</div>
+				<div className="max-w-6xl mx-auto">
+					<UploadArticle />
 				</div>
 			</div>
 

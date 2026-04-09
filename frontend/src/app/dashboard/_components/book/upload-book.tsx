@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { request } from '@/lib/request';
-import { useBookStore } from '../_store/book-store';
+import { useBookStore } from '../../_store/book-store';
 
 interface Props {
 	variant?: 'hero' | 'compact';
@@ -53,7 +53,7 @@ export function UploadBook({ variant = 'compact' }: Props) {
 			formData.append('file', file);
 
 			// 使用全局请求工具。如果失败，它会通过抛错自动跳到 finally，不再往下运行。
-			const response = await request<UploadResponse>('/api/books/upload', {
+			await request<UploadResponse>('/api/books/upload', {
 				method: 'POST',
 				body: formData,
 			});

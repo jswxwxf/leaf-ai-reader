@@ -1,8 +1,8 @@
 'use client';
 
 import { useBookStore } from '../_store/book-store';
-import { BookShelf } from './book-shelf';
-import { ArticleList } from './article-list';
+import { BookShelf } from './book/book-shelf';
+import { ArticleList } from './article/article-list';
 
 /**
  * DashboardContainer (仪表盘视图容器)

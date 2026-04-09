@@ -4,8 +4,8 @@ import { Loader2 } from 'lucide-react';
 import { Book } from './book';
 import { UploadBook } from './upload-book';
 import { useShallow } from 'zustand/react/shallow';
-import { useBookStore } from '../_store/book-store';
-import { useBookPolling } from '../_hooks/use-book-polling';
+import { useBookStore } from '../../_store/book-store';
+import { useBookPolling } from '../../_hooks/use-book-polling';
 
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)

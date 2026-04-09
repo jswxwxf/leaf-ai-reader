@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { AlertCircle, Loader2, Book as BookIcon, X } from 'lucide-react';
 import Image from 'next/image';
 import { BookData, deleteBook } from '@/lib/book';
-import { useBookStore } from '../_store/book-store';
+import { useBookStore } from '../../_store/book-store';
 import { showLoading, hideLoading } from '@/app/full-screen-loading';
 import { showAlert, showConfirm } from '@/app/global-modals';
 
