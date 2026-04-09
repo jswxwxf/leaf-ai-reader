@@ -7,6 +7,7 @@
 - [x] **PRD-003: EPUB 结构解析** ([003-epub-indexing.md](./003-epub-indexing.md)) — 已打通 R2 元数据提取与 TOC 索引生成
 - [ ] **PRD-004: 网页文章采集与处理** ([004-web-article-collection.md](./004-web-article-collection.md)) — 规划中，支持自动抓取与手动粘贴
 - [/] **PRD-005: 阅读页与章节渲染** ([005-lazy-chapter-render.md](./005-lazy-chapter-render.md)) — 已完成 UI 框架与目录树集成，开发中
+- [/] **PRD-006: 阅读器平行路由与拦截布局** ([006-reader-routing-overlay.md](./006-reader-routing-overlay.md)) — 设计已完成，准备实施
 
 
 ---
