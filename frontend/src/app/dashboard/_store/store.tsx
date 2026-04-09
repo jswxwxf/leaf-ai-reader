@@ -4,11 +4,13 @@ import React, { createContext, use, useState } from 'react';
 import { createStore, useStore } from 'zustand';
 import { combine, persist, createJSONStorage } from 'zustand/middleware';
 import { BookData } from '@/lib/book';
+import { ArticleData } from '@/lib/article';
 import { request } from '@/lib/request';
 import { createUrlSearchStorage } from '@/lib/zustand-helpers';
 
 export type InitialState = {
 	books?: BookData[];
+	articles?: ArticleData[];
 	view?: 'books' | 'articles';
 };
 
@@ -19,6 +21,8 @@ export interface DashboardState {
 	view: 'books' | 'articles';
 	isBookLoading: boolean;
 	books: BookData[];
+	isArticleLoading: boolean;
+	articles: ArticleData[];
 }
 
 /**
@@ -28,6 +32,8 @@ export interface DashboardActions {
 	setView: (view: 'books' | 'articles') => void;
 	setBooks: (books: BookData[]) => void;
 	fetchBooks: () => Promise<void>;
+	setArticles: (articles: ArticleData[]) => void;
+	fetchArticles: () => Promise<void>;
 }
 
 /**
@@ -37,7 +43,7 @@ export interface DashboardActions {
 export type DashboardStoreState = DashboardState & DashboardActions;
 
 const createDashboardStore = (initialState: InitialState = {}) => {
-	const { books = [], view = 'books' } = initialState;
+	const { books = [], articles = [], view = 'books' } = initialState;
 
 	return createStore<DashboardStoreState>()(
 		persist(
@@ -47,6 +53,8 @@ const createDashboardStore = (initialState: InitialState = {}) => {
 					view,
 					isBookLoading: false,
 					books,
+					isArticleLoading: false,
+					articles,
 				},
 				(set) => ({
 					// 动作实现 - 必须符合 DashboardActions 接口
@@ -59,6 +67,16 @@ const createDashboardStore = (initialState: InitialState = {}) => {
 							set({ books: res.books });
 						} finally {
 							set({ isBookLoading: false });
+						}
+					},
+					setArticles: (articles) => set({ articles }),
+					fetchArticles: async () => {
+						set({ isArticleLoading: true });
+						try {
+							const res = await request<{ articles: ArticleData[] }>('/api/articles');
+							set({ articles: res.articles });
+						} finally {
+							set({ isArticleLoading: false });
 						}
 					},
 				})

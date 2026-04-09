@@ -5,7 +5,7 @@ import { Book } from './book';
 import { UploadBook } from './upload-book';
 import { useShallow } from 'zustand/react/shallow';
 import { useDashboardStore } from '../_store/store';
-import { useBookPolling } from '../_hooks/use-book-polling';
+import { usePolling } from '../_hooks/use-polling';
 
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)
@@ -20,7 +20,7 @@ export function BookShelf() {
 	);
 
 	// 监听书籍状态并自动刷新轮询
-	useBookPolling(books, fetchBooks);
+	usePolling(books, fetchBooks);
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">

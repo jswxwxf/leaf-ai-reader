@@ -28,7 +28,8 @@ export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, req
 	// 2. 触发后台 Worker 解析逻辑 (非阻塞)
 	ctx.waitUntil((async () => {
 		try {
-			await env.BOOK_WORKER.processArticle(user.sub, articleId);
+			const stub = await env.BOOK_WORKER.processArticle(user.sub, articleId);
+			stub?.dispose?.();
 		} catch (e) {
 			console.error('[Articles API] 触发 Worker 解析失败:', e);
 			// 发生异常时，将数据库中的状态更新为 error，防止前端无限轮询

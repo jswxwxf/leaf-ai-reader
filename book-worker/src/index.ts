@@ -173,17 +173,24 @@ export default class extends WorkerEntrypoint<Env> {
 
 			console.log(`[Worker] Successfully extracted article: ${parsedArticle.title}`);
 
-			// 3. 更新 D1 状态为 ready
+			// 3. 将正文 HTML 持久化到 R2
+			const contentKey = `articles/${userId}/${articleId}/content.html`;
+			await this.env.LEAF_BOOK_BUCKET.put(contentKey, parsedArticle.content, {
+				httpMetadata: { contentType: "text/html;charset=UTF-8" },
+			});
+			console.log(`[Worker] Successfully saved article content to R2: ${contentKey}`);
+
+			// 4. 更新 D1 状态为 ready (content 字段留空或存占位符，全文已转存 R2)
 			await this.env.LEAF_BOOK_DB.prepare(
 				"UPDATE articles SET title = ?, content = ?, source = ?, status = 'ready' WHERE id = ?"
 			).bind(
 				parsedArticle.title || article.title,
-				parsedArticle.content,
+				contentKey,
 				parsedArticle.source,
 				articleId
 			).run();
 
-			console.log(`[Worker] Article ${articleId} processed and updated in D1`);
+			console.log(`[Worker] Article ${articleId} processed and metadata updated in D1`);
 
 			return {
 				title: parsedArticle.title,

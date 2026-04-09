@@ -3,6 +3,7 @@
 import { useActionState, useRef } from 'react';
 import { request } from '@/lib/request';
 import { showAlert } from '@/app/global-modals';
+import { useDashboardStore } from '../_store/store';
 
 /**
  * UploadArticle (文章采集输入框)
@@ -11,6 +12,7 @@ import { showAlert } from '@/app/global-modals';
  */
 export function UploadArticle() {
 	const formRef = useRef<HTMLFormElement>(null);
+	const fetchArticles = useDashboardStore((s) => s.fetchArticles);
 
 	// 使用 useActionState 替代手动的 useState 和 onSubmit 模式
 	const [state, formAction, isPending] = useActionState(async (prevState: any, formData: FormData) => {
@@ -34,6 +36,7 @@ export function UploadArticle() {
 
 		// 成功后清空输入框
 		formRef.current?.reset();
+		fetchArticles();
 		return { success: true };
 	}, null);
 
