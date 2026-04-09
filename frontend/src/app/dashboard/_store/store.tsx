@@ -15,16 +15,16 @@ export type InitialState = {
 /**
  * 状态定义（数据）
  */
-export interface BookState {
-	isLoading: boolean;
+export interface DashboardState {
 	view: 'books' | 'articles';
+	isBookLoading: boolean;
 	books: BookData[];
 }
 
 /**
  * 动作定义（方法）
  */
-export interface BookActions {
+export interface DashboardActions {
 	setView: (view: 'books' | 'articles') => void;
 	setBooks: (books: BookData[]) => void;
 	fetchBooks: () => Promise<void>;
@@ -34,31 +34,31 @@ export interface BookActions {
  * 完整的 Store 状态类型
  * 先定义“因”（类型契约），再产生“果”（具体实现）
  */
-export type BookStoreState = BookState & BookActions;
+export type DashboardStoreState = DashboardState & DashboardActions;
 
-const createBookStore = (initialState: InitialState = {}) => {
+const createDashboardStore = (initialState: InitialState = {}) => {
 	const { books = [], view = 'books' } = initialState;
 
-	return createStore<BookStoreState>()(
+	return createStore<DashboardStoreState>()(
 		persist(
-			combine<BookState, BookActions>(
+			combine<DashboardState, DashboardActions>(
 				{
-					// 状态实现 - 必须符合 BookState 接口
-					isLoading: false,
+					// 状态实现 - 必须符合 DashboardState 接口
 					view,
+					isBookLoading: false,
 					books,
 				},
 				(set) => ({
-					// 动作实现 - 必须符合 BookActions 接口
+					// 动作实现 - 必须符合 DashboardActions 接口
 					setView: (view) => set({ view }),
 					setBooks: (books) => set({ books }),
 					fetchBooks: async () => {
-						set({ isLoading: true });
+						set({ isBookLoading: true });
 						try {
 							const res = await request<{ books: BookData[] }>('/api/books');
 							set({ books: res.books });
 						} finally {
-							set({ isLoading: false });
+							set({ isBookLoading: false });
 						}
 					},
 				})
@@ -77,34 +77,34 @@ const createBookStore = (initialState: InitialState = {}) => {
 	);
 };
 
-export type BookStore = ReturnType<typeof createBookStore>;
+export type DashboardStore = ReturnType<typeof createDashboardStore>;
 
-const BookStoreContext = createContext<BookStore | null>(null);
+const DashboardStoreContext = createContext<DashboardStore | null>(null);
 
 type Props = {
 	initialState?: InitialState;
 };
 
-export function BookStoreProvider({
+export function DashboardStoreProvider({
 	children,
 	initialState = {}
 }: React.PropsWithChildren<Props>) {
-	const [store] = useState(() => createBookStore(initialState));
+	const [store] = useState(() => createDashboardStore(initialState));
 
 	return (
-		<BookStoreContext value={store}>
+		<DashboardStoreContext value={store}>
 			{children}
-		</BookStoreContext>
+		</DashboardStoreContext>
 	);
 }
 
 /**
  * 更加推荐的用法：支持 selector，避免不必要的重渲染
  */
-export function useBookStore<T>(selector: (state: BookStoreState) => T): T {
-	const context = use(BookStoreContext);
+export function useDashboardStore<T>(selector: (state: DashboardStoreState) => T): T {
+	const context = use(DashboardStoreContext);
 	if (!context) {
-		throw new Error('useBookStore must be used within a BookStoreProvider');
+		throw new Error('useDashboardStore must be used within a DashboardStoreProvider');
 	}
 	return useStore(context, selector);
 }

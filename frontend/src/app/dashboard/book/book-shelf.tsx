@@ -4,17 +4,17 @@ import { Loader2 } from 'lucide-react';
 import { Book } from './book';
 import { UploadBook } from './upload-book';
 import { useShallow } from 'zustand/react/shallow';
-import { useBookStore } from '../../_store/book-store';
-import { useBookPolling } from '../../_hooks/use-book-polling';
+import { useDashboardStore } from '../_store/store';
+import { useBookPolling } from '../_hooks/use-book-polling';
 
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)
  */
 export function BookShelf() {
-	const { books, isLoading, fetchBooks } = useBookStore(
+	const { books, isBookLoading, fetchBooks } = useDashboardStore(
 		useShallow((s) => ({
 			books: s.books,
-			isLoading: s.isLoading,
+			isBookLoading: s.isBookLoading,
 			fetchBooks: s.fetchBooks,
 		}))
 	);
@@ -24,7 +24,7 @@ export function BookShelf() {
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">
-			{isLoading && books.length === 0 ? (
+			{isBookLoading && books.length === 0 ? (
 				/* 加载中状态 */
 				<div className="flex-1 flex items-center justify-center p-12">
 					<div className="flex flex-col items-center gap-4">

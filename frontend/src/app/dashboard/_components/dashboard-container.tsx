@@ -1,6 +1,6 @@
 'use client';
 
-import { useBookStore } from '../book/_store/book-store';
+import { useDashboardStore } from '../_store/store';
 import { BookShelf } from '../book/book-shelf';
 import { ArticleList } from '../article/article-list';
 
@@ -9,7 +9,7 @@ import { ArticleList } from '../article/article-list';
  * 职责：根据 Store 中的当前视图 (view) 状态，控制图书列表和文章列表的显隐。
  */
 export function DashboardContainer() {
-	const view = useBookStore((s) => s.view);
+	const view = useDashboardStore((s) => s.view);
 
 	return (
 		<>

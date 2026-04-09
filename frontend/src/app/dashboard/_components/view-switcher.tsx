@@ -1,14 +1,14 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import { useBookStore } from '../book/_store/book-store';
+import { useDashboardStore } from '../_store/store';
 
 /**
  * ViewSwitcher (视图切换器)
  * 职责：处理“图书”和“文章”视图的切换，并在客户端维护 URL 同步。
  */
 export function ViewSwitcher() {
-	const { view, setView } = useBookStore(
+	const { view, setView } = useDashboardStore(
 		useShallow((s) => ({
 			view: s.view,
 			setView: s.setView,

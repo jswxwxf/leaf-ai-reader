@@ -1,6 +1,6 @@
 import { Header } from './_components/header';
 import { getBooks } from '@/lib/book';
-import { BookStoreProvider, InitialState } from './book/_store/book-store';
+import { DashboardStoreProvider, InitialState } from './_store/store';
 import { DashboardContainer } from './_components/dashboard-container';
 
 type Props = {
@@ -20,7 +20,7 @@ export default async function DashboardPage({
 	const { view = 'books' } = await searchParams;
 
 	return (
-		<BookStoreProvider
+		<DashboardStoreProvider
 			initialState={{
 				books: initialBooks,
 				view
@@ -33,7 +33,7 @@ export default async function DashboardPage({
 				{/* 列表与交互区域 (根据 Store 显隐) */}
 				<DashboardContainer />
 			</div>
-		</BookStoreProvider>
+		</DashboardStoreProvider>
 	);
 }
 
