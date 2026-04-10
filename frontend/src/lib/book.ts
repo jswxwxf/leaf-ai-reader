@@ -20,15 +20,17 @@ export interface BookData {
  * 获取当前登录用户的所有书籍列表 (Server Action)
  * 封装了鉴权、上下文获取和数据库查询的最核心逻辑
  */
-export async function getBooks(): Promise<BookData[]> {
+export async function getBooks(
+	cloudflare?: { env: CloudflareEnv; ctx?: ExecutionContext }
+): Promise<BookData[]> {
 	// 1. 鉴权
 	const user = await getCurrentUser();
 	if (!user?.sub) {
 		throw new Error('Unauthorized');
 	}
 
-	// 2. 获取 Cloudflare 运行环境 (D1)
-	const { env } = getCloudflareContext();
+	// 2. 获取 Cloudflare 运行环境 (D1)：优先使用传入参数
+	const { env } = cloudflare || getCloudflareContext();
 
 	// 3. 执行 D1 数据库查询
 	const { results } = await env.LEAF_BOOK_DB.prepare(
@@ -42,7 +44,10 @@ export async function getBooks(): Promise<BookData[]> {
  * 删除书籍 (Server Action / 内部逻辑)
  * 同步删除数据库记录，并在后台异步删除 R2 关联文件
  */
-export async function deleteBook(id: string): Promise<{ success: boolean }> {
+export async function deleteBook(
+	id: string,
+	cloudflare?: { env: CloudflareEnv; ctx: ExecutionContext }
+): Promise<{ success: boolean }> {
 	// 1. 鉴权
 	const user = await getCurrentUser();
 	const userId = user?.sub;
@@ -50,8 +55,8 @@ export async function deleteBook(id: string): Promise<{ success: boolean }> {
 		throw new Error('Unauthorized');
 	}
 
-	// 2. 获取 Cloudflare 上下文
-	const { env, ctx } = getCloudflareContext();
+	// 2. 获取 Cloudflare 上下文：优先使用传入参数
+	const { env, ctx } = cloudflare || getCloudflareContext();
 
 	// 3. 执行 D1 数据库删除并校验所有权
 	// 如果不是当前用户的书，SQL 里的 WHERE 就会滤掉它，导致 meta.changes === 0

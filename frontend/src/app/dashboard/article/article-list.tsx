@@ -26,7 +26,7 @@ export function ArticleList() {
 	return (
 		<main className="w-full flex-1">
 			{/* 模拟地址栏 - 吸顶 */}
-			<div className="sticky top-[65px] z-40 bg-base-200/95 backdrop-blur-sm px-4 md:px-6 py-4 border-b border-base-300 mb-1">
+			<div className="sticky top-[65px] z-40 bg-base-200/95 backdrop-blur-sm px-4 md:px-6 py-4 mb-2">
 				<div className="max-w-6xl mx-auto">
 					<UploadArticle />
 				</div>

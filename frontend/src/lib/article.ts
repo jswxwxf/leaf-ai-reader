@@ -19,15 +19,17 @@ export interface ArticleData {
 /**
  * 获取当前登录用户的所有文章列表
  */
-export async function getArticles(): Promise<ArticleData[]> {
+export async function getArticles(
+	cloudflare?: { env: CloudflareEnv; ctx?: ExecutionContext }
+): Promise<ArticleData[]> {
 	// 1. 鉴权
 	const user = await getCurrentUser();
 	if (!user?.sub) {
 		throw new Error('Unauthorized');
 	}
 
-	// 2. 获取 Cloudflare 运行环境 (D1)
-	const { env } = getCloudflareContext();
+	// 2. 获取 Cloudflare 运行环境 (D1)：优先使用传入的参数，否则才调用上下文
+	const { env } = cloudflare || getCloudflareContext();
 
 	// 3. 执行 D1 数据库查询
 	const { results } = await env.LEAF_BOOK_DB.prepare(
@@ -41,7 +43,10 @@ export async function getArticles(): Promise<ArticleData[]> {
  * 删除文章
  * 同步删除数据库记录，并在后台异步删除 R2 关联文件
  */
-export async function deleteArticle(id: string): Promise<{ success: boolean }> {
+export async function deleteArticle(
+	id: string,
+	cloudflare?: { env: CloudflareEnv; ctx: ExecutionContext }
+): Promise<{ success: boolean }> {
 	// 1. 鉴权
 	const user = await getCurrentUser();
 	const userId = user?.sub;
@@ -49,8 +54,8 @@ export async function deleteArticle(id: string): Promise<{ success: boolean }> {
 		throw new Error('Unauthorized');
 	}
 
-	// 2. 获取 Cloudflare 上下文
-	const { env, ctx } = getCloudflareContext();
+	// 2. 获取 Cloudflare 上下文：优先使用传入的参数，否则从上下文获取
+	const { env, ctx } = cloudflare || getCloudflareContext();
 
 	// 3. 执行 D1 数据库删除并校验所有权
 	const { meta } = await env.LEAF_BOOK_DB.prepare(
