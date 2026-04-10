@@ -1,3 +1,10 @@
+import { parseHTML } from 'linkedom';
+import createDOMPurify from 'dompurify';
+
+// 初始化 DOMPurify 实例 (单例模式)
+const { window } = parseHTML('<!DOCTYPE html><html><body></body></html>');
+const DOMPurify = createDOMPurify(window as any);
+
 /**
  * 微信公众号文章解析器
  */
@@ -12,25 +19,25 @@ export function extract(document: any) {
   if (!jsContent) return null;
 
   // 3. 执行清洗
-  clean(jsContent);
+  const cleanContent = cleanHtml(jsContent);
 
   return {
     title,
-    content: jsContent.innerHTML.trim(),
+    content: cleanContent,
     source: "微信公众号"
   };
 }
 
 /**
- * 激进清理并重构 HTML
- * 目标：保留核心结构，剔除冗余样式，将文本拆分为带 ID 的 span 句子
+ * 清洗 HTML 容器内容
+ * @param container DOM 容器节点 (linkedom Node)
+ * @returns 清洗后的 HTML 字符串
  */
-function clean(container: any) {
+function cleanHtml(container: any): string {
   let sentenceId = 0;
   const getNextId = () => ++sentenceId;
 
-  // 1. 结构平坦化：微信 HTML 经常会有冗余的 span/section/div 嵌套
-  // 我们先剥掉这些“透明”容器，并合并相邻的碎片文本节点
+  // 1. 结构平坦化：剥掉冗余容器，合并碎片节点
   normalizeStructure(container);
 
   const children = Array.from(container.childNodes);
@@ -50,7 +57,24 @@ function clean(container: any) {
     }
   });
 
-  container.innerHTML = fragments.join('\n');
+  const rawHtml = fragments.join('\n');
+
+  // 3. 安全净化 (Sanitize)
+  // 配置白名单，仅保留业务必需的标签和属性
+  const sanitizedHtml = DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: [
+      'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'span', 'strong', 'b', 'em', 'i', 'sub', 'sup', 'del',
+      'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code',
+      'img', 'br'
+    ],
+    ALLOWED_ATTR: ['id', 'class', 'src', 'alt'],
+    // 强制校验协议
+    ADD_TAGS: ['iframe'], // 如果后续需要支持嵌入视频，可在此开启
+    ALLOW_DATA_ATTR: false,
+  });
+
+  return sanitizedHtml;
 }
 
 /**
@@ -102,7 +126,9 @@ function transformNode(node: any, getNextId: () => number): string {
 
     // 图片特殊处理
     if (tagName === 'img') {
-      const src = node.getAttribute('data-src') || node.getAttribute('src');
+      const src = node.getAttribute('data-src') ||
+        node.getAttribute('src') ||
+        node.getAttribute('data-actualsrc'); // 增加一些常见的 Data 属性
       return src ? `<img src="${src}">` : "";
     }
 
@@ -136,11 +162,13 @@ function transformNode(node: any, getNextId: () => number): string {
   return "";
 }
 
+/**
+ * 将文本拆分为句子
+ */
 function splitSentences(text: string): string[] {
   if (!text.trim()) return [];
 
   // 改进的正则：匹配以标点（。！？!?……）结尾的片段，或者不带标点的片段
-  // 支持微信常见的多种省略号形式
   const regex = /([^。！？!?……\n]+([。！？!?……\n]|\.{3})*)/g;
   const matches = text.match(regex);
 

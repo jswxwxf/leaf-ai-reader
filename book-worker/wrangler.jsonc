@@ -18,7 +18,7 @@
 		{
 			"binding": "LEAF_BOOK_DB",
 			"database_name": "leaf-book-db",
-			"database_id": "f50f21cc-74e3-419a-abdd-c6c51f92d4f7",
+			"database_id": "1cb6d87d-94f3-447c-b68a-169b0859641e",
 			"migrations_dir": "migrations"
 		}
 	],
@@ -48,7 +48,7 @@
 	// "vars": {  "MY_VARIABLE": "production_value" }
 	"vars": {
 		"NODE_ENV": "production"
-	}
+	},
 	/**
 	 * Static Assets
 	 * https://developers.cloudflare.com/workers/static-assets/binding/
@@ -58,5 +58,8 @@
 	 * Service Bindings (communicate between multiple Workers)
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
-	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ],
+	"ai": {
+		"binding": "AI"
+	}
 }

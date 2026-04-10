@@ -13,6 +13,7 @@ export interface ArticleData {
 	source?: string;
 	status: 'processing' | 'ready' | 'error';
 	content?: string;
+	summary?: string;
 	created_at: string; // D1 中的 DATETIME
 }
 

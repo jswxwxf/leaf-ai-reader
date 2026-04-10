@@ -1,7 +1,7 @@
 import { Header } from "./header";
 import { Chapters } from "./chapters";
 import { Content } from "./content";
-import { Highlights } from "./highlights";
+import { Summary } from "./summary";
 import { Footer } from "./footer";
 import { ReaderStoreProvider } from "../_store/store";
 import { getArticle, getArticleData, type ArticleData } from "@/lib/article";
@@ -26,7 +26,12 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 	}
 
 	if (!data) {
-		return <div>数据加载失败</div>;
+		return (
+			<div className="flex flex-col items-center justify-center h-screen bg-base-100 text-base-content/60">
+				<div className="text-xl font-medium mb-2">数据加载失败</div>
+				<p className="text-sm">文章不存在或链路已失效</p>
+			</div>
+		);
 	}
 	let content = "";
 	if (article_id && 'content' in data && data.content) {
@@ -38,19 +43,21 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 			initialState={{
 				article_id,
 				book_id,
+				data,
+				content,
 			}}
 		>
 			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden font-sans">
-				<Header isPopup={isPopup} data={data} />
+				<Header isPopup={isPopup} />
 
 				{/* 中间主要区域 */}
 				<main className="flex flex-1 overflow-hidden">
 					{/* 仅在非文章模式（即书籍模式）下显示目录 */}
 					{!article_id && <Chapters />}
 
-					<Content content={content} />
+					<Content />
 
-					<Highlights />
+					<Summary />
 				</main>
 
 				<Footer />

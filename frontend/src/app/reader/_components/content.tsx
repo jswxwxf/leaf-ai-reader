@@ -1,11 +1,14 @@
-interface Props {
-  content?: string;
-}
+"use client";
+
+import { useReaderStore } from "../_store/store";
+
+interface Props {}
 
 /**
  * 阅读器正文区域组件
  */
-export function Content({ content }: Props) {
+export function Content({}: Props) {
+  const content = useReaderStore((state) => state.content);
   return (
     <section className="flex-1 overflow-y-auto bg-base-200/30 px-4 md:px-0 scroll-smooth">
       {content ? (

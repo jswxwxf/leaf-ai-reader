@@ -2,19 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { type ArticleData } from "@/lib/article";
-import { type BookData } from "@/lib/book";
+import { useReaderStore } from "../_store/store";
 
 interface Props {
 	isPopup?: boolean;
-	data?: ArticleData | BookData | null;
 }
 
 /**
  * 阅读器顶部状态栏组件
  */
-export function Header({ isPopup = true, data }: Props) {
+export function Header({ isPopup = true }: Props) {
 	const router = useRouter();
+	const data = useReaderStore((state) => state.data);
 
 	return (
 		<header className="navbar bg-base-200 border-b border-base-300 px-4 h-14 flex-none">

@@ -1,7 +1,7 @@
 import { parseHTML } from 'linkedom';
 import { Readability } from '@mozilla/readability';
 import { extract } from './crawlers/wechat';
-
+import { injectSentenceIds } from './utils/sentence';
 
 /**
  * 爬虫解析结果接口
@@ -62,10 +62,11 @@ export async function crawlArticle(url: string): Promise<CrawlResult> {
 		const parsed = reader.parse();
 		if (parsed) {
 			title = title || parsed.title || "无标题";
-			content = parsed.content || "";
 			source = parsed.siteName || source;
+			
+			// 对于 Readability 结果，我们只进行最小化的句子拆分，不剔除任何 HTML 标签
+			content = injectSentenceIds(parsed.content || "");
 		}
-
 	}
 
 	if (!content) {

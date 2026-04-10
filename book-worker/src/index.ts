@@ -14,6 +14,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { EpubParser } from "./epub";
 import { crawlArticle } from "./article";
+import { toCompactText, generateSummary } from "./utils/summary";
 
 export default class extends WorkerEntrypoint<Env> {
 	/**
@@ -23,7 +24,7 @@ export default class extends WorkerEntrypoint<Env> {
 		const url = new URL(request.url);
 		if (url.pathname === "/debug") {
 			const userId = "local-dev";
-			const articleId = "df97fd0b-ae47-4441-b02d-0c891e2f625f";
+			const articleId = "22389518-f686-43ad-98dc-581e81a7b136";
 			try {
 				const result = await this.processArticle(userId, articleId);
 				return Response.json(result);
@@ -180,12 +181,31 @@ export default class extends WorkerEntrypoint<Env> {
 			});
 			console.log(`[Worker] Successfully saved article content to R2: ${contentKey}`);
 
-			// 4. 更新 D1 状态为 ready (content 字段留空或存占位符，全文已转存 R2)
+			// 4. AI 摘要生成
+			let summaryJson = null;
+			if ((this.env as any).NODE_ENV !== 'development') {
+				try {
+					console.log(`[Worker] Starting AI summary for ${parsedArticle.title}...`);
+					const compactText = toCompactText(parsedArticle.content);
+					const summaryResult = await generateSummary(this.env.AI, compactText);
+					if (summaryResult) {
+						summaryJson = JSON.stringify(summaryResult);
+						console.log(`[Worker] Successfully generated AI summary (${summaryResult.summaries?.length || 0} items)`);
+					}
+				} catch (aiError) {
+					console.error("[Worker] AI Summary calculation failed (but continuing process):", aiError);
+				}
+			} else {
+				console.log("[Worker] Skipping AI summary in development environment");
+			}
+
+			// 5. 更新 D1 状态为 ready (同时保存摘要内容)
 			await this.env.LEAF_BOOK_DB.prepare(
-				"UPDATE articles SET title = ?, content = ?, source = ?, status = 'ready' WHERE id = ?"
+				"UPDATE articles SET title = ?, content = ?, summary = ?, source = ?, status = 'ready' WHERE id = ?"
 			).bind(
 				parsedArticle.title || article.title,
 				contentKey,
+				summaryJson,
 				parsedArticle.source,
 				articleId
 			).run();

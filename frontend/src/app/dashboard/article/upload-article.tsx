@@ -19,14 +19,14 @@ export function UploadArticle() {
 		const url = (formData.get('url') as string)?.trim();
 		if (!url) return null;
 
-		// 简单的 URL 正则校验
-		const urlPattern = /^https?:\/\/.+/i;
-		if (!urlPattern.test(url)) {
-			showAlert({
-				message: '请输入有效的文章网址 (须以 http:// 或 https:// 开头)'
-			});
-			return null;
-		}
+		// 限制仅支持微信公众号文章
+		// const urlPattern = /^https?:\/\/mp\.weixin\.qq\.com\/.+/i;
+		// if (!urlPattern.test(url)) {
+		// 	showAlert({
+		// 		message: '目前仅支持微信公众号文章 (网址须以 https://mp.weixin.qq.com/ 开头)'
+		// 	});
+		// 	return null;
+		// }
 
 		// 已经在 request 工具内部处理了错误弹窗，这里无需再次 catch
 		await request('/api/articles/upload', {
@@ -49,7 +49,7 @@ export function UploadArticle() {
 			<input
 				type="text"
 				name="url"
-				placeholder="输入文章网址"
+				placeholder="输入微信公众号文章网址"
 				disabled={isPending}
 				className="input input-bordered join-item w-full focus:outline-none focus:border-primary border-r-0"
 			/>

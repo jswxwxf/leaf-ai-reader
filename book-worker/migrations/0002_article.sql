@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS articles (
     title TEXT NOT NULL,
     source TEXT,
     content TEXT,
+    summary TEXT,
     status TEXT CHECK(status IN ('processing', 'ready', 'error')) DEFAULT 'processing',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

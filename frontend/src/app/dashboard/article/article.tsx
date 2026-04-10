@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ExternalLink, Globe, Loader2, AlertCircle, X } from 'lucide-react';
 import { ArticleData, deleteArticle } from '@/lib/article';
 import { useDashboardStore } from '../_store/store';
@@ -14,8 +14,15 @@ interface Props {
  * 职责：展示单篇文章的卡片 UI，支持加载中/就绪/错误状态。
  */
 export function Article({ article }: Props) {
+	const router = useRouter();
 	const fetchArticles = useDashboardStore((s) => s.fetchArticles);
 	const status = article.status || 'ready';
+
+	const handleCardClick = () => {
+		if (status === 'ready') {
+			router.push(`/reader?article_id=${article.id}`);
+		}
+	};
 
 	const handleDelete = async (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -39,10 +46,10 @@ export function Article({ article }: Props) {
 	};
 
 	return (
-		<Link
-			href={`/reader?article_id=${article.id}`}
-			className={`group bg-base-100 rounded-xl p-4 shadow-sm border border-base-200 transition-all flex items-center gap-4 relative ${status === 'ready' ? 'hover:border-primary/30 hover:shadow-md active:scale-[0.98] active:bg-base-200 cursor-pointer' : 'cursor-default pointer-events-none'
-				}`}
+		<div
+			onClick={handleCardClick}
+			className={`group bg-base-100 rounded-xl p-4 shadow-sm border border-base-200 transition-all flex items-center gap-4 relative ${status === 'ready' ? 'hover:border-primary/30 hover:shadow-md active:scale-[0.98] active:bg-base-200 cursor-pointer' : 'cursor-default'
+				} ${status === 'processing' ? 'pointer-events-none' : ''}`}
 		>
 			{/* 删除按钮 (仅在悬停时显示) */}
 			{status !== 'processing' && (
@@ -74,7 +81,22 @@ export function Article({ article }: Props) {
 				</h3>
 				<div className="flex items-center gap-2 mt-1">
 					{status !== 'processing' && (
-						<span className="badge badge-ghost badge-sm opacity-70 px-2 py-0.5">{article.source || '未知来源'}</span>
+						<div className="flex items-center text-[11px] opacity-70">
+							<span className="max-w-[100px] truncate">{article.source || '未知来源'}</span>
+							<span className="mx-1 opacity-20">|</span>
+							<a
+								href={article.source_url}
+								target="_blank"
+								rel="noopener noreferrer"
+								onClick={(e) => e.stopPropagation()}
+								className="relative font-medium hover:text-primary hover:underline transition-colors"
+								title="在新窗口打开原站"
+							>
+								跳转原站
+								{/* 移动端点击区域扩充层：扩大至 48px (size-12)，仅在非精细指点设备（如手机）开启 */}
+								<span className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-10 pointer-fine:hidden" aria-hidden="true" />
+							</a>
+						</div>
 					)}
 					{status === 'processing' && (
 						<span className="text-[11px] text-primary animate-pulse font-medium">请稍候...</span>
@@ -97,6 +119,6 @@ export function Article({ article }: Props) {
 					</div>
 				)}
 			</div>
-		</Link>
+		</div>
 	);
 }

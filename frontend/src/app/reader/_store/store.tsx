@@ -5,6 +5,9 @@ import { createStore, useStore } from 'zustand';
 import { combine, persist, createJSONStorage } from 'zustand/middleware';
 import { createUrlSearchStorage } from '@/lib/zustand-helpers';
 
+import { type ArticleData } from '@/lib/article';
+import { type BookData } from '@/lib/book';
+
 export type ReaderMode = 'article' | 'book';
 
 /**
@@ -14,6 +17,8 @@ export type InitialState = {
 	mode?: ReaderMode | null;
 	article_id?: string | null;
 	book_id?: string | null;
+	data?: ArticleData | BookData | null;
+	content?: string;
 };
 
 /**
@@ -23,6 +28,8 @@ export interface ReaderState {
 	mode: ReaderMode | null;
 	article_id: string | null;
 	book_id: string | null;
+	data: ArticleData | BookData | null;
+	content: string;
 	isLoading: boolean;
 }
 
@@ -33,6 +40,8 @@ export interface ReaderActions {
 	setMode: (mode: ReaderMode | null) => void;
 	setArticleId: (id: string | null) => void;
 	setBookId: (id: string | null) => void;
+	setData: (data: ArticleData | BookData | null) => void;
+	setContent: (content: string) => void;
 }
 
 /**
@@ -47,7 +56,9 @@ const createReaderStore = (initialState: InitialState = {}) => {
 	const { 
 		mode = null, 
 		article_id = null, 
-		book_id = null 
+		book_id = null,
+		data = null,
+		content = ""
 	} = initialState;
 
 	return createStore<ReaderStoreState>()(
@@ -57,6 +68,8 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					mode,
 					article_id,
 					book_id,
+					data,
+					content,
 					isLoading: false,
 				},
 				(set, get) => ({
@@ -69,6 +82,8 @@ const createReaderStore = (initialState: InitialState = {}) => {
 						book_id: id, 
 						mode: get().article_id ? 'article' : (id ? 'book' : null) 
 					}),
+					setData: (data) => set({ data }),
+					setContent: (content) => set({ content }),
 				})
 			),
 			{
