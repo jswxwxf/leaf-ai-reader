@@ -1,37 +1,46 @@
 "use client";
 
-import { Loader2 } from 'lucide-react';
+import { use, useEffect } from 'react';
 import { Book } from './book';
 import { UploadBook } from './upload-book';
 import { useShallow } from 'zustand/react/shallow';
 import { useDashboardStore } from '../_store/store';
 import { usePolling } from '../_hooks/use-polling';
+import { Loading } from '../_components/loading';
+import { BookData } from '@/lib/book';
 
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)
  */
-export function BookShelf() {
-	const { books, isBookLoading, fetchBooks } = useDashboardStore(
+export function BookShelf({ booksPromise }: { booksPromise: Promise<BookData[]> }) {
+	// 使用 use() 解析从服务器传下来的 Promise
+	const initialBooks = use(booksPromise);
+
+	const { books, isBookLoading, fetchBooks, setBooks } = useDashboardStore(
 		useShallow((s) => ({
 			books: s.books,
 			isBookLoading: s.isBookLoading,
 			fetchBooks: s.fetchBooks,
+			setBooks: s.setBooks,
 		}))
 	);
+
+	// 数据同步：将服务器解析出的初始数据同步到全局 Store
+	// 这样可以确保其他依赖 Store 的组件（如侧边栏计数等）能够获取到最新数据
+	useEffect(() => {
+		if (initialBooks && books.length === 0) {
+			setBooks(initialBooks);
+		}
+	}, [initialBooks, setBooks, books.length]);
 
 	// 监听书籍状态并自动刷新轮询
 	usePolling(books, fetchBooks);
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">
+			{/* 处理后续刷新时的二次加载状态 (可选) */}
 			{isBookLoading && books.length === 0 ? (
-				/* 加载中状态 */
-				<div className="flex-1 flex items-center justify-center p-12">
-					<div className="flex flex-col items-center gap-4">
-						<Loader2 className="w-10 h-10 text-primary animate-spin" />
-						<p className="text-sm opacity-60">加载书籍列表中...</p>
-					</div>
-				</div>
+				<Loading message="刷新书架中..." />
 			) : books.length === 0 ? (
 				/* 空状态 */
 				<div className="flex-1 flex items-center justify-center py-20">

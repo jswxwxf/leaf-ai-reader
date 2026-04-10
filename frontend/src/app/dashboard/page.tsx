@@ -17,16 +17,14 @@ export default async function DashboardPage({
 	searchParams,
 }: Props) {
 	// 1. 服务端预取数据与参数
-	const initialBooks = await getBooks();
-	const initialArticles = await getArticles();
+	const booksPromise = getBooks();
+	const articlesPromise = getArticles();
 	const { view = 'books' } = await searchParams;
 
 	return (
 		<DashboardStoreProvider
 			initialState={{
 				view,
-				books: initialBooks,
-				articles: initialArticles
 			} as InitialState}
 		>
 			<div className="min-h-screen bg-base-200 flex flex-col">
@@ -34,7 +32,7 @@ export default async function DashboardPage({
 				<Header />
 
 				{/* 列表与交互区域 (根据 Store 显隐) */}
-				<DashboardContainer />
+				<DashboardContainer booksPromise={booksPromise} articlesPromise={articlesPromise} />
 			</div>
 		</DashboardStoreProvider>
 	);

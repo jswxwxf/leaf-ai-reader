@@ -1,24 +1,37 @@
 'use client';
 
-import { useEffect } from 'react';
+import { use, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { usePolling } from '../_hooks/use-polling';
 import { Article } from './article';
 import { UploadArticle } from './upload-article';
 import { useDashboardStore } from '../_store/store';
+import { Loading } from '../_components/loading';
+import { ArticleData } from '@/lib/article';
 
 /**
  * ArticleList (文章列表)
  * 职责：以垂直列表形式展示采集的文章。
  */
-export function ArticleList() {
-	const { articles, fetchArticles, isArticleLoading } = useDashboardStore(
+export function ArticleList({ articlesPromise }: { articlesPromise: Promise<ArticleData[]> }) {
+	// 使用 use() 解析服务器传下来的 Promise，激活外部 Suspense
+	const initialArticles = use(articlesPromise);
+
+	const { articles, fetchArticles, setArticles, isArticleLoading } = useDashboardStore(
 		useShallow((s) => ({
 			articles: s.articles,
 			fetchArticles: s.fetchArticles,
+			setArticles: s.setArticles,
 			isArticleLoading: s.isArticleLoading,
 		}))
 	);
+
+	// 同步初始数据到全局 Store
+	useEffect(() => {
+		if (initialArticles && articles.length === 0) {
+			setArticles(initialArticles);
+		}
+	}, [initialArticles, setArticles, articles.length]);
 
 	// 监听文章状态并自动刷新轮询（当有正在处理的文章时）
 	usePolling(articles, fetchArticles);
@@ -34,9 +47,7 @@ export function ArticleList() {
 
 			<div className="flex flex-col gap-3 p-4 pt-1 md:px-6 md:pb-6 md:pt-0">
 				{isArticleLoading && articles.length === 0 ? (
-					<div className="flex justify-center py-10">
-						<span className="loading loading-spinner loading-lg text-primary opacity-20"></span>
-					</div>
+					<Loading message="正在刷新文章列表..." />
 				) : (
 					articles.map((article) => (
 						<Article key={article.id} article={article} />
