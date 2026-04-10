@@ -1,4 +1,7 @@
-# PRD 006: 阅读器平行路由与拦截布局设计
+# PRD 005: 阅读器平行路由与拦截布局设计
+
+> **状态：已完成 (Completed)**
+> **更新时间：2026-04-10**
 
 ## 1. 背景与目标
 为了提升用户体验，我们希望在 Dashboard 中点击文章进入阅读器时，阅读器能以全屏遮罩的形式盖在 Dashboard 之上，同时保留 Dashboard 的运行状态（如滚动位置、数据轮询等）。当用户直接通过 URL 访问或刷新阅读器页面时，则只显示纯净的阅读器界面，不加载 Dashboard。
@@ -56,3 +59,10 @@ export default function RootLayout({ children, reader }) {
 - **代码重用**：阅读器的主要逻辑（文章渲染、章节树等）应解耦为独立组件，以便同时在原始页面和拦截页面引用。
 - **零侵入性**：Dashboard 内部组件（如文章卡片）无需感知此逻辑，依然使用标准的 `<Link href="/reader">`。
 - **返回逻辑**：使用 `useRouter` 的 `back()` 方法确保返回到 Dashboard 之前的状态。
+
+## 5. 最终实现总结
+- **Parallel Routes**：成功在 `layout.tsx` 中使用 `{reader}` 插槽。
+- **Intercepting Routes**：通过 `(.)reader` 实现了在不丢失 Dashboard 状态的情况下的全屏弹出效果。
+- **状态同步**：引入了 `ReaderStore` (Zustand)，并结合 `createUrlSearchStorage` 实现了 `article_id` 和 `book_id` 与 URL 的自动双向同步。
+- **服务器组件兼容**：`Reader` 核心组件保持为 Server Component，通过 `initialState` 由 Page 层下发初始数据，保证了 SEO 与首屏内容。
+- **条件渲染**：实现了在 `article` 模式下自动隐藏章节目录侧边栏的逻辑。

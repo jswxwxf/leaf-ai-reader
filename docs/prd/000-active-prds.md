@@ -5,10 +5,10 @@
 - [x] **PRD-001: Logto 极简集成** ([001-logto-auth.md](./001-logto-auth.md))
 - [x] **PRD-002: 上传及管理图书** ([002-book-upload.md](./002-book-upload.md)) — 已支持 Modal 上传、R2 存储及删除管理
 - [x] **PRD-003: EPUB 结构解析** ([003-epub-indexing.md](./003-epub-indexing.md)) — 已打通 R2 元数据提取与 TOC 索引生成
-- [ ] **PRD-004: 网页文章采集与处理** ([004-web-article-collection.md](./004-web-article-collection.md)) — 规划中，支持自动抓取与手动粘贴
-- [/] **PRD-005: 阅读页与章节渲染** ([005-lazy-chapter-render.md](./005-lazy-chapter-render.md)) — 已完成 UI 框架与目录树集成，开发中
-- [/] **PRD-006: 阅读器平行路由与拦截布局** ([006-reader-routing-overlay.md](./006-reader-routing-overlay.md)) — 设计已完成，准备实施
-
+- [x] **PRD-004: 网页文章采集与 D1 存储** ([004-web-article-collection.md](./004-web-article-collection.md)) — 已支持自动抓取、R2 持久化与状态轮询
+- [x] **PRD-005: 阅读器平行路由与拦截布局** ([005-reader-routing-overlay.md](./005-reader-routing-overlay.md)) — 已实现无损状态切换与 URL 自动同步
+- [/] **PRD-006: 采集文章阅读渲染** ([006-render-article-reader.md](./006-render-article-reader.md)) — **[Phase 1]** 已完成目录集成，正文拉取 API 开发中
+- [ ] **PRD-007: 图书 EPUB 实时提取与渲染** ([007-render-book-reader.md](./007-render-book-reader.md)) — **[Phase 2]** 待实现实时解压与图片中转代理
 
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*
