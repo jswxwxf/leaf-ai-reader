@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createHandler, HandlerContext } from '../../_handler';
 
 
@@ -38,6 +40,9 @@ export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, req
 			).bind("error", articleId).run();
 		}
 	})());
+
+	// 3. 告知 Next.js 刷新仪表盘页面的缓存数据
+	revalidatePath('/dashboard');
 
 	return {
 		success: true,

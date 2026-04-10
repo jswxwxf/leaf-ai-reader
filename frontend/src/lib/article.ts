@@ -1,6 +1,7 @@
 "use server";
 
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
 
 /**
@@ -145,6 +146,9 @@ export async function deleteArticle(
 
 	// 让清理任务在后台运行
 	ctx.waitUntil(cleanupTask());
+
+	// 告知 Next.js 刷新仪表盘页面的缓存数据
+	revalidatePath('/dashboard');
 
 	return { success: true };
 }

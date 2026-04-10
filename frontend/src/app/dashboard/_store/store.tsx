@@ -63,7 +63,7 @@ const createDashboardStore = (initialState: InitialState = {}) => {
 					fetchBooks: async () => {
 						set({ isBookLoading: true });
 						try {
-							const res = await request<{ books: BookData[] }>('/api/books');
+							const res = await request<{ books: BookData[] }>('/api/books', { cache: 'no-store' });
 							set({ books: res.books });
 						} finally {
 							set({ isBookLoading: false });
@@ -73,7 +73,7 @@ const createDashboardStore = (initialState: InitialState = {}) => {
 					fetchArticles: async () => {
 						set({ isArticleLoading: true });
 						try {
-							const res = await request<{ articles: ArticleData[] }>('/api/articles');
+							const res = await request<{ articles: ArticleData[] }>('/api/articles', { cache: 'no-store' });
 							set({ articles: res.articles });
 						} finally {
 							set({ isArticleLoading: false });
