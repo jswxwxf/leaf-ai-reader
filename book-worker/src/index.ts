@@ -183,11 +183,19 @@ export default class extends WorkerEntrypoint<Env> {
 
 			// 4. AI 摘要生成
 			let summaryJson = null;
-			if ((this.env as any).NODE_ENV !== 'development') {
+			// 只有在生产环境，或者在开发环境且提供了 GEMINI_API_KEY 时才运行 AI 摘要
+			const shouldRunAI = (this.env as any).NODE_ENV !== 'development' || this.env.GEMINI_API_KEY;
+
+			if (shouldRunAI) {
 				try {
 					console.log(`[Worker] Starting AI summary for ${parsedArticle.title}...`);
 					const compactText = toCompactText(parsedArticle.content);
-					const summaryResult = await generateSummary(this.env.AI, compactText);
+					const summaryResult = await generateSummary(
+						this.env.AI, 
+						compactText, 
+						this.env.GEMINI_API_KEY,
+						(this.env as any).GEMINI_API_BASE_URL
+					);
 					if (summaryResult) {
 						summaryJson = JSON.stringify(summaryResult);
 						console.log(`[Worker] Successfully generated AI summary (${summaryResult.summaries?.length || 0} items)`);
@@ -196,7 +204,7 @@ export default class extends WorkerEntrypoint<Env> {
 					console.error("[Worker] AI Summary calculation failed (but continuing process):", aiError);
 				}
 			} else {
-				console.log("[Worker] Skipping AI summary in development environment");
+				console.log("[Worker] Skipping AI summary in development environment (no Gemini API Key set)");
 			}
 
 			// 5. 更新 D1 状态为 ready (同时保存摘要内容)

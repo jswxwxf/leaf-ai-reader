@@ -5,6 +5,8 @@ import createDOMPurify from 'dompurify';
 const { window } = parseHTML('<!DOCTYPE html><html><body></body></html>');
 const DOMPurify = createDOMPurify(window as any);
 
+import { splitSentences } from '../utils/sentence';
+
 /**
  * 微信公众号文章解析器
  */
@@ -33,7 +35,7 @@ export function extract(document: any) {
  * @param container DOM 容器节点 (linkedom Node)
  * @returns 清洗后的 HTML 字符串
  */
-function cleanHtml(container: any): string {
+export function cleanHtml(container: any): string {
   let sentenceId = 0;
   const getNextId = () => ++sentenceId;
 
@@ -42,20 +44,34 @@ function cleanHtml(container: any): string {
 
   const children = Array.from(container.childNodes);
   const fragments: string[] = [];
+  let inlineBuffer: string[] = [];
+
+  const flushBuffer = () => {
+    if (inlineBuffer.length > 0) {
+      const content = inlineBuffer.join('').trim();
+      if (content) {
+        fragments.push(`<p>${content}</p>`);
+      }
+      inlineBuffer = [];
+    }
+  };
 
   children.forEach((node: any) => {
-    const html = transformNode(node, getNextId).trim();
+    const html = transformNode(node, getNextId);
     if (!html) return;
 
-    // 块级标签列表，用于判断是否需要额外包裹 <p>
-    const isBlockAlready = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre)/i.test(html);
+    // 检查是否已经是块级元素
+    const isBlock = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre)/i.test(html);
 
-    if (isBlockAlready) {
-      fragments.push(html);
+    if (isBlock) {
+      flushBuffer();
+      fragments.push(html.trim());
     } else {
-      fragments.push(`<p>${html}</p>`);
+      inlineBuffer.push(html);
     }
   });
+
+  flushBuffer();
 
   const rawHtml = fragments.join('\n');
 
@@ -81,7 +97,7 @@ function cleanHtml(container: any): string {
  * 辅助函数：平坦化 DOM 结构，剥离冗余的 inline 容器
  */
 function normalizeStructure(container: any) {
-  const tagsToStrip = ['span', 'section', 'font'];
+  const tagsToStrip = ['span', 'section', 'font', 'div', 'fieldset'];
 
   const walk = (node: any) => {
     let child = node.firstChild;
@@ -90,8 +106,11 @@ function normalizeStructure(container: any) {
       if (child.nodeType === 1) {
         walk(child);
         const tag = child.tagName.toLowerCase();
-        // 如果是冗余容器，则将其子节点提升到父级，然后删除自己
-        if (tagsToStrip.includes(tag)) {
+        
+        // 只有不含 class/id 的 div 才会被剥离，防止剥离重要的容器
+        const isSimpleDiv = tag === 'div' && !child.id && !child.className;
+
+        if (tagsToStrip.includes(tag) && (tag !== 'div' || isSimpleDiv)) {
           while (child.firstChild) {
             node.insertBefore(child.firstChild, child);
           }
@@ -113,8 +132,14 @@ function normalizeStructure(container: any) {
 function transformNode(node: any, getNextId: () => number): string {
   // 1. 处理文本节点
   if (node.nodeType === 3) {
-    const text = node.textContent?.trim();
-    if (!text) return "";
+    const text = node.textContent || "";
+    if (!text.trim()) return "";
+    
+    // 如果纯粹是换行符等产生的空白节点，保留一个空格以防粘连
+    if (/^\s+$/.test(text) && text.includes('\n')) {
+      return " ";
+    }
+
     return splitSentences(text)
       .map(s => `<span class="sentence" id="s-${getNextId()}">${s}</span>`)
       .join('');
@@ -128,11 +153,11 @@ function transformNode(node: any, getNextId: () => number): string {
     if (tagName === 'img') {
       const src = node.getAttribute('data-src') ||
         node.getAttribute('src') ||
-        node.getAttribute('data-actualsrc'); // 增加一些常见的 Data 属性
+        node.getAttribute('data-actualsrc');
       return src ? `<img src="${src}">` : "";
     }
 
-    // 换行保留
+    // 换行处理
     if (tagName === 'br') return "<br>";
 
     // 定义要保留的标签白名单
@@ -162,15 +187,3 @@ function transformNode(node: any, getNextId: () => number): string {
   return "";
 }
 
-/**
- * 将文本拆分为句子
- */
-function splitSentences(text: string): string[] {
-  if (!text.trim()) return [];
-
-  // 改进的正则：匹配以标点（。！？!?……）结尾的片段，或者不带标点的片段
-  const regex = /([^。！？!?……\n]+([。！？!?……\n]|\.{3})*)/g;
-  const matches = text.match(regex);
-
-  return matches ? matches.map(s => s.trim()).filter(Boolean) : [text.trim()].filter(Boolean);
-}

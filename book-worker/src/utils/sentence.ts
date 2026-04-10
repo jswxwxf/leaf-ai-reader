@@ -1,11 +1,60 @@
 import { parseHTML } from 'linkedom';
 
 /**
+ * 将文本拆分为句子
+ */
+export function splitSentences(text: string): string[] {
+	if (!text.trim()) return [];
+
+	const sentences: string[] = [];
+	const terminators = "。！？!?……";
+	const closers = "”’』」》）〉】〗｝\"')]}";
+	
+	let current = "";
+	for (let i = 0; i < text.length; i++) {
+		const char = text[i];
+		current += char;
+
+		// 遇到换行，强制切断
+		if (char === '\n') {
+			if (current.trim()) sentences.push(current.trim());
+			current = "";
+			continue;
+		}
+
+		// 检查是否遇到结束标点
+		if (terminators.includes(char)) {
+			// 1. 尽可能吞掉后面的连续闭合符号 (如 》” )
+			while (i + 1 < text.length && closers.includes(text[i + 1])) {
+				current += text[++i];
+			}
+			
+			// 2. 决策是否在此处切断
+			const nextChar = i + 1 < text.length ? text[i + 1] : null;
+			
+			// 核心逻辑：
+			// 如果后面没内容了，或者紧跟着换行或空格，则执行断句
+			if (!nextChar || nextChar === '\n' || nextChar === ' ' || nextChar === '\u3000') {
+				if (current.trim()) {
+					sentences.push(current.trim());
+				}
+				current = "";
+			} else {
+				// 如果后面紧跟着普通文字（如“？》系列”），我们认为这是标题内部标点，不断句，继续走
+				continue;
+			}
+		}
+	}
+
+	if (current.trim()) {
+		sentences.push(current.trim());
+	}
+	
+	return sentences.filter(Boolean);
+}
+
+/**
  * 为 HTML 字符串注入句子 ID，但不改变原有 HTML 结构
- * 适用场景：标准 HTML、Readability 输出、EPUB 内容处理等
- * 
- * @param html HTML 片段字符串
- * @returns 注入 <span> 标签后的 HTML 字符串
  */
 export function injectSentenceIds(html: string): string {
 	if (!html) return "";
@@ -15,31 +64,26 @@ export function injectSentenceIds(html: string): string {
 	let sentenceId = 0;
 
 	const walk = (node: any) => {
-		if (node.nodeType === 3) { // 文本节点
-			const text = node.textContent?.trim();
-			if (!text) return;
+		if (node.nodeType === 3) {
+			const text = node.textContent;
+			if (!text || !text.trim()) return;
 
-			// 匹配以标点（。！？!?……）结尾的片段，或者不带标点的片段
-			const regex = /([^。！？!?……\n]+([。！？!?……\n]|\.{3})*)/g;
-			const matches = text.match(regex);
+			const matches = splitSentences(text);
 			
-			if (matches) {
-				const fragments = matches.map((s: string) => {
+			if (matches.length > 0) {
+				const fragment = document.createDocumentFragment();
+				matches.forEach((s: string) => {
 					const span = document.createElement('span');
 					span.className = 'sentence';
 					span.id = `s-${++sentenceId}`;
-					span.textContent = s.trim();
-					return span;
+					span.textContent = s;
+					fragment.appendChild(span);
 				});
 				
-				// 用 span 替换原文本节点
-				fragments.forEach((span: any) => node.parentNode.insertBefore(span, node));
-				node.parentNode.removeChild(node);
+				node.parentNode.replaceChild(fragment, node);
 			}
-		} else if (node.nodeType === 1) { // 元素节点
-			// 递归处理子节点
-			const children = Array.from(node.childNodes);
-			children.forEach(walk);
+		} else if (node.nodeType === 1) {
+			Array.from(node.childNodes).forEach(walk);
 		}
 	};
 
