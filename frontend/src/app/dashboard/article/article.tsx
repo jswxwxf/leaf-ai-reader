@@ -41,7 +41,7 @@ export function Article({ article }: Props) {
 	return (
 		<Link
 			href={`/reader?article_id=${article.id}`}
-			className={`group bg-base-100 rounded-xl p-4 shadow-sm border border-base-200 transition-all flex items-center gap-4 relative ${status === 'ready' ? 'hover:border-primary/30 hover:shadow-md cursor-pointer' : 'cursor-default pointer-events-none'
+			className={`group bg-base-100 rounded-xl p-4 shadow-sm border border-base-200 transition-all flex items-center gap-4 relative ${status === 'ready' ? 'hover:border-primary/30 hover:shadow-md active:scale-[0.98] active:bg-base-200 cursor-pointer' : 'cursor-default pointer-events-none'
 				}`}
 		>
 			{/* 删除按钮 (仅在悬停时显示) */}

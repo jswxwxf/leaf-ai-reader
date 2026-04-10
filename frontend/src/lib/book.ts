@@ -41,6 +41,28 @@ export async function getBooks(
 }
 
 /**
+ * 获取单本书籍元数据（只从 D1 数据库读取）
+ */
+export async function getBookData(
+	id: string,
+	cloudflare?: { env: CloudflareEnv; ctx?: ExecutionContext }
+): Promise<BookData | null> {
+	// 1. 鉴权
+	const user = await getCurrentUser();
+	if (!user?.sub) {
+		throw new Error('Unauthorized');
+	}
+
+	// 2. 获取 Cloudflare 运行环境
+	const { env } = cloudflare || getCloudflareContext();
+
+	// 3. 执行 D1 数据库查询获取元数据
+	return (await env.LEAF_BOOK_DB.prepare(
+		"SELECT * FROM books WHERE id = ? AND user_id = ?"
+	).bind(id, user.sub).first()) as unknown as BookData | null;
+}
+
+/**
  * 删除书籍 (Server Action / 内部逻辑)
  * 同步删除数据库记录，并在后台异步删除 R2 关联文件
  */

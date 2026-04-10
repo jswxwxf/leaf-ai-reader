@@ -2,15 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { type ArticleData } from "@/lib/article";
+import { type BookData } from "@/lib/book";
 
 interface Props {
 	isPopup?: boolean;
+	data?: ArticleData | BookData | null;
 }
 
 /**
  * 阅读器顶部状态栏组件
  */
-export function Header({ isPopup = true }: Props) {
+export function Header({ isPopup = true, data }: Props) {
 	const router = useRouter();
 
 	return (
@@ -18,7 +21,7 @@ export function Header({ isPopup = true }: Props) {
 			{isPopup && (
 				<div className="flex-none">
 					<button
-						className="btn btn-ghost btn-circle"
+						className="btn btn-ghost btn-circle active:scale-90 transition-all"
 						onClick={() => router.back()}
 						title="返回"
 					>
@@ -26,11 +29,11 @@ export function Header({ isPopup = true }: Props) {
 					</button>
 				</div>
 			)}
-      <div className="flex-1 px-4">
-        <h1 className="text-lg font-bold truncate">
-          书籍名称
-        </h1>
-      </div>
-    </header>
-  );
+			<div className="flex-1 px-4 min-w-0">
+				<h1 className="text-lg font-bold truncate">
+					{data?.title || "正在加载..."}
+				</h1>
+			</div>
+		</header>
+	);
 }

@@ -29,6 +29,10 @@ function clean(container: any) {
   let sentenceId = 0;
   const getNextId = () => ++sentenceId;
 
+  // 1. 结构平坦化：微信 HTML 经常会有冗余的 span/section/div 嵌套
+  // 我们先剥掉这些“透明”容器，并合并相邻的碎片文本节点
+  normalizeStructure(container);
+
   const children = Array.from(container.childNodes);
   const fragments: string[] = [];
 
@@ -38,7 +42,7 @@ function clean(container: any) {
 
     // 块级标签列表，用于判断是否需要额外包裹 <p>
     const isBlockAlready = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre)/i.test(html);
-    
+
     if (isBlockAlready) {
       fragments.push(html);
     } else {
@@ -47,6 +51,36 @@ function clean(container: any) {
   });
 
   container.innerHTML = fragments.join('\n');
+}
+
+/**
+ * 辅助函数：平坦化 DOM 结构，剥离冗余的 inline 容器
+ */
+function normalizeStructure(container: any) {
+  const tagsToStrip = ['span', 'section', 'font'];
+
+  const walk = (node: any) => {
+    let child = node.firstChild;
+    while (child) {
+      const next = child.nextSibling;
+      if (child.nodeType === 1) {
+        walk(child);
+        const tag = child.tagName.toLowerCase();
+        // 如果是冗余容器，则将其子节点提升到父级，然后删除自己
+        if (tagsToStrip.includes(tag)) {
+          while (child.firstChild) {
+            node.insertBefore(child.firstChild, child);
+          }
+          node.removeChild(child);
+        }
+      }
+      child = next;
+    }
+  };
+
+  walk(container);
+  // 合并相邻的文本节点
+  container.normalize();
 }
 
 /**
@@ -65,7 +99,7 @@ function transformNode(node: any, getNextId: () => number): string {
   // 2. 处理元素节点
   if (node.nodeType === 1) {
     const tagName = node.tagName.toLowerCase();
-    
+
     // 图片特殊处理
     if (tagName === 'img') {
       const src = node.getAttribute('data-src') || node.getAttribute('src');
@@ -102,12 +136,13 @@ function transformNode(node: any, getNextId: () => number): string {
   return "";
 }
 
-/**
- * 分句工具：按标点拆分并保留标点
- */
 function splitSentences(text: string): string[] {
-  // 匹配：。！？！？ !? \n 以及之后的空格
-  const regex = /([^。！？！？!?\n]+[。！？！？!?\n]*)/g;
+  if (!text.trim()) return [];
+
+  // 改进的正则：匹配以标点（。！？!?……）结尾的片段，或者不带标点的片段
+  // 支持微信常见的多种省略号形式
+  const regex = /([^。！？!?……\n]+([。！？!?……\n]|\.{3})*)/g;
   const matches = text.match(regex);
-  return matches ? matches.map(s => s.trim()).filter(Boolean) : [text.trim()];
+
+  return matches ? matches.map(s => s.trim()).filter(Boolean) : [text.trim()].filter(Boolean);
 }

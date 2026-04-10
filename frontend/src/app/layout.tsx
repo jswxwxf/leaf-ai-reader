@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: "Leaf AI Reader",
 	description: "极简、高效的智能 EPUB 阅读器",
+	referrer: 'no-referrer'
 };
 
 import { FullScreenLoading } from "@/app/full-screen-loading";
