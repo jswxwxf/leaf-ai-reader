@@ -20,13 +20,13 @@ export function UploadArticle() {
 		if (!url) return null;
 
 		// 限制仅支持微信公众号文章
-		// const urlPattern = /^https?:\/\/mp\.weixin\.qq\.com\/.+/i;
-		// if (!urlPattern.test(url)) {
-		// 	showAlert({
-		// 		message: '目前仅支持微信公众号文章 (网址须以 https://mp.weixin.qq.com/ 开头)'
-		// 	});
-		// 	return null;
-		// }
+		const urlPattern = /^https?:\/\/mp\.weixin\.qq\.com\/.+/i;
+		if (!urlPattern.test(url)) {
+			showAlert({
+				message: '目前仅支持微信公众号文章 (网址须以 https://mp.weixin.qq.com/ 开头)'
+			});
+			return null;
+		}
 
 		// 已经在 request 工具内部处理了错误弹窗，这里无需再次 catch
 		await request('/api/articles/upload', {

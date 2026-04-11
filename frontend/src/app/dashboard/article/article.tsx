@@ -59,6 +59,8 @@ export function Article({ article }: Props) {
 					title="删除文章"
 				>
 					<X className="w-3 h-3 text-white" />
+					{/* 移动端点击区域扩充层：确保小按钮在手机上也能轻松点中 */}
+					<span className="absolute inset-[-12px]" aria-hidden="true" />
 				</button>
 			)}
 
@@ -93,8 +95,7 @@ export function Article({ article }: Props) {
 								title="在新窗口打开原站"
 							>
 								跳转原站
-								{/* 移动端点击区域扩充层：扩大至 48px (size-12)，仅在非精细指点设备（如手机）开启 */}
-								<span className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-10 pointer-fine:hidden" aria-hidden="true" />
+								<span className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-10" aria-hidden="true" />
 							</a>
 						</div>
 					)}

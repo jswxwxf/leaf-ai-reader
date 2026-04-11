@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 import { FullScreenLoading } from "@/app/full-screen-loading";
 import { PropsWithChildren } from "react";
-import { GlobalModals } from "./global-modals";
+import { GlobalModals } from "@/app/global-modals";
 
 type Props = PropsWithChildren<{
 	reader: React.ReactNode;

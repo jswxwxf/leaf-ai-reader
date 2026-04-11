@@ -9,33 +9,32 @@ import { useState, useEffect } from "react";
  * 导出 showLoading 和 hideLoading 方法
  */
 
-let setVisible: (visible: boolean) => void;
+let setVisible: (visible: boolean) => void = () => {
+    if (process.env.NODE_ENV === 'development') {
+        console.warn("[FullScreenLoading] show/hideLoading called before component was mounted.");
+    }
+};
 
 /**
  * 显示全屏加载
  */
 export const showLoading = () => {
-    if (setVisible) setVisible(true);
+    setVisible(true);
 };
 
 /**
  * 隐藏全屏加载
  */
 export const hideLoading = () => {
-    if (setVisible) setVisible(false);
+    setVisible(false);
 };
 
 export function FullScreenLoading() {
     const [visible, _setVisible] = useState(false);
 
     useEffect(() => {
-        // 组件安装时将 setVisible 挂载到全局变量
         setVisible = _setVisible;
-        return () => {
-            // 组件卸载时清理（虽然加载组件通常不会卸载）
-            setVisible = () => { };
-        };
-    }, []);
+    }, [_setVisible]);
 
     if (!visible) return null;
 

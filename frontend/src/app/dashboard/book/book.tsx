@@ -55,6 +55,7 @@ export function Book({ book }: Props) {
 				title="删除书籍"
 			>
 				<X className="w-3 h-3 text-white" />
+				<span className="absolute inset-[-12px] pointer-fine:hidden" aria-hidden="true" />
 			</button>
 
 			{/* 状态徽章 (仅在非 ready 状态显示) */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 /**
  * 确认框配置接口
@@ -41,8 +41,23 @@ const DEFAULT_ALERT: AlertConfig = {
   buttonText: "我知道了",
 };
 
-let setConfirmConfig: (config: ConfirmConfig) => void;
-let setAlertConfig: (config: AlertConfig) => void;
+// 使用队列存储在组件挂载前被调用的配置
+let pendingConfirm: ConfirmConfig | null = null;
+let pendingAlert: AlertConfig | null = null;
+
+let setConfirmConfig: (config: ConfirmConfig) => void = (config) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn("[GlobalModals] showConfirm called before mount. Queueing action.");
+  }
+  pendingConfirm = config;
+};
+
+let setAlertConfig: (config: AlertConfig) => void = (config) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn("[GlobalModals] showAlert called before mount. Queueing action.");
+  }
+  pendingAlert = config;
+};
 
 /**
  * 显示全局确认框
@@ -50,14 +65,13 @@ let setAlertConfig: (config: AlertConfig) => void;
  */
 export const showConfirm = (options: Partial<Omit<ConfirmConfig, 'visible' | 'resolve' | 'reject'>>) => {
   return new Promise<void>((resolve, reject) => {
-    setConfirmConfig?.({
+    setConfirmConfig({
       ...DEFAULT_CONFIRM,
       ...options,
       visible: true,
       resolve,
       reject,
     });
-
   });
 };
 
@@ -67,13 +81,12 @@ export const showConfirm = (options: Partial<Omit<ConfirmConfig, 'visible' | 're
  */
 export const showAlert = (options: Partial<Omit<AlertConfig, 'visible' | 'resolve'>>) => {
   return new Promise<void>((resolve) => {
-    setAlertConfig?.({
+    setAlertConfig({
       ...DEFAULT_ALERT,
       ...options,
       visible: true,
       resolve,
     });
-
   });
 };
 
@@ -86,40 +99,66 @@ export function GlobalModals() {
   const [confirmConfig, _setConfirmConfig] = useState<ConfirmConfig>(DEFAULT_CONFIRM);
   const [alertConfig, _setAlertConfig] = useState<AlertConfig>(DEFAULT_ALERT);
 
+  const confirmRef = useRef<HTMLDialogElement>(null);
+  const alertRef = useRef<HTMLDialogElement>(null);
+
+  // 监听 Confirm 显隐并操作原生 DOM
+  useEffect(() => {
+    if (confirmConfig.visible) {
+      confirmRef.current?.showModal();
+    } else {
+      confirmRef.current?.close();
+    }
+  }, [confirmConfig.visible]);
+
+  // 监听 Alert 显隐并操作原生 DOM
+  useEffect(() => {
+    if (alertConfig.visible) {
+      alertRef.current?.showModal();
+    } else {
+      alertRef.current?.close();
+    }
+  }, [alertConfig.visible]);
+
   useEffect(() => {
     setConfirmConfig = _setConfirmConfig;
     setAlertConfig = _setAlertConfig;
-    return () => {
-      setConfirmConfig = () => { };
-      setAlertConfig = () => { };
-    };
-  }, []);
+    
+    // 如果在水合(Hydration)前有被拦截的操作，立刻执行它们并清空队列
+    if (pendingConfirm) {
+      _setConfirmConfig(pendingConfirm);
+      pendingConfirm = null;
+    }
+    if (pendingAlert) {
+      _setAlertConfig(pendingAlert);
+      pendingAlert = null;
+    }
+  }, [_setConfirmConfig, _setAlertConfig]);
 
   // Confirm 处理函数
   const handleConfirmAction = () => {
     _setConfirmConfig({ ...DEFAULT_CONFIRM, visible: false });
     confirmConfig.resolve?.();
-
   };
 
   const handleConfirmCancel = () => {
     _setConfirmConfig({ ...DEFAULT_CONFIRM, visible: false });
     confirmConfig.reject?.(new Error("User cancelled"));
-
   };
 
   // Alert 处理函数
   const handleAlertClose = () => {
     _setAlertConfig({ ...DEFAULT_ALERT, visible: false });
     alertConfig.resolve?.();
-
   };
 
   return (
     <>
       {/* 确认模态框 */}
       <dialog
-        className={`modal z-50 items-start pt-10 bg-black/20 backdrop-blur-[1px] ${confirmConfig.visible ? 'modal-open' : ''}`}
+        ref={confirmRef}
+        className="modal items-start pt-10"
+        onClose={handleConfirmCancel}
       >
         <div className="modal-box max-w-md rounded-2xl shadow-2xl p-6 border border-neutral/5">
           <h3 className="text-lg font-bold text-neutral">{confirmConfig.title}</h3>
@@ -142,14 +181,16 @@ export function GlobalModals() {
             </button>
           </div>
         </div>
-        <form method="dialog" className="modal-backdrop" onClick={handleConfirmCancel}>
-          <button>close</button>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleConfirmCancel}>close</button>
         </form>
       </dialog>
 
       {/* 提示模态框 */}
       <dialog
-        className={`modal z-50 items-start pt-10 bg-black/20 backdrop-blur-[1px] ${alertConfig.visible ? 'modal-open' : ''}`}
+        ref={alertRef}
+        className="modal items-start pt-10"
+        onClose={handleAlertClose}
       >
         <div className="modal-box max-w-md rounded-2xl shadow-2xl p-6 border border-neutral/5">
           <h3 className="text-lg font-bold text-neutral">{alertConfig.title}</h3>
@@ -166,8 +207,8 @@ export function GlobalModals() {
             </button>
           </div>
         </div>
-        <form method="dialog" className="modal-backdrop" onClick={handleAlertClose}>
-          <button>close</button>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={handleAlertClose}>close</button>
         </form>
       </dialog>
     </>
