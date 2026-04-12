@@ -7,9 +7,10 @@
 - [x] **PRD-003: EPUB 结构解析** ([003-epub-indexing.md](./003-epub-indexing.md)) — 已打通 R2 元数据提取与 TOC 索引生成
 - [x] **PRD-004: 网页文章采集与 D1 存储** ([004-web-article-collection.md](./004-web-article-collection.md)) — 已支持自动抓取、R2 持久化与状态轮询
 - [x] **PRD-005: 阅读器平行路由与拦截布局** ([005-reader-routing-overlay.md](./005-reader-routing-overlay.md)) — 已实现无损状态切换与 URL 自动同步
-- [/] **PRD-006: 采集文章阅读渲染** ([006-render-article-reader.md](./006-render-article-reader.md)) — **[Phase 1]** 已完成目录集成，正文拉取 API 开发中
-- [ ] **PRD-007: 图书 EPUB 实时提取与渲染** ([007-render-book-reader.md](./007-render-book-reader.md)) — **[Phase 2]** 待实现实时解压与图片中转代理
-- [x] **PRD-008: AI 内容总结与滚动同步高亮** ([008-ai-summary-highlighting.md](./008-ai-summary-highlighting.md)) — 已实现高性能 Scrollspy、点击跳转锁及 Store 逻辑重构
+- [x] **PRD-006: 采集文章阅读渲染** ([006-render-article-reader.md](./006-render-article-reader.md)) — **[Phase 1]** 已实现内容拉取、安全清洗与前端自动填充
+- [x] **PRD-007: AI 内容总结与滚动同步高亮** ([007-ai-summary-highlighting.md](./007-ai-summary-highlighting.md)) — 已实现高性能 Scrollspy、点击跳转锁及 Store 逻辑重构
+- [ ] **PRD-008: 逐句逐词朗读高亮** ([008-sentence-highlighting.md](./008-sentence-highlighting.md)) — **[New]** 待实现双层高亮系统与 TTS 联动
+- [ ] **PRD-009: 图书 EPUB 实时提取与渲染** ([009-render-book-reader.md](./009-render-book-reader.md)) — **[Phase 2]** 待实现实时解压与图片中转代理
 
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*
