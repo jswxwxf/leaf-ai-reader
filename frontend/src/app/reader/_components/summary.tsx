@@ -1,59 +1,56 @@
 "use client";
 
 import { Star } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useReaderStore } from "../_store/store";
-import { type ArticleData } from "@/lib/article";
 
 /**
  * 重点列表组件 (AI 核心摘要)
  */
 export function Summary() {
-  const data = useReaderStore((state) => state.data);
-  
-  // 仅文章模式下显示摘要
-  const summaryRaw = (data as ArticleData)?.summary;
-  
-  let summaryPoints: string[] = [];
-  if (summaryRaw) {
-    try {
-      const parsed = JSON.parse(summaryRaw);
-      // 处理 {"summaries": [{"summary": "...", ...}, ...]} 格式
-      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.summaries)) {
-        summaryPoints = parsed.summaries.map((s: any) => s.summary || "");
-      } 
-      // 处理直接的数组格式
-      else if (Array.isArray(parsed)) {
-        summaryPoints = parsed;
-      } else {
-        summaryPoints = [summaryRaw];
-      }
-    } catch (e) {
-      // 如果不是 JSON，则按换行分割或直接显示
-      summaryPoints = summaryRaw.split('\n').filter(p => p.trim());
-    }
-  }
+  const {
+    summaries,
+    activeSentenceId,
+    jumpToSentence,
+    data
+  } = useReaderStore(
+    useShallow((state) => ({
+      summaries: state.summaries,
+      activeSentenceId: state.activeSentenceId,
+      jumpToSentence: state.jumpToSentence,
+      data: state.data,
+    }))
+  );
 
   return (
-    <aside className="w-80 border-l border-base-300 bg-base-100 hidden lg:flex flex-col h-full overflow-hidden">
+    <aside className="w-80 border-l border-base-300 bg-base-100 hidden lg:flex flex-col h-full overflow-hidden shrink-0">
       <div className="p-4 flex-none border-b border-base-200">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Star className="w-4 h-4 text-warning" /> AI 核心摘要
         </h2>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-        {summaryPoints.length > 0 ? (
-          summaryPoints.map((point, index) => (
-            <div 
-              key={index} 
-              className="card bg-base-200 shadow-sm border border-base-300/50"
-            >
-              <div className="p-3">
-                <p className="text-sm opacity-80 leading-relaxed">
-                  {point}
-                </p>
+        {summaries.length > 0 ? (
+          summaries.map((item, index) => {
+            const isActive = activeSentenceId === item.start_sId;
+            return (
+              <div
+                key={index}
+                onClick={() => jumpToSentence(item.start_sId)}
+                className={`card cursor-pointer transition-all duration-300 border ${isActive
+                    ? "bg-primary/10 border-primary shadow-md translate-x-1"
+                    : "bg-base-200 border-base-300/50 hover:border-base-300 hover:bg-base-200/80"
+                  }`}
+              >
+                <div className="p-3">
+                  <p className={`text-sm leading-relaxed transition-colors ${isActive ? "text-primary font-medium" : "opacity-80 font-normal"
+                    }`}>
+                    {item.summary}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="py-10 text-center opacity-40 text-sm">
             {data?.status === 'ready' ? '暂无核心摘要' : '摘要生成中...'}

@@ -7,8 +7,14 @@ import { createUrlSearchStorage } from '@/lib/zustand-helpers';
 
 import { type ArticleData } from '@/lib/article';
 import { type BookData } from '@/lib/book';
+import { jumpToSentence as _jumpToSentence, parseSummaries } from './helpers';
 
 export type ReaderMode = 'article' | 'book';
+
+export interface AISummary {
+	summary: string;
+	start_sId: string;
+}
 
 /**
  * 初始状态定义
@@ -30,6 +36,9 @@ export interface ReaderState {
 	book_id: string | null;
 	data: ArticleData | BookData | null;
 	content: string;
+	summaries: AISummary[];
+	activeSentenceId: string | null;
+	isManualScrolling: boolean;
 	isLoading: boolean;
 }
 
@@ -40,8 +49,10 @@ export interface ReaderActions {
 	setMode: (mode: ReaderMode | null) => void;
 	setArticleId: (id: string | null) => void;
 	setBookId: (id: string | null) => void;
-	setData: (data: ArticleData | BookData | null) => void;
 	setContent: (content: string) => void;
+	setActiveSentenceId: (id: string | null) => void;
+	setIsManualScrolling: (isManual: boolean) => void;
+	jumpToSentence: (sId: string) => void;
 }
 
 /**
@@ -53,9 +64,9 @@ export type ReaderStoreState = ReaderState & ReaderActions;
  * 创建 Store 的工厂函数
  */
 const createReaderStore = (initialState: InitialState = {}) => {
-	const { 
-		mode = null, 
-		article_id = null, 
+	const {
+		mode = null,
+		article_id = null,
 		book_id = null,
 		data = null,
 		content = ""
@@ -70,34 +81,43 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					book_id,
 					data,
 					content,
+					summaries: parseSummaries(data),
+					activeSentenceId: null,
+					isManualScrolling: false,
 					isLoading: false,
 				},
 				(set, get) => ({
 					setMode: (mode) => set({ mode }),
-					setArticleId: (id) => set({ 
-						article_id: id, 
-						mode: id ? 'article' : (get().book_id ? 'book' : null) 
+					setArticleId: (id) => set({
+						article_id: id,
+						mode: id ? 'article' : (get().book_id ? 'book' : null)
 					}),
-					setBookId: (id) => set({ 
-						book_id: id, 
-						mode: get().article_id ? 'article' : (id ? 'book' : null) 
+					setBookId: (id) => set({
+						book_id: id,
+						mode: get().article_id ? 'article' : (id ? 'book' : null)
 					}),
-					setData: (data) => set({ data }),
+					setData: (data: ArticleData | BookData | null) => {
+						set({ data, summaries: parseSummaries(data) });
+					},
 					setContent: (content) => set({ content }),
+					setActiveSentenceId: (activeSentenceId) => set({ activeSentenceId }),
+					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
+					jumpToSentence: (sId) => _jumpToSentence(set, sId),
 				})
 			),
 			{
 				name: 'reader-storage',
 				// 使用之前在 Dashboard 中定义的帮助函数同步到 URL
 				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id'])),
-				partialize: (state) => ({ 
-					article_id: state.article_id, 
-					book_id: state.book_id 
+				partialize: (state) => ({
+					article_id: state.article_id,
+					book_id: state.book_id
 				}),
 				// 在从 URL 恢复状态后，重新计算一次 mode
 				merge: (persistedState: any, currentState) => {
 					const article_id = persistedState?.article_id ?? currentState.article_id;
 					const book_id = persistedState?.book_id ?? currentState.book_id;
+
 					return {
 						...currentState,
 						...persistedState,
