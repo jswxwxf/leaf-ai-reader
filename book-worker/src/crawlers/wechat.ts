@@ -97,7 +97,7 @@ export function cleanHtml(container: any): string {
  * 辅助函数：平坦化 DOM 结构，剥离冗余的 inline 容器
  */
 function normalizeStructure(container: any) {
-  const tagsToStrip = ['span', 'section', 'font', 'div', 'fieldset', 'a'];
+  const tagsToStrip = ['span', 'font', 'div', 'fieldset', 'a'];
 
   const walk = (node: any) => {
     let child = node.firstChild;
@@ -180,7 +180,14 @@ function transformNode(node: any, getNextId: () => number): string {
       return `<${tagName}>${innerContent}</${tagName}>`;
     }
 
-    // 如果是辅助容器（如 div, section, span），则“透传”其经过处理的内容
+    // 特殊处理 section：将其视为段落处理器
+    // 如果内部不含块级元素，则包装成 <p>；否则仅透传子内容（避免嵌套 <p>）
+    if (tagName === 'section') {
+      const hasBlock = /<(p|h[1-6]|ul|ol|li|blockquote|table|tr|td|th|hr|pre|img)/i.test(innerContent);
+      return hasBlock ? innerContent : `<p>${innerContent}</p>`;
+    }
+
+    // 如果是辅助容器（如 div, span），则“透传”其经过处理的内容
     return innerContent;
   }
 

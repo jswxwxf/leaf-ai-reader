@@ -7,7 +7,7 @@ export function splitSentences(text: string): string[] {
 	if (!text.trim()) return [];
 
 	const sentences: string[] = [];
-	const terminators = "。！？!?……";
+	const terminators = "。！？；!?……";
 	const closers = "”’』」》）〉】〗｝\"')]}";
 	
 	let current = "";
@@ -39,8 +39,8 @@ export function splitSentences(text: string): string[] {
 					sentences.push(current.trim());
 				}
 				current = "";
-			} else if (char === '。') {
-				// 场景 B: 哪怕后面没有空格，只要是中文句号 '。' -> 也执行断句（解决微信这种无空格排版）
+			} else if (char === '。' || char === '；') {
+				// 场景 B: 哪怕后面没有空格，只要是中文句号或分号 -> 也执行断句
 				if (current.trim()) {
 					sentences.push(current.trim());
 				}

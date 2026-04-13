@@ -1,7 +1,8 @@
-import { useReaderStore } from "../_store/store";
+import { ReaderStoreContext, useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
+import { useEffect } from "react";
 
 /**
  * 语音朗读核心逻辑 Hook
@@ -38,12 +39,15 @@ export function useSpeech() {
     setIsPlaying(true);
     clearHighlight();
 
-    // 3. 创建朗读任务 (对破折号做特殊处理，引导 TTS 引擎停顿)
-    const processedText = el.textContent.replaceAll('——', '--');
+    // 3. 创建朗读任务 (对破折号和相邻引号做处理，引导 TTS 引擎停顿)
+    // 使用 2:2 替换 (”“ -> ”，)，既能增加停顿，又能保证 charIndex 索引不乱
+    const processedText = el.textContent
+      .replaceAll('——', '--')
+      .replaceAll('”“', '”，');
     const utterance = new SpeechSynthesisUtterance(processedText);
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
-    utterance.rate = isSafari ? 1.4 : 2.1;
+    utterance.rate = isSafari ? 1.4 : 2;
 
     // 3.1 词级高亮逻辑 (通过抽取出的 hook 处理)
     utterance.onboundary = (event) => {
@@ -96,5 +100,63 @@ export function useSpeech() {
     clearHighlight();
   };
 
+  useShortKey({ isPlaying, play, stop, step });
+
   return { play, step, stop, speechSentenceId, isPlaying };
+}
+
+/**
+ * 键盘快捷键监听 Hook
+ */
+function useShortKey({
+  isPlaying,
+  play,
+  stop,
+  step,
+}: {
+  isPlaying: boolean;
+  play: () => void;
+  stop: () => void;
+  step: (delta: number) => void;
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // 如果焦点在输入元素上，不触发快捷键
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (event.code === "Space") {
+        event.preventDefault(); // 防止页面滚动
+        if (isPlaying) {
+          stop();
+        } else {
+          play();
+        }
+      } else if (event.code === "ArrowLeft") {
+        event.preventDefault();
+        step(-1);
+      } else if (event.code === "ArrowRight") {
+        event.preventDefault();
+        step(1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPlaying, play, stop]);
+}
+
+export function stopSpeech(store: any) {
+  // 停止当前朗读并清除词级高亮
+  window.speechSynthesis?.cancel();
+  store.getState().setIsPlaying(false);
+  (CSS as any).highlights?.get("word-focus")?.clear();
 }

@@ -140,7 +140,7 @@ export type ReaderStore = ReturnType<typeof createReaderStore>;
 /**
  * Context 定义
  */
-const ReaderStoreContext = createContext<ReaderStore | null>(null);
+export const ReaderStoreContext = createContext<ReaderStore | null>(null);
 
 type Props = {
 	initialState?: InitialState;
@@ -172,3 +172,4 @@ export function useReaderStore<T>(selector: (state: ReaderStoreState) => T): T {
 	}
 	return useStore(context, selector);
 }
+

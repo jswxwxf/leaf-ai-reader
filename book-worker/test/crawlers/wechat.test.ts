@@ -26,6 +26,12 @@ describe('WeChat Sentence Splitting', () => {
         expect(result).toEqual(['且不说我在《《指环王》密码（上）：欧洲文明在惧怕谁？》系列开篇就已经解释了托尔金所处的时代给他的难言之隐']);
     });
 
+    it('应该正确处理中文分号断句', () => {
+        const text = '第一句；第二句。';
+        const result = splitSentences(text);
+        expect(result).toEqual(['第一句；', '第二句。']);
+    });
+
     it('应该正确处理标准的句号断句', () => {
         const text = '第一句。 第二句。';
         const result = splitSentences(text);
@@ -117,5 +123,27 @@ describe('WeChat Crawler cleanHtml', () => {
         
         const sentenceCount = (cleaned.match(/class="sentence"/g) || []).length;
         expect(sentenceCount).toBe(2);
+    });
+
+    it('应该正确清洗带有 section 和 leaf 属性的复杂微信 HTML', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <section style="margin-left: 16px;margin-right: 16px;line-height: 1.75em;margin-bottom: 20px;"><span style="font-family: 宋体;font-size: 17px;color: rgb(65, 70, 75);"><span leaf="">我能想象他们的心情，这帮人读我文章时，一定是非常高傲的，他们一定不断默念着：“作者就是个傻叉，我比他懂《指环王》多了，我就是要跟他抬杠一下，证明这一点！”</span></span></section>
+                <section style="margin-left: 16px;margin-right: 16px;line-height: 1.75em;margin-bottom: 20px;"><span style="color: rgb(65, 70, 75);"><span style="font-family: 宋体;font-size: 17px;"><span leaf="">好吧，可能我不如您懂指环王。但我要说：</span></span><strong><span style="font-family: 宋体;"><span leaf="">一个人若以这种高傲的心态去读书览文，看的再多也只是在浪费时间。</span></span></strong></span></section>
+                <section style="margin-left: 16px;margin-right: 16px;line-height: 1.75em;margin-bottom: 20px;"><span style="font-family: 宋体;font-size: 17px;color: rgb(65, 70, 75);"><span leaf="">因为骄傲会封闭你的大脑和内心，让你无法获得新启发和新知识。</span></span></section>
+                <section style="margin-left: 16px;margin-right: 16px;line-height: 1.75em;margin-bottom: 20px;"><span style="color: rgb(65, 70, 75);font-family: 宋体;"><span leaf="">抛开成见，请思考一下，《指环王》之中有没有历史的影子呢？</span></span></section>
+                <section style="margin-left: 16px;margin-right: 16px;line-height: 1.75em;margin-bottom: 20px;"><span style="font-family: 宋体;color: rgb(65, 70, 75);"><span leaf="">当然是有的。</span></span></section>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+        
+        console.log('--- Cleaned HTML Response Start ---');
+        console.log(cleaned);
+        console.log('--- Cleaned HTML Response End ---');
+
+        expect(cleaned).not.toContain('style=');
+        expect(cleaned).toContain('class="sentence"');
     });
 });
