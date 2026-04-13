@@ -140,7 +140,7 @@ export type ReaderStore = ReturnType<typeof createReaderStore>;
 /**
  * Context 定义
  */
-export const ReaderStoreContext = createContext<ReaderStore | null>(null);
+const ReaderStoreContext = createContext<ReaderStore | null>(null);
 
 type Props = {
 	initialState?: InitialState;
@@ -172,4 +172,13 @@ export function useReaderStore<T>(selector: (state: ReaderStoreState) => T): T {
 	}
 	return useStore(context, selector);
 }
+
+export function useReaderStoreRaw(): ReaderStore {
+	const context = use(ReaderStoreContext);
+	if (!context) {
+		throw new Error('useReaderStoreRaw must be used within a ReaderStoreProvider');
+	}
+	return context;
+}
+
 

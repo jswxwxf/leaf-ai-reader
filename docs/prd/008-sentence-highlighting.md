@@ -39,12 +39,15 @@
 ### 3.2 高亮逻辑 (核心算法)
 1. **句子激活** (`onstart`):
    - 根据当前朗读句子的 ID，为对应 `<span>` 添加 `.active-sentence` 类。
-   - 调用 `element.scrollIntoView({ behavior: 'smooth', block: 'center' })`。
+   - 调用 `scrollIntoViewIfNeeded` 辅助函数进行平滑滚动。
 2. **词级追踪** (`onboundary`):
    - 捕获 `name === 'word'` 的边界事件。
-   - 获取 `charIndex`。若引擎未提供 `charLength`，则调用 `Intl.Segmenter` 对句子文本进行现场分析，推算当前词的末尾位置。
+   - 获取 `charIndex` 与 `charLength`。
    - 创建 `Range` 对象并映射至文本节点。
    - 更新 `CSS.highlights` 注册表中的 `word-focus` 对象。
+3. **交互扩展**:
+   - **键盘导航**：空格键控制播放/暂停，左右方向键实现前后句跳转。
+   - **自动接力**：当前句播放结束后，自动推进至下一句并触发滚动与播放。
 3. **状态清理** (`onend`):
    - 移除 `.active-sentence`。
    - 执行 `CSS.highlights.clear()`。
@@ -56,10 +59,9 @@
   - 如果检测到 `CSS.highlights` 不可用，或者 `onboundary` 事件在当前引擎下表现极差。
   - **回退方案**：取消词级背景高亮，**仅保留句级下划线高亮**。这能保证核心体验不受损，且不需要复杂的 UI 逻辑。
 
-## 5. 任务清单 (Task List)
-
-- [ ] 在前端阅读器组件中集成 Web Speech API 控制逻辑。
-- [ ] 实现基于 ID 定位 `<span>` 并添加 CSS 下划线的逻辑。
-- [ ] 封装针对 `charLength` 缺失的 `Intl.Segmenter` 补丁函数。
-- [ ] 集成 `CSS Custom Highlight API` 进行词级渲染。
-- [ ] (可选) 增加 UI 设置项：允许用户开启/关闭单词高亮。
+- [x] 在前端阅读器组件中集成 Web Speech API 控制逻辑。
+- [x] 实现基于 ID 定位 `<span>` 并添加 CSS 下划线的逻辑 (通过 Scroller 组件实现)。
+- [x] 封装基于 `useWordHighlight` 的词级高亮逻辑。
+- [x] 集成 `CSS Custom Highlight API` 进行词级渲染。
+- [x] 增加键盘快捷键支持 (空格播放/暂停，左右方向键切句)。
+- [x] 实现跨句自动接力朗读。

@@ -9,7 +9,7 @@
 - [x] **PRD-005: 阅读器平行路由与拦截布局** ([005-reader-routing-overlay.md](./005-reader-routing-overlay.md)) — 已实现无损状态切换与 URL 自动同步
 - [x] **PRD-006: 采集文章阅读渲染** ([006-render-article-reader.md](./006-render-article-reader.md)) — **[Phase 1]** 已实现内容拉取、安全清洗与前端自动填充
 - [x] **PRD-007: AI 内容总结与滚动同步高亮** ([007-ai-summary-highlighting.md](./007-ai-summary-highlighting.md)) — 已实现高性能 Scrollspy、点击跳转锁及 Store 逻辑重构
-- [ ] **PRD-008: 逐句逐词朗读高亮** ([008-sentence-highlighting.md](./008-sentence-highlighting.md)) — **[New]** 待实现双层高亮系统与 TTS 联动
+- [x] **PRD-008: 逐句逐词朗读高亮** ([008-sentence-highlighting.md](./008-sentence-highlighting.md)) — 已实现双层联动高亮系统、TTS 接力朗读及键盘快捷键导航
 - [ ] **PRD-009: 图书 EPUB 实时提取与渲染** ([009-render-book-reader.md](./009-render-book-reader.md)) — **[Phase 2]** 待实现实时解压与图片中转代理
 
 ---

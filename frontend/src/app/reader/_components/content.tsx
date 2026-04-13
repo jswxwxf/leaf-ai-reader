@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { useReaderStore, ReaderStoreContext } from "../_store/store";
+import { useReaderStore, useReaderStoreRaw } from "../_store/store";
 import { useScrollspy } from "../_hooks/use-scrollspy";
 import { Scroller } from "./scroller";
 import styles from "./content.module.css";
@@ -17,7 +17,7 @@ export function Content({ }: Props) {
   // 避免订阅 speechSentenceId 导致每次点击都触发重渲染，保护 useScrollspy 的 Observer 稳定
   const content = useReaderStore((state) => state.content);
   // 直接持有 store 实例（不订阅），用于事件处理器中一次性读取状态
-  const store = use(ReaderStoreContext)!;
+  const rawStore = useReaderStoreRaw();
 
   // 激活滚动监听
   useScrollspy();
@@ -34,14 +34,14 @@ export function Content({ }: Props) {
       const targetId = sentenceEl.id;
 
       // 在事件处理器里一次性读取当前值，不需要响应式订阅
-      const { speechSentenceId, setSpeechSentenceId } = store.getState();
+      const { speechSentenceId, setSpeechSentenceId } = rawStore.getState();
 
       // 如果点击的是当前已经高亮的句子，直接返回，不做任何操作
       if (targetId === speechSentenceId) {
         return;
       }
 
-      stopSpeech(store);
+      stopSpeech(rawStore);
       setSpeechSentenceId(targetId);
     }
   };
