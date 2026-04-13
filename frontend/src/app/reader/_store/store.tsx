@@ -7,7 +7,7 @@ import { createUrlSearchStorage } from '@/lib/zustand-helpers';
 
 import { type ArticleData } from '@/lib/article';
 import { type BookData } from '@/lib/book';
-import { jumpToSentence as _jumpToSentence, parseSummaries } from './helpers';
+import { parseSummaries } from './helpers';
 
 export type ReaderMode = 'article' | 'book';
 
@@ -37,9 +37,11 @@ export interface ReaderState {
 	data: ArticleData | BookData | null;
 	content: string;
 	summaries: AISummary[];
-	activeSentenceId: string | null;
+	summarySentenceId: string | null;
+	speechSentenceId: string | null;
 	isManualScrolling: boolean;
 	isLoading: boolean;
+	isPlaying: boolean;
 }
 
 /**
@@ -50,9 +52,10 @@ export interface ReaderActions {
 	setArticleId: (id: string | null) => void;
 	setBookId: (id: string | null) => void;
 	setContent: (content: string) => void;
-	setActiveSentenceId: (id: string | null) => void;
+	setSpeechSentenceId: (id: string | null) => void;
+	setSummarySentenceId: (id: string | null) => void;
 	setIsManualScrolling: (isManual: boolean) => void;
-	jumpToSentence: (sId: string) => void;
+	setIsPlaying: (isPlaying: boolean) => void;
 }
 
 /**
@@ -82,9 +85,11 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					data,
 					content,
 					summaries: parseSummaries(data),
-					activeSentenceId: null,
+					summarySentenceId: null,
+					speechSentenceId: null,
 					isManualScrolling: false,
 					isLoading: false,
+					isPlaying: false,
 				},
 				(set, get) => ({
 					setMode: (mode) => set({ mode }),
@@ -100,9 +105,10 @@ const createReaderStore = (initialState: InitialState = {}) => {
 						set({ data, summaries: parseSummaries(data) });
 					},
 					setContent: (content) => set({ content }),
-					setActiveSentenceId: (activeSentenceId) => set({ activeSentenceId }),
+					setSummarySentenceId: (summarySentenceId) => set({ summarySentenceId }),
+					setSpeechSentenceId: (speechSentenceId) => set({ speechSentenceId }),
 					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
-					jumpToSentence: (sId) => _jumpToSentence(set, sId),
+					setIsPlaying: (isPlaying) => set({ isPlaying }),
 				})
 			),
 			{

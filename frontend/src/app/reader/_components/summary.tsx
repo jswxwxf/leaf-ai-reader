@@ -3,6 +3,7 @@
 import { Star } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useReaderStore } from "../_store/store";
+import { useReader } from "../_hooks/use-reader";
 
 /**
  * 重点列表组件 (AI 核心摘要)
@@ -10,17 +11,16 @@ import { useReaderStore } from "../_store/store";
 export function Summary() {
   const {
     summaries,
-    activeSentenceId,
-    jumpToSentence,
+    summarySentenceId,
     data
   } = useReaderStore(
     useShallow((state) => ({
       summaries: state.summaries,
-      activeSentenceId: state.activeSentenceId,
-      jumpToSentence: state.jumpToSentence,
+      summarySentenceId: state.summarySentenceId,
       data: state.data,
     }))
   );
+  const { jumpToSentence } = useReader();
 
   return (
     <aside className="w-80 border-l border-base-300 bg-base-100 hidden lg:flex flex-col h-full overflow-hidden shrink-0">
@@ -32,7 +32,7 @@ export function Summary() {
       <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
         {summaries.length > 0 ? (
           summaries.map((item, index) => {
-            const isActive = activeSentenceId === item.start_sId;
+            const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
             return (
               <div
                 key={index}
