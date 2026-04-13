@@ -32,15 +32,21 @@ export function splitSentences(text: string): string[] {
 			// 2. 决策是否在此处切断
 			const nextChar = i + 1 < text.length ? text[i + 1] : null;
 			
-			// 核心逻辑：
-			// 如果后面没内容了，或者紧跟着换行或空格，则执行断句
+			// 核心决策逻辑：
 			if (!nextChar || nextChar === '\n' || nextChar === ' ' || nextChar === '\u3000') {
+				// 场景 A: 后面没内容了，或者紧跟着换行或空格 -> 此时肯定执行断句
+				if (current.trim()) {
+					sentences.push(current.trim());
+				}
+				current = "";
+			} else if (char === '。') {
+				// 场景 B: 哪怕后面没有空格，只要是中文句号 '。' -> 也执行断句（解决微信这种无空格排版）
 				if (current.trim()) {
 					sentences.push(current.trim());
 				}
 				current = "";
 			} else {
-				// 如果后面紧跟着普通文字（如“？》系列”），我们认为这是标题内部标点，不断句，继续走
+				// 场景 C: 针对英文或其他标点（如“？》系列”），如果没空格且不是句号，不断句
 				continue;
 			}
 		}

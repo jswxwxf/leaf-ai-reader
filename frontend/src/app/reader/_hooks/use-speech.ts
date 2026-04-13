@@ -38,8 +38,9 @@ export function useSpeech() {
     setIsPlaying(true);
     clearHighlight();
 
-    // 3. 创建朗读任务
-    const utterance = new SpeechSynthesisUtterance(el.textContent);
+    // 3. 创建朗读任务 (对破折号做特殊处理，引导 TTS 引擎停顿)
+    const processedText = el.textContent.replaceAll('——', '--');
+    const utterance = new SpeechSynthesisUtterance(processedText);
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
     utterance.rate = isSafari ? 1.4 : 2.1;

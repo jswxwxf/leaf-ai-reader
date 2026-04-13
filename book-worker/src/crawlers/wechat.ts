@@ -97,7 +97,7 @@ export function cleanHtml(container: any): string {
  * 辅助函数：平坦化 DOM 结构，剥离冗余的 inline 容器
  */
 function normalizeStructure(container: any) {
-  const tagsToStrip = ['span', 'section', 'font', 'div', 'fieldset'];
+  const tagsToStrip = ['span', 'section', 'font', 'div', 'fieldset', 'a'];
 
   const walk = (node: any) => {
     let child = node.firstChild;

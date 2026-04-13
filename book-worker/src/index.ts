@@ -184,15 +184,15 @@ export default class extends WorkerEntrypoint<Env> {
 			// 4. AI 摘要生成
 			let summaryJson = null;
 			// 只有在生产环境，或者在开发环境且提供了 GEMINI_API_KEY 时才运行 AI 摘要
-			const shouldRunAI = (this.env as any).NODE_ENV !== 'development' || this.env.GEMINI_API_KEY;
+			const shouldRunAI = (this.env as any).NODE_ENV !== 'development';
 
 			if (shouldRunAI) {
 				try {
 					console.log(`[Worker] Starting AI summary for ${parsedArticle.title}...`);
 					const compactText = toCompactText(parsedArticle.content);
 					const summaryResult = await generateSummary(
-						this.env.AI, 
-						compactText, 
+						this.env.AI,
+						compactText,
 						this.env.GEMINI_API_KEY,
 						(this.env as any).GEMINI_API_BASE_URL
 					);

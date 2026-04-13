@@ -95,4 +95,27 @@ describe('WeChat Crawler cleanHtml', () => {
         const textOnly = cleaned.replace(/<[^>]+>/g, '');
         expect(textOnly).toContain('上篇《指环王密码》');
     });
+
+    it('应该正确清洗微信典型的复杂嵌套 HTML 并合并被切断的句子', () => {
+        const messyHtml = `
+            <div id="js_content">
+                <p style="margin-left: 16px;margin-right: 16px;"><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;">西北大学</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;">终于站出来了，此时，离</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;">我周一</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;">发的</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;">《</span><a href="https://mp.weixin.qq.com/s..."><span textstyle="" style="font-size: 16px;">一觉醒来，贾浅浅终于变成董小姐了</span></a><span textstyle="" style="font-size: 16px;">》</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;">已经三天。在这篇文章中，</span><span textstyle="" style="font-size: 16px;font-weight: bold;">我</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;font-weight: bold;">把小贾论文抄袭这事上升到</span></span></font><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;font-weight: bold;">“董小姐同类腐败链</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;font-weight: bold;">“</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;font-weight: bold;">的高度，</span></span></font></span><span style="font-family: 宋体;font-size: 10.5pt;"><font face="宋体"><span leaf=""><span textstyle="" style="font-size: 16px;font-weight: bold;">目的就是推进议程。</span></span></font></span></p>
+            </div>
+        `;
+        const { document } = parseHTML(messyHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        // 验证不再包含 style 属性、font 标签和 a 标签
+        expect(cleaned).not.toContain('style=');
+        expect(cleaned).not.toContain('<font');
+        expect(cleaned).not.toContain('<a');
+        
+        // 验证是否正确合并并分句 (应该只有 2 句)
+        // 第一句应该包含完整的《...》
+        expect(cleaned).toContain('西北大学终于站出来了，此时，离我周一发的《一觉醒来，贾浅浅终于变成董小姐了》已经三天。');
+        
+        const sentenceCount = (cleaned.match(/class="sentence"/g) || []).length;
+        expect(sentenceCount).toBe(2);
+    });
 });
