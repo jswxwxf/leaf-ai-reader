@@ -80,7 +80,14 @@ export function useSpeech() {
     }
   };
 
+  const stop = () => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+    clearHighlight();
+  };
+
   const step = (delta: number) => {
+    stop();
     let currentNum = 0;
     if (speechSentenceId) {
       currentNum = parseInt(speechSentenceId.replace("s-", ""));
@@ -92,12 +99,6 @@ export function useSpeech() {
     if (document.getElementById(nextId)) {
       setSpeechSentenceId(nextId);
     }
-  };
-
-  const stop = () => {
-    window.speechSynthesis.cancel();
-    setIsPlaying(false);
-    clearHighlight();
   };
 
   useShortKey({ isPlaying, play, stop, step });
@@ -140,11 +141,9 @@ function useShortKey({
         }
       } else if (event.code === "ArrowLeft") {
         event.preventDefault();
-        stop();
         step(-1);
       } else if (event.code === "ArrowRight") {
         event.preventDefault();
-        stop();
         step(1);
       }
     };

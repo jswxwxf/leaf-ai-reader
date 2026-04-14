@@ -7,11 +7,11 @@ import { useReaderStore } from "../_store/store";
  * 仅仅负责监控位置并更新侧边栏摘要的高亮，不干涉朗读状态
  */
 export function useScrollspy() {
-  const { 
-    summaries, 
-    setSummarySentenceId, 
+  const {
+    summaries,
+    setSummarySentenceId,
     isManualScrolling,
-    content 
+    content
   } = useReaderStore(
     useShallow((state) => ({
       summaries: state.summaries,
@@ -37,7 +37,7 @@ export function useScrollspy() {
       },
       {
         root: null,
-        rootMargin: "0px 0px -80% 0px", // 顶部 20% 触发
+        rootMargin: "-80% 0px -10% 0px", // 偏下方 10% 区域触发
         threshold: [0],
       }
     );

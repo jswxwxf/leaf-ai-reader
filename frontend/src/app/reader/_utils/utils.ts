@@ -19,7 +19,7 @@ export function scrollIntoViewIfNeeded(el: HTMLElement) {
   if (isOutOfView) {
     el.scrollIntoView({
       behavior: 'smooth',
-      block: 'center',
+      block: 'end',
     });
   }
 }

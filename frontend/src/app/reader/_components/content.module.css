@@ -1,11 +1,19 @@
 /* 严格遵循 PRD 008 视觉规范：复刻 iOS “朗读屏幕”原生蓝色下划线风格 */
 .reader_content :global(.active-sentence) {
   text-decoration: underline;
-  text-underline-offset: 4px;      /* 增加呼吸感，避开字母尾巴 */
+  text-underline-offset: 4px;
+  /* 增加呼吸感，避开字母尾巴 */
   text-decoration-thickness: 1.5px;
-  text-decoration-color: oklch(0.56 0.21 253);         /* iOS 原生蓝色 */
-  text-decoration-skip-ink: none;  /* 确保线条连续 */
-  
+  text-decoration-color: oklch(0.56 0.21 253);
+  /* iOS 原生蓝色 */
+  text-decoration-skip-ink: none;
+  /* 确保线条连续 */
+
   /* 增加微妙的渐变过渡 */
   transition: text-decoration-color 0.3s ease;
+}
+
+.reader_content [id^="s-"] {
+  /* 当使用 scrollIntoView({ block: 'end' }) 时，使元素停在距离底部 15% 处（即 85% 高度位置） */
+  scroll-margin-bottom: 15vh;
 }
