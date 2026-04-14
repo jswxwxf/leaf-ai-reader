@@ -103,7 +103,11 @@ function normalizeStructure(container: any) {
     let child = node.firstChild;
     while (child) {
       const next = child.nextSibling;
-      if (child.nodeType === 1) {
+
+      // 如果是仅含空白的文本节点，直接移除以防干扰合并
+      if (child.nodeType === 3 && !child.textContent.trim()) {
+        node.removeChild(child);
+      } else if (child.nodeType === 1) {
         walk(child);
         const tag = child.tagName.toLowerCase();
         
@@ -119,6 +123,7 @@ function normalizeStructure(container: any) {
       }
       child = next;
     }
+
   };
 
   walk(container);

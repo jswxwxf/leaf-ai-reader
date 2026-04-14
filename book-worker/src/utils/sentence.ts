@@ -9,7 +9,7 @@ export function splitSentences(text: string): string[] {
 	const sentences: string[] = [];
 	const terminators = "。！？；!?……";
 	const closers = "”’』」》）〉】〗｝\"')]}";
-	
+
 	let current = "";
 	for (let i = 0; i < text.length; i++) {
 		const char = text[i];
@@ -25,37 +25,41 @@ export function splitSentences(text: string): string[] {
 		// 检查是否遇到结束标点
 		if (terminators.includes(char)) {
 			// 1. 尽可能吞掉后面的连续闭合符号 (如 》” )
+			let swallowedAnyCloser = false;
 			while (i + 1 < text.length && closers.includes(text[i + 1])) {
 				current += text[++i];
+				swallowedAnyCloser = true;
 			}
 			
 			// 2. 决策是否在此处切断
 			const nextChar = i + 1 < text.length ? text[i + 1] : null;
-			
-			// 核心决策逻辑：
-			if (!nextChar || nextChar === '\n' || nextChar === ' ' || nextChar === '\u3000') {
-				// 场景 A: 后面没内容了，或者紧跟着换行或空格 -> 此时肯定执行断句
+			const isAtBoundary = !nextChar || nextChar === '\n' || nextChar === ' ' || nextChar === '\u3000';
+
+			if (isAtBoundary) {
+				// 场景 A: 后面没内容了，或者紧跟着换行或空格 -> 断句
 				if (current.trim()) {
 					sentences.push(current.trim());
 				}
 				current = "";
-			} else if (char === '。' || char === '；') {
-				// 场景 B: 哪怕后面没有空格，只要是中文句号或分号 -> 也执行断句
+			} else if (!swallowedAnyCloser && terminators.includes(char)) {
+				// 场景 B: 哪怕后面没有空格，但只要是直接暴露的中文终结符 -> 也执行断句
+				// 这解决了用户反馈的“问号后紧跟汉字不分句”的问题
 				if (current.trim()) {
 					sentences.push(current.trim());
 				}
 				current = "";
 			} else {
-				// 场景 C: 针对英文或其他标点（如“？》系列”），如果没空格且不是句号，不断句
+				// 场景 C: 书名号词缀、对话后紧跟描述等特殊情况，且没有空格 -> 保持不断句以保护 UT
 				continue;
 			}
 		}
+
 	}
 
 	if (current.trim()) {
 		sentences.push(current.trim());
 	}
-	
+
 	return sentences.filter(Boolean);
 }
 
@@ -75,7 +79,7 @@ export function injectSentenceIds(html: string): string {
 			if (!text || !text.trim()) return;
 
 			const matches = splitSentences(text);
-			
+
 			if (matches.length > 0) {
 				const fragment = document.createDocumentFragment();
 				matches.forEach((s: string) => {
@@ -85,7 +89,7 @@ export function injectSentenceIds(html: string): string {
 					span.textContent = s;
 					fragment.appendChild(span);
 				});
-				
+
 				node.parentNode.replaceChild(fragment, node);
 			}
 		} else if (node.nodeType === 1) {

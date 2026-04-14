@@ -52,34 +52,21 @@ describe('WeChat Sentence Splitting', () => {
 });
 
 describe('WeChat Crawler cleanHtml', () => {
-    // it('应该能正确处理 test.html 并生成 output.html', () => {
-    //     const htmlPath = resolve(__dirname, 'test.html');
-    //     const outputPath = resolve(__dirname, 'output.html');
+    it('应该正确清洗包含多个 span 和 leaf 属性的复杂微信 HTML (用户请求测试)', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p style="margin-left: 8px; margin-right: 8px; text-align: justify; line-height: 1.75em; visibility: visible;"><span style="font-family: 微软雅黑; font-size: 16px; visibility: visible;" mpa-font-style="mnwzzv6ib6h"><font face="微软雅黑" style="visibility: visible;"><span leaf="" style="visibility: visible;"><span textstyle="" style="letter-spacing: 1px; visibility: visible;">为啥我说这些人观念朴素呢？一个关键问题，线下店到底是怎么丢掉自己的优势的？如果去过中关村之前的那几个电脑城，或者你在线下店买到的东西出了问题，你才能意识到线上店的优势有多大，那些被迫关闭的线下商场，没一个是冤枉的。</span></span></font></span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
 
-    //     const html = readFileSync(htmlPath, 'utf-8');
-    //     let { document } = parseHTML(html);
+        const expected = '<p><span class="sentence" id="s-1">为啥我说这些人观念朴素呢？</span><span class="sentence" id="s-2">一个关键问题，线下店到底是怎么丢掉自己的优势的？</span><span class="sentence" id="s-3">如果去过中关村之前的那几个电脑城，或者你在线下店买到的东西出了问题，你才能意识到线上店的优势有多大，那些被迫关闭的线下商场，没一个是冤枉的。</span></p>';
 
-    //     // 处理 Chrome "View Source" 格式
-    //     const lineWrap = document.querySelector('.line-wrap');
-    //     if (lineWrap) {
-    //         const lines = Array.from(document.querySelectorAll('.line-content'));
-    //         const originalHtml = lines.map((line: any) => line.textContent).join('\n');
-    //         const parsed = parseHTML(originalHtml);
-    //         document = parsed.document;
-    //     }
+        expect(cleaned).toBe(expected);
+    });
 
-    //     const jsContent = document.getElementById('js_content');
-    //     expect(jsContent).toBeDefined();
-
-    //     if (jsContent) {
-    //         const cleaned = cleanHtml(jsContent);
-    //         writeFileSync(outputPath, cleaned, 'utf-8');
-
-    //         expect(cleaned).toContain('class="sentence"');
-    //         expect(cleaned).not.toContain('style=');
-    //         expect(cleaned).not.toContain('data-src=');
-    //     }
-    // });
 
     it('应该正确合并相邻的行内元素而不产生多余的段落', () => {
         const { document } = parseHTML(`
@@ -94,12 +81,9 @@ describe('WeChat Crawler cleanHtml', () => {
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
 
-        // 期望值：应该只有一个 <p> 标签包含所有的文本
-        const pCount = (cleaned.match(/<p>/g) || []).length;
-        expect(pCount).toBe(1);
-        // 允许 span 标签存在，所以检查文本内容
-        const textOnly = cleaned.replace(/<[^>]+>/g, '');
-        expect(textOnly).toContain('上篇《指环王密码》');
+        const expected = '<p><span class="sentence" id="s-1">上篇《指环王密码》</span></p>';
+        expect(cleaned).toBe(expected);
+
     });
 
     it('应该正确清洗微信典型的复杂嵌套 HTML 并合并被切断的句子', () => {
@@ -112,18 +96,11 @@ describe('WeChat Crawler cleanHtml', () => {
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
 
-        // 验证不再包含 style 属性、font 标签和 a 标签
-        expect(cleaned).not.toContain('style=');
-        expect(cleaned).not.toContain('<font');
-        expect(cleaned).not.toContain('<a');
-        
-        // 验证是否正确合并并分句 (应该只有 2 句)
-        // 第一句应该包含完整的《...》
-        expect(cleaned).toContain('西北大学终于站出来了，此时，离我周一发的《一觉醒来，贾浅浅终于变成董小姐了》已经三天。');
-        
-        const sentenceCount = (cleaned.match(/class="sentence"/g) || []).length;
-        expect(sentenceCount).toBe(2);
+        const expected = '<p><span class="sentence" id="s-1">西北大学终于站出来了，此时，离我周一发的《一觉醒来，贾浅浅终于变成董小姐了》已经三天。</span><span class="sentence" id="s-2">在这篇文章中，我把小贾论文抄袭这事上升到“董小姐同类腐败链“的高度，目的就是推进议程。</span></p>';
+
+        expect(cleaned).toBe(expected);
     });
+
 
     it('应该正确清洗带有 section 和 leaf 属性的复杂微信 HTML', () => {
         const inputHtml = `
@@ -138,12 +115,14 @@ describe('WeChat Crawler cleanHtml', () => {
         const { document } = parseHTML(inputHtml);
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
-        
-        console.log('--- Cleaned HTML Response Start ---');
-        console.log(cleaned);
-        console.log('--- Cleaned HTML Response End ---');
 
-        expect(cleaned).not.toContain('style=');
-        expect(cleaned).toContain('class="sentence"');
+        const expected = `<p><span class="sentence" id="s-1">我能想象他们的心情，这帮人读我文章时，一定是非常高傲的，他们一定不断默念着：“作者就是个傻叉，我比他懂《指环王》多了，我就是要跟他抬杠一下，证明这一点！”</span></p>
+<p><span class="sentence" id="s-2">好吧，可能我不如您懂指环王。</span><span class="sentence" id="s-3">但我要说：</span><strong><span class="sentence" id="s-4">一个人若以这种高傲的心态去读书览文，看的再多也只是在浪费时间。</span></strong></p>
+<p><span class="sentence" id="s-5">因为骄傲会封闭你的大脑和内心，让你无法获得新启发和新知识。</span></p>
+<p><span class="sentence" id="s-6">抛开成见，请思考一下，《指环王》之中有没有历史的影子呢？</span></p>
+<p><span class="sentence" id="s-7">当然是有的。</span></p>`;
+
+        expect(cleaned).toBe(expected);
     });
+
 });
