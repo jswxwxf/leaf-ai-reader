@@ -138,5 +138,19 @@ describe('WeChat Crawler cleanHtml', () => {
         expect(cleaned).toBe(expected);
     });
 
+    it('应该正确移除 <br> 标签', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p>第一行<br>第二行</p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">第一行</span><span class="sentence" id="s-2">第二行</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
 });
 

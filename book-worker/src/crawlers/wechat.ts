@@ -82,7 +82,7 @@ export function cleanHtml(container: any): string {
       'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'span', 'strong', 'b', 'em', 'i', 'sub', 'sup', 'del',
       'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code',
-      'img', 'br'
+      'img'
     ],
     ALLOWED_ATTR: ['id', 'class', 'src', 'alt'],
     // 强制校验协议
@@ -110,7 +110,7 @@ function normalizeStructure(container: any) {
       } else if (child.nodeType === 1) {
         walk(child);
         const tag = child.tagName.toLowerCase();
-        
+
         // 只有不含 class/id 的 div 才会被剥离，防止剥离重要的容器
         const isSimpleDiv = tag === 'div' && !child.id && !child.className;
 
@@ -139,7 +139,7 @@ function transformNode(node: any, getNextId: () => number): string {
   if (node.nodeType === 3) {
     const text = node.textContent || "";
     if (!text.trim()) return "";
-    
+
     // 如果纯粹是换行符等产生的空白节点，保留一个空格以防粘连
     if (/^\s+$/.test(text) && text.includes('\n')) {
       return " ";
@@ -163,7 +163,7 @@ function transformNode(node: any, getNextId: () => number): string {
     }
 
     // 换行处理
-    if (tagName === 'br') return "<br>";
+    if (tagName === 'br') return "";
 
     // 定义要保留的标签白名单
     const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code'];
