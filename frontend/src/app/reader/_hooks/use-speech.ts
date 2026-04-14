@@ -39,11 +39,12 @@ export function useSpeech() {
     setIsPlaying(true);
     clearHighlight();
 
-    // 3. 创建朗读任务 (对破折号和相邻引号做处理，引导 TTS 引擎停顿)
-    // 使用 2:2 替换 (”“ -> ”，)，既能增加停顿，又能保证 charIndex 索引不乱
+    // 3. 创建朗读任务 (对标点进行处理，防止 TTS 误读并引导停顿)
+    // 注意：采用 1:1 或 2:2 替换以保持字符串长度不变，确保 onboundary 的 charIndex 索引不位移
     const processedText = el.textContent
       .replaceAll('——', '--')
-      .replaceAll('”“', '”，');
+      .replaceAll('”“', '”，')
+      .replaceAll('"', ' '); // 仅处理会产生噪音的半角双引号，保持长度对齐
     const utterance = new SpeechSynthesisUtterance(processedText);
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)

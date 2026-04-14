@@ -42,21 +42,28 @@ export function splitSentences(text: string): string[] {
 			const isAtBoundary = !nextChar || nextChar === '\n' || nextChar === ' ' || nextChar === '\u3000';
 
 			if (isAtBoundary) {
-				// 场景 A: 后面没内容了，或者紧跟着换行或空格 -> 断句
-				if (current.trim()) {
-					sentences.push(current.trim());
-				}
-				current = "";
-			} else if (!swallowedAnyCloser && terminators.includes(char)) {
-				// 场景 B: 哪怕后面没有空格，但只要是直接暴露的中文终结符 -> 也执行断句
-				// 这解决了用户反馈的“问号后紧跟汉字不分句”的问题
+				// 场景 A: 后面没内容了，或者紧跟着换行或空格 -> 无论什么符号都断句
 				if (current.trim()) {
 					sentences.push(current.trim());
 				}
 				current = "";
 			} else {
-				// 场景 C: 书名号词缀、对话后紧跟描述等特殊情况，且没有空格 -> 保持不断句以保护 UT
-				continue;
+				// 场景 B/C: 后面紧跟汉字或其他非空字符
+				// 为了避免在书名号（《》）或括号（（））内部被终结符意外切断
+				const nonSplittableClosers = "》）〕〉】〗｝)]}"; 
+				const lastCloser = swallowedAnyCloser ? text[i] : null;
+				const isInsideTitleOrBrackets = lastCloser && nonSplittableClosers.includes(lastCloser);
+
+				if (!isInsideTitleOrBrackets) {
+					// 如果没吞掉闭合符，或者是引号类闭合符，则断句
+					if (current.trim()) {
+						sentences.push(current.trim());
+					}
+					current = "";
+				} else {
+					// 书名号、括号等特殊情况 -> 保持不断句
+					continue;
+				}
 			}
 		}
 
