@@ -10,6 +10,7 @@ import { type BookData } from '@/lib/book';
 import { parseSummaries } from './helpers';
 
 export type ReaderMode = 'article' | 'book';
+export type SpeechMode = 'sentence' | 'paragraph' | 'article';
 
 export interface AISummary {
 	summary: string;
@@ -42,6 +43,7 @@ export interface ReaderState {
 	isManualScrolling: boolean;
 	isLoading: boolean;
 	isPlaying: boolean;
+	speechMode: SpeechMode;
 }
 
 /**
@@ -56,6 +58,7 @@ export interface ReaderActions {
 	setSummarySentenceId: (id: string | null) => void;
 	setIsManualScrolling: (isManual: boolean) => void;
 	setIsPlaying: (isPlaying: boolean) => void;
+	setSpeechMode: (mode: SpeechMode) => void;
 }
 
 /**
@@ -90,6 +93,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					isManualScrolling: false,
 					isLoading: false,
 					isPlaying: false,
+					speechMode: 'sentence',
 				},
 				(set, get) => ({
 					setMode: (mode) => set({ mode }),
@@ -109,6 +113,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					setSpeechSentenceId: (speechSentenceId) => set({ speechSentenceId }),
 					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
 					setIsPlaying: (isPlaying) => set({ isPlaying }),
+					setSpeechMode: (speechMode) => set({ speechMode }),
 				})
 			),
 			{
@@ -117,7 +122,8 @@ const createReaderStore = (initialState: InitialState = {}) => {
 				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id'])),
 				partialize: (state) => ({
 					article_id: state.article_id,
-					book_id: state.book_id
+					book_id: state.book_id,
+					speechMode: state.speechMode
 				}),
 				// 在从 URL 恢复状态后，重新计算一次 mode
 				merge: (persistedState: any, currentState) => {

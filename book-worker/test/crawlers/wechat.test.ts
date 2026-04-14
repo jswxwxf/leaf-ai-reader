@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
 import { parseHTML } from 'linkedom';
 import { splitSentences } from '../../src/utils/sentence';
 import { cleanHtml } from '../../src/crawlers/wechat';
