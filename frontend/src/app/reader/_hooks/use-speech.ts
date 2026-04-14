@@ -65,7 +65,7 @@ export function useSpeech() {
     const utterance = new SpeechSynthesisUtterance(processedText);
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
-    utterance.rate = isSafari ? 1.4 : 2;
+    utterance.rate = isSafari ? 1.3 : 2;
 
     // 3.1 词级高亮逻辑 (通过抽取出的 hook 处理)
     utterance.onboundary = (event) => {
