@@ -2,7 +2,7 @@ import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * 语音朗读核心逻辑 Hook
@@ -13,24 +13,41 @@ export function useSpeech() {
     setSpeechSentenceId,
     isPlaying,
     setIsPlaying,
+    speechMode,
   } = useReaderStore(
     useShallow((state) => ({
       speechSentenceId: state.speechSentenceId,
       setSpeechSentenceId: state.setSpeechSentenceId,
       isPlaying: state.isPlaying,
       setIsPlaying: state.setIsPlaying,
+      speechMode: state.speechMode,
     }))
   );
 
   const { highlightWord, clearHighlight } = useWordHighlight();
 
+  // 用 ref 持有最新值，确保 onend 等异步回调中读取不受闭包陈旧值影响
+  const speechSentenceIdRef = useRef(speechSentenceId);
+  useEffect(() => {
+    speechSentenceIdRef.current = speechSentenceId;
+  }, [speechSentenceId]);
+
   const play = () => {
-    // 1. 确定当前要读的句子
-    const targetId = speechSentenceId || "s-1";
+    // 1. 确定当前要读的句子（始终从 ref 读取最新值）
+    const targetId = speechSentenceIdRef.current ?? "s-1";
     const el = document.getElementById(targetId);
 
     if (!el || !el.textContent) {
       console.warn(`未找到目标句子 (${targetId})`);
+      return;
+    }
+
+    // 如果全是标点符号则跳过，递归调用 play 直到读到实质内容或触及边界
+    if (!/[^\p{P}\p{S}\s]/u.test(el.textContent)) {
+      setSpeechSentenceId(`s-${parseInt(targetId.replace("s-", "")) + 1}`);
+      if (speechMode !== "paragraph" || !isLastSentenceInParagraph(el as HTMLElement)) {
+        setTimeout(play, 0);
+      }
       return;
     }
 
@@ -57,16 +74,40 @@ export function useSpeech() {
       highlightWord(el, event.charIndex, event.charLength);
     };
 
-    // 4. 重要：当这一句读完时，自动将高亮“接力”给下一句
+    // 4. 当这一句读完时，根据朗读模式决定是否继续播放下一句
     utterance.onend = () => {
       setIsPlaying(false);
       clearHighlight();
 
       const currentNum = parseInt(targetId.replace("s-", ""));
       const nextId = `s-${currentNum + 1}`;
-      // 检查下一句是否存在，存在则更新 ID 触发 Scroller 滚动和高亮
-      if (document.getElementById(nextId)) {
-        setSpeechSentenceId(nextId);
+      const nextEl = document.getElementById(nextId);
+
+      // 已到文章末尾，无需任何操作
+      if (!nextEl) return;
+
+      // 无论哪种模式，都将焦点移至下一句（确保用户手动播放时从下一句开始）
+      setSpeechSentenceId(nextId);
+
+      if (speechMode === 'sentence') {
+        // 逐句模式：停止，不自动触发下一句播放
+        return;
+      }
+
+      if (speechMode === 'paragraph') {
+        // 逐段模式：判断当前句是否为该段落中的最后一句
+        if (isLastSentenceInParagraph(el as HTMLElement)) {
+          // 段落已结束，停止播放
+          return;
+        }
+        // 段落未完，接力播放下一句（微延迟确保合成器状态已重置）
+        setTimeout(play, 0);
+        return;
+      }
+
+      if (speechMode === 'article') {
+        // 全文模式：无条件跨段接力朗读
+        setTimeout(play, 0);
       }
     };
 
@@ -161,4 +202,16 @@ export function stopSpeech(store: any) {
   window.speechSynthesis?.cancel();
   store.getState().setIsPlaying(false);
   (CSS as any).highlights?.get("word-focus")?.clear();
+}
+
+/**
+ * 判断当前句子元素是否为其所属段落的最后一个句子
+ */
+function isLastSentenceInParagraph(el: HTMLElement): boolean {
+  const container = el.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote');
+  if (!container) return true; // 如果找不到容器，保守起见视为段落结束
+
+  const sentencesInContainer = container.querySelectorAll('.sentence');
+  return sentencesInContainer.length > 0 &&
+    sentencesInContainer[sentencesInContainer.length - 1] === el;
 }
