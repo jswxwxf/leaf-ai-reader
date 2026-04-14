@@ -59,3 +59,13 @@ export type SpeechMode = 'sentence' | 'paragraph' | 'article';
 1. **强解耦**：将所有模式控制逻辑收敛在 `useSpeech` 的交互中模块中，不会干扰底层的 HTML 净化清洗以及前端的渲染流程。
 2. **高健壮性**：`querySelectorAll` 能够扁平化获取父容器内的所有符合 `class` 的节点，完美兼容带有内联富文本（加粗、斜体等导致深度层级变化）的句子，不会出现判断遗漏。
 3. **极简的高性能**：仅在每句话发音完全结束并触发事件的那个瞬间才执行一次少量的 DOM 查找，避免了全局状态监听与复杂的虚拟 DOM 差分比对计算。
+
+## 5. 实施状态 (Implementation Status)
+
+- [x] **状态集成**：已在 `useReaderStore` 中完整对接 `speechMode`。
+- [x] **调度引擎**：`useSpeech` 已更新，通过 `onend` 生命周期支持三种模式的自动跳转与停止判定。
+- [x] **闭包安全**：通过 `useRef` 追踪最新 `speechSentenceId`，解决了 TTS 异步回调导致的重播死循环问题。
+- [x] **代码架构**：提取了 `isLastSentenceInParagraph` 工具函数，保持了 Hook 逻辑的纯粹性。
+
+---
+*Last Updated: 2026-04-14*

@@ -10,7 +10,8 @@
 - [x] **PRD-006: 采集文章阅读渲染** ([006-render-article-reader.md](./006-render-article-reader.md)) — **[Phase 1]** 已实现内容拉取、安全清洗与前端自动填充
 - [x] **PRD-007: AI 内容总结与滚动同步高亮** ([007-ai-summary-highlighting.md](./007-ai-summary-highlighting.md)) — 已实现高性能 Scrollspy、点击跳转锁及 Store 逻辑重构
 - [x] **PRD-008: 逐句逐词朗读高亮** ([008-sentence-highlighting.md](./008-sentence-highlighting.md)) — 已实现双层联动高亮系统、TTS 接力朗读及键盘快捷键导航
-- [ ] **PRD-009: 朗读模式切换** ([009-speech-modes.md](./009-speech-modes.md)) — 当前进行中
+- [x] **PRD-009: 朗读模式切换** ([009-speech-modes.md](./009-speech-modes.md)) — 已实现三种调度模式与跨闭包陈旧值修复
+- [ ] **PRD-011: MediaSession 系统级媒体控制** ([011-mediasession-integration.md](./011-mediasession-integration.md)) — 待实现锁屏控制与静音保活
 - [ ] **PRD-010: 图书 EPUB 实时提取与渲染** ([010-render-book-reader.md](./010-render-book-reader.md)) — **[Phase 2]** 待实现实时解压与图片中转代理
 
 ---
