@@ -123,6 +123,23 @@ describe('WeChat Crawler cleanHtml', () => {
 <p><span class="sentence" id="s-7">当然是有的。</span></p>`;
 
         expect(cleaned).toBe(expected);
+
+    });
+
+    it('应该正确清洗包含 Light Phone 评价的复杂微信 HTML (用户请求测试)', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><span leaf=""><span textstyle="" style="letter-spacing: normal;">海外媒体是这么评价 Light Phone 三代的：「极简主义被拉伸到令人沮丧的程度」，「一台越来越像智能机的傻瓜手机」。也不能怪他们：AMOLED 屏幕、摄像头、NFC 支付、指纹解锁……只看参数表的话，你很容易以为这就是一台智能机。</span></span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">海外媒体是这么评价 Light Phone 三代的：「极简主义被拉伸到令人沮丧的程度」，「一台越来越像智能机的傻瓜手机」。</span><span class="sentence" id="s-2">也不能怪他们：AMOLED 屏幕、摄像头、NFC 支付、指纹解锁……</span><span class="sentence" id="s-3">只看参数表的话，你很容易以为这就是一台智能机。</span></p>';
+
+        expect(cleaned).toBe(expected);
     });
 
 });
+

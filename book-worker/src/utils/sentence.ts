@@ -24,8 +24,14 @@ export function splitSentences(text: string): string[] {
 
 		// 检查是否遇到结束标点
 		if (terminators.includes(char)) {
-			// 1. 尽可能吞掉后面的连续闭合符号 (如 》” )
+			// 1. 尽可能多地吞掉连续的终结符 (如 …… 或 !!!)
+			while (i + 1 < text.length && terminators.includes(text[i + 1])) {
+				current += text[++i];
+			}
+
+			// 2. 尽可能吞掉后面的连续闭合符号 (如 》” )
 			let swallowedAnyCloser = false;
+
 			while (i + 1 < text.length && closers.includes(text[i + 1])) {
 				current += text[++i];
 				swallowedAnyCloser = true;
