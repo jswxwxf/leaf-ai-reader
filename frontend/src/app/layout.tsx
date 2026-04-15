@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,6 +11,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
 	subsets: ["latin"],
+});
+
+// 配置自定义中文字体
+const customFont = localFont({
+	src: "../../public/AaBiaoTiChuYuan.woff2",
+	variable: "--font-custom",
+	display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -31,11 +39,11 @@ export default function RootLayout({
 	reader,
 }: Props) {
 	return (
-		<html lang="en" data-theme="light">
+		<html lang="zh" data-theme="light" className={`${customFont.variable}`}>
 			<head>
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml"></link>
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+			<body className={`${geistSans.variable} ${geistMono.variable} ${customFont.className} antialiased`}>
 				<div>
 					{children}
 				</div>

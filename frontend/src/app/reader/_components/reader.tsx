@@ -47,7 +47,7 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 				content,
 			}}
 		>
-			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden font-sans">
+			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden">
 				<Header isPopup={isPopup} />
 
 				{/* 中间主要区域 */}
