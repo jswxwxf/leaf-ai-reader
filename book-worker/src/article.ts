@@ -46,7 +46,7 @@ export async function crawlArticle(url: string): Promise<CrawlResult> {
 
 	if (isWechat) {
 		console.log("[Crawler] Detected Wechat article, using wechat extractor...");
-		const result = extract(document);
+		const result = extract(document, html);
 		if (result) {
 			title = result.title;
 			content = result.content;

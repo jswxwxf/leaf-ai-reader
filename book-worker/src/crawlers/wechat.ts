@@ -10,14 +10,25 @@ import { splitSentences } from '../utils/sentence';
 /**
  * 微信公众号文章解析器
  */
-export function extract(document: any) {
+export function extract(document: any, rawHtml?: string) {
   // 1. 提取标题
   const title = document.getElementById("activity-name")?.textContent?.trim() ||
     document.querySelector('meta[property="og:title"]')?.getAttribute('content') ||
     "微信文章";
 
   // 2. 提取正文容器
-  const jsContent = document.getElementById("js_content");
+  let jsContent = document.getElementById("js_content");
+
+  // 后备方案：如果 DOM 中找不到 js_content，尝试从原始 HTML 的 JS 变量中提取
+  if ((!jsContent || !jsContent.textContent?.trim()) && rawHtml) {
+    console.log("[WechatExtractor] js_content is empty or not found, trying JS variable extraction...");
+    const jsExtractedHtml = tryExtractFromJsVariables(rawHtml);
+    if (jsExtractedHtml) {
+      const { document: tempDoc } = parseHTML(`<!DOCTYPE html><html><body><div id="js_content">${jsExtractedHtml}</div></body></html>`);
+      jsContent = tempDoc.getElementById("js_content");
+    }
+  }
+
   if (!jsContent) return null;
 
   // 3. 执行清洗
@@ -28,6 +39,44 @@ export function extract(document: any) {
     content: cleanContent,
     source: "微信公众号"
   };
+}
+
+/**
+ * 尝试从 HTML 源代码中的 JS 变量提取内容
+ * 处理部分文章将正文放在 text_page_info.content 里的情况
+ */
+function tryExtractFromJsVariables(html: string): string | null {
+  // 匹配 content: JsDecode('...')
+  const contentRegex = /content:\s*JsDecode\(['"](.*?)['"]\)/s;
+  const match = html.match(contentRegex);
+  if (!match || !match[1]) return null;
+
+  const decodedText = decodeJsContent(match[1]);
+  if (!decodedText) return null;
+
+  // 将文本（通常以 \n\n 分段）包装为 HTML
+  return decodedText
+    .split(/\n+/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0)
+    .map(p => `<p>${p}</p>`)
+    .join('\n');
+}
+
+/**
+ * 模拟微信浏览器的 JsDecode 函数
+ * 还原 \x0a, \x3c 等转义字符
+ */
+function decodeJsContent(str: string): string {
+  return str
+    .replace(/\\x5c/g, '\\')
+    .replace(/\\x0d/g, '\r')
+    .replace(/\\x22/g, '"')
+    .replace(/\\x26/g, '&')
+    .replace(/\\x27/g, '\'')
+    .replace(/\\x3c/g, '<')
+    .replace(/\\x3e/g, '>')
+    .replace(/\\x0a/g, '\n');
 }
 
 /**
