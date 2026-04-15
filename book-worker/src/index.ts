@@ -14,30 +14,34 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { EpubParser } from "./epub";
 import { crawlArticle } from "./article";
+import { parseHTML } from 'linkedom';
+import * as fflate from 'fflate';
+import { normalizeChapters } from './utils/chapter';
+import { cleanHtml } from './utils/html';
 import { toCompactText, generateSummary } from "./utils/summary";
-import { normalizeChapters } from "./utils/chapter";
 
 export default class extends WorkerEntrypoint<Env> {
 	/**
 	 * 处理 HTTP 请求，防止部署报错并支持基础的状态验证。
 	 */
-	async fetch(request: Request): Promise<Response> {
-		const url = new URL(request.url);
-		if (url.pathname === "/debug") {
-			const userId = "local-dev";
-			const articleId = "22389518-f686-43ad-98dc-581e81a7b136";
-			try {
-				const result = await this.processArticle(userId, articleId);
-				return Response.json(result);
-			} catch (e: any) {
-				return new Response(e.message, { status: 500 });
-			}
-		}
+	// async fetch(request: Request): Promise<Response> {
+	// 	const url = new URL(request.url);
+	// 	if (url.pathname === "/debug") {
+	// 		const userId = "local-dev";
+	// 		const bookId = "fb0aefba-28e0-44e6-ae1c-5f597fb2177d";
+	// 		const chapterPath = 'text00028.html'
+	// 		try {
+	// 			const result = await this.processChapter(userId, bookId, chapterPath);
+	// 			return Response.json(result);
+	// 		} catch (e: any) {
+	// 			return new Response(e.message, { status: 500 });
+	// 		}
+	// 	}
 
-		return new Response("Leaf Book Worker is running.", {
-			headers: { "Content-Type": "text/plain;charset=UTF-8" },
-		});
-	}
+	// 	return new Response("Leaf Book Worker is running.", {
+	// 		headers: { "Content-Type": "text/plain;charset=UTF-8" },
+	// 	});
+	// }
 
 
 	/**
@@ -106,6 +110,7 @@ export default class extends WorkerEntrypoint<Env> {
 					 published_at = ?,
 					 total_chapters = ?, 
 					 cover_r2_key = ?, 
+					 root_dir = ?,
 					 status = 'ready' 
 				 WHERE id = ? AND user_id = ?`
 			).bind(
@@ -114,6 +119,7 @@ export default class extends WorkerEntrypoint<Env> {
 				metadata.publishDate,
 				totalCount,
 				updatedCoverKey,
+				metadata.rootDir,
 				bookId,
 				userId
 			).run();
@@ -150,6 +156,60 @@ export default class extends WorkerEntrypoint<Env> {
 		};
 		traverse(chapters);
 		return count;
+	}
+
+	async processChapter(userId: string, bookId: string, chapterPath: string) {
+		console.log(`[Worker] Processing chapter: book=${bookId}, path=${chapterPath}`);
+
+		// 0. 检查是否已经处理过
+		const contentKey = `books/${userId}/${bookId}/content/${chapterPath}`;
+		const existing = await this.env.LEAF_BOOK_BUCKET.head(contentKey);
+		if (existing) {
+			console.log(`[Worker] Chapter already processed, returning cached: ${contentKey}`);
+			return { success: true, key: contentKey, cached: true };
+		}
+
+		// 1. 从 D1 获取该书的物理根目录 (root_dir)
+		const book = await this.env.LEAF_BOOK_DB.prepare(
+			"SELECT root_dir FROM books WHERE id = ?"
+		).bind(bookId).first<{ root_dir: string }>();
+
+		const rootDir = book?.root_dir || "";
+
+		// 2. 从 R2 读取原文
+		const epubKey = `books/${userId}/${bookId}/original.epub`;
+		const epubObject = await this.env.LEAF_BOOK_BUCKET.get(epubKey);
+		if (!epubObject) throw new Error(`[Worker] EPUB not found: ${epubKey}`);
+
+		const epubBuffer = await epubObject.arrayBuffer();
+		const uint8Array = new Uint8Array(epubBuffer);
+
+		// 3. 解压并提取指定 HTML
+		const decodedPath = decodeURIComponent(chapterPath);
+		// 拼接真实全路径 (rootDir + decodedPath)
+		const fullPath = rootDir + decodedPath;
+
+		const unzipped = fflate.unzipSync(uint8Array, {
+			filter: (file) => file.name === fullPath
+		});
+
+		const chapterFile = unzipped[fullPath];
+		if (!chapterFile) {
+			console.log("[Worker] ZIP Files available (partial):", Object.keys(unzipped).slice(0, 5));
+			throw new Error(`[Worker] Chapter file not found at: ${fullPath}`);
+		}
+
+		// 3. 清洗且分句
+		const htmlContent = new TextDecoder().decode(chapterFile);
+		const { document } = parseHTML(htmlContent);
+		const processedHtml = cleanHtml(document.body || document);
+
+		// 4. 存回 R2
+		await this.env.LEAF_BOOK_BUCKET.put(contentKey, processedHtml, {
+			httpMetadata: { contentType: 'text/html; charset=utf-8' }
+		});
+
+		return { success: true, key: contentKey };
 	}
 
 	async processArticle(userId: string, articleId: string) {

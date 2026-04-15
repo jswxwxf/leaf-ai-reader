@@ -91,11 +91,10 @@ export function Article({ article }: Props) {
 								target="_blank"
 								rel="noopener noreferrer"
 								onClick={(e) => e.stopPropagation()}
-								className="relative font-medium hover:text-primary hover:underline transition-colors"
+								className="font-medium hover:text-primary hover:underline transition-colors"
 								title="在新窗口打开原站"
 							>
 								跳转原站
-								<span className="absolute top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-10" aria-hidden="true" />
 							</a>
 						</div>
 					)}

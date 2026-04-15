@@ -166,6 +166,7 @@ export class EpubParser {
 			coverPath,
 			coverMime,
 			chapters,
+			rootDir
 		};
 	}
 
@@ -178,8 +179,8 @@ export class EpubParser {
 
 		const transform = (point: any, currentLevel: number): Chapter => {
 			const src = point.content?.["@_src"] || "";
-			const children = point.navPoint 
-				? (Array.isArray(point.navPoint) 
+			const children = point.navPoint
+				? (Array.isArray(point.navPoint)
 					? point.navPoint.map((p: any) => transform(p, currentLevel + 1))
 					: [transform(point.navPoint, currentLevel + 1)])
 				: [];
@@ -192,7 +193,7 @@ export class EpubParser {
 			};
 		};
 
-		return Array.isArray(navPoints) 
+		return Array.isArray(navPoints)
 			? navPoints.map(p => transform(p, level))
 			: [transform(navPoints, level)];
 	}
@@ -220,13 +221,13 @@ export class EpubParser {
 		const parseList = (ol: any, level: number): Chapter[] => {
 			if (!ol || !ol.li) return [];
 			const items = Array.isArray(ol.li) ? ol.li : [ol.li];
-			
+
 			return items.map((li: any) => {
 				const a = li.a;
 				const title = a ? this.extractValue(a) : "Untitled";
 				const href = a ? a["@_href"] : "";
 				const subOl = li.ol;
-				
+
 				return {
 					title,
 					path: href.split("#")[0],
