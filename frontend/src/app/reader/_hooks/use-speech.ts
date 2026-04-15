@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
 import { useEffect, useRef } from "react";
+import { useWakeLock } from "./use-wake-lock";
 
 /**
  * 语音朗读核心逻辑 Hook
@@ -25,6 +26,7 @@ export function useSpeech() {
   );
 
   const { highlightWord, clearHighlight } = useWordHighlight();
+  const { requestWakeLock, releaseWakeLock } = useWakeLock(isPlaying);
 
   // 用 ref 持有最新值，确保 onend 等异步回调中读取不受闭包陈旧值影响
   const speechSentenceIdRef = useRef(speechSentenceId);
@@ -32,13 +34,17 @@ export function useSpeech() {
     speechSentenceIdRef.current = speechSentenceId;
   }, [speechSentenceId]);
 
-  const play = () => {
+  const play = async () => {
+    // 朗读开始时，申请保持屏幕唤醒
+    await requestWakeLock();
+
     // 1. 确定当前要读的句子（始终从 ref 读取最新值）
     const targetId = speechSentenceIdRef.current ?? "s-1";
     const el = document.getElementById(targetId);
 
     if (!el || !el.textContent) {
       console.warn(`未找到目标句子 (${targetId})`);
+      releaseWakeLock(); // 出错或找不到时考虑释放
       return;
     }
 
@@ -84,30 +90,32 @@ export function useSpeech() {
       const nextId = `s-${currentNum + 1}`;
       const nextEl = document.getElementById(nextId);
 
-      // 已到文章末尾，无需任何操作
-      if (!nextEl) return;
+      // 已到文章末尾，停止播放并释放锁
+      if (!nextEl) {
+        releaseWakeLock();
+        return;
+      }
 
-      // 无论哪种模式，都将焦点移至下一句（确保用户手动播放时从下一句开始）
+      // 无论哪种模式，都将焦点移至下一句
       setSpeechSentenceId(nextId);
 
       if (speechMode === 'sentence') {
-        // 逐句模式：停止，不自动触发下一句播放
+        // 逐句模式：停止，但不手动释放锁
         return;
       }
 
       if (speechMode === 'paragraph') {
-        // 逐段模式：判断当前句是否为该段落中的最后一句
+        // 逐段模式：判断是否为段落末尾
         if (isLastSentenceInParagraph(el as HTMLElement)) {
-          // 段落已结束，停止播放
           return;
         }
-        // 段落未完，接力播放下一句（微延迟确保合成器状态已重置）
+        // 段落未完，接力播放
         setTimeout(play, 0);
         return;
       }
 
       if (speechMode === 'article') {
-        // 全文模式：无条件跨段接力朗读
+        // 全文模式：接力播放
         setTimeout(play, 0);
       }
     };
@@ -127,6 +135,7 @@ export function useSpeech() {
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     clearHighlight();
+    releaseWakeLock();
   };
 
   const step = (delta: number) => {
