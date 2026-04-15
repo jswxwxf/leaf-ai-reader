@@ -59,7 +59,7 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 				<Header isPopup={isPopup} />
 
 				{/* 中间主要区域 */}
-				<main className="flex flex-1 overflow-hidden">
+				<main className="flex flex-col lg:flex-row flex-1 overflow-hidden">
 					{/* 仅在非文章模式（即书籍模式）下显示目录 */}
 					{!article_id && <ChaptersWrapper />}
 
