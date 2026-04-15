@@ -1,11 +1,11 @@
 import { Header } from "./header";
-import { Chapters } from "./chapters";
+import { ChaptersWrapper } from "./chapters";
 import { Content } from "./content";
 import { Summary } from "./summary";
 import { Footer } from "./footer";
 import { ReaderStoreProvider } from "../_store/store";
 import { getArticle, getArticleData, type ArticleData } from "@/lib/article";
-import { getBookData, type BookData } from "@/lib/book";
+import { getBookData, getBookChapters, type BookData } from "@/lib/book";
 
 interface Props {
 	isPopup?: boolean;
@@ -22,7 +22,15 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 	if (article_id) {
 		data = await getArticleData(article_id);
 	} else if (book_id) {
-		data = await getBookData(book_id);
+		const [bookData, chapters] = await Promise.all([
+			getBookData(book_id),
+			getBookChapters(book_id)
+		]);
+
+		if (bookData) {
+			bookData.chapters = chapters;
+			data = bookData;
+		}
 	}
 
 	if (!data) {
@@ -53,7 +61,7 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 				{/* 中间主要区域 */}
 				<main className="flex flex-1 overflow-hidden">
 					{/* 仅在非文章模式（即书籍模式）下显示目录 */}
-					{!article_id && <Chapters />}
+					{!article_id && <ChaptersWrapper />}
 
 					<Content />
 

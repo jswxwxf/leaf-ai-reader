@@ -4,6 +4,17 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
 /**
+ * 章节结构定义
+ */
+export interface Chapter {
+	id?: string;
+	title: string;
+	path: string;
+	level: number;
+	children: Chapter[];
+}
+
+/**
  * 书籍数据模型接口
  */
 export interface BookData {
@@ -15,6 +26,7 @@ export interface BookData {
 	cover_r2_key?: string | null;
 	total_chapters?: number;
 	created_at: number;
+	chapters?: Chapter[]; // 注入的目录数据
 }
 
 /**
@@ -61,6 +73,37 @@ export async function getBookData(
 	return (await env.LEAF_BOOK_DB.prepare(
 		"SELECT * FROM books WHERE id = ? AND user_id = ?"
 	).bind(id, user.sub).first()) as unknown as BookData | null;
+}
+
+/**
+ * 从 R2 获取书籍目录 (toc.json)
+ */
+export async function getBookChapters(
+	id: string,
+	cloudflare?: { env: CloudflareEnv; ctx?: ExecutionContext }
+): Promise<Chapter[]> {
+	// 1. 鉴权
+	const user = await getCurrentUser();
+	if (!user?.sub) {
+		throw new Error('Unauthorized');
+	}
+
+	// 2. 获取 Cloudflare 环境
+	const { env } = cloudflare || getCloudflareContext();
+
+	// 3. 构建 R2 Key 并读取
+	const tocKey = `books/${user.sub}/${id}/toc.json`;
+	try {
+		const object = await env.LEAF_BOOK_BUCKET.get(tocKey);
+		if (!object) {
+			console.warn(`[lib/book] TOC not found for book: ${id}`);
+			return [];
+		}
+		return await object.json() as Chapter[];
+	} catch (e) {
+		console.error(`[lib/book] Failed to fetch TOC for book ${id}:`, e);
+		return [];
+	}
 }
 
 /**

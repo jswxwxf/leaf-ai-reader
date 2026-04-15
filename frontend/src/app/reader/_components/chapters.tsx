@@ -1,30 +1,25 @@
+"use client";
+
 import { Menu } from "lucide-react";
-import chaptersData from "../chapters.json";
+import { useReaderStore } from "../_store/store";
+import type { Chapter, BookData } from "@/lib/book";
 
-interface Chapter {
-  title: string;
-  path: string;
-  level: number;
-  children?: Chapter[];
-  isActive?: boolean;
-}
-
-const ChapterTree = ({ items }: { items: Chapter[] }) => {
+const Chapters = ({ items }: { items: Chapter[] }) => {
   return (
     <>
       {items.map((item, index) => (
         <li key={`${item.path}-${index}`}>
           {item.children && item.children.length > 0 ? (
-            <details open={item.isActive}>
-              <summary className={item.isActive ? "bg-base-200" : ""}>
+            <details>
+              <summary>
                 {item.title}
               </summary>
               <ul>
-                <ChapterTree items={item.children} />
+                <Chapters items={item.children} />
               </ul>
             </details>
           ) : (
-            <a className={item.isActive ? "active" : ""}>
+            <a>
               {item.title}
             </a>
           )}
@@ -37,7 +32,10 @@ const ChapterTree = ({ items }: { items: Chapter[] }) => {
 /**
  * 阅读器章节目录侧边栏组件
  */
-export function Chapters() {
+export function ChaptersWrapper() {
+  const data = useReaderStore((state) => state.data);
+  const chapters = (data as BookData)?.chapters || [];
+
   return (
     <aside className="w-64 border-r border-base-300 bg-base-100 hidden md:flex flex-col h-full overflow-hidden">
       <div className="p-4 flex-none border-b border-base-200">
@@ -47,7 +45,7 @@ export function Chapters() {
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <ul className="menu menu-sm bg-base-100 rounded-box w-full p-0">
-          <ChapterTree items={chaptersData as Chapter[]} />
+          <Chapters items={chapters} />
         </ul>
       </div>
     </aside>
