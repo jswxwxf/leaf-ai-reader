@@ -60,8 +60,8 @@ export function useMediaSession({ onPlayPause, onNext, onPrev }: MediaHandlers) 
   const activateMedia = () => {
     if (typeof window === "undefined") return;
     if (!audioRef.current) {
-      // 使用一段符合标准、完全静音的 WAV Base64
-      audioRef.current = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAE=");
+      // 使用 31 秒的实体 m4a 文件，以满足 iOS 的严格音频流检测
+      audioRef.current = new Audio("/silent_31s.m4a");
       audioRef.current.loop = true;
       audioRef.current.volume = 0.05; // 需保持微弱声音以维持 OS 焦点
     }

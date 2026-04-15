@@ -42,8 +42,8 @@ export function useSpeech() {
       return;
     }
 
-    // 如果全是标点符号则跳过，递归调用 play 直到读到实质内容或触及边界
-    if (!/[^\p{P}\p{S}\s]/u.test(el.textContent)) {
+    // 如果全是标点符号、符号或 emoji 则跳过，递归调用 play 直到读到实质内容或触及边界
+    if (!/[^\p{P}\p{S}\s\p{Extended_Pictographic}]/u.test(el.textContent)) {
       setSpeechSentenceId(`s-${parseInt(targetId.replace("s-", "")) + 1}`);
       if (speechMode !== "paragraph" || !isLastSentenceInParagraph(el as HTMLElement)) {
         setTimeout(play, 0);
@@ -59,6 +59,7 @@ export function useSpeech() {
     // 3. 创建朗读任务 (对标点进行处理，防止 TTS 误读并引导停顿)
     // 注意：采用 1:1 或 2:2 替换以保持字符串长度不变，确保 onboundary 的 charIndex 索引不位移
     const processedText = el.textContent
+      .replace(/\p{Extended_Pictographic}/gu, (m) => ' '.repeat(m.length)) // 将 emoji 替换为等长空格，防止误读且保持索引对齐
       .replaceAll('——', '--')
       .replaceAll('”“', '”，')
       .replaceAll('"', ' '); // 仅处理会产生噪音的半角双引号，保持长度对齐
