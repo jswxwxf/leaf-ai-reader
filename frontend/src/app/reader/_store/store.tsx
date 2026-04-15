@@ -24,6 +24,7 @@ export type InitialState = {
 	mode?: ReaderMode | null;
 	article_id?: string | null;
 	book_id?: string | null;
+	path?: string | null;
 	data?: ArticleData | BookData | null;
 	content?: string;
 };
@@ -35,6 +36,7 @@ export interface ReaderState {
 	mode: ReaderMode | null;
 	article_id: string | null;
 	book_id: string | null;
+	path: string | null;
 	data: ArticleData | BookData | null;
 	content: string;
 	summaries: AISummary[];
@@ -53,6 +55,7 @@ export interface ReaderActions {
 	setMode: (mode: ReaderMode | null) => void;
 	setArticleId: (id: string | null) => void;
 	setBookId: (id: string | null) => void;
+	setPath: (path: string | null) => void;
 	setContent: (content: string) => void;
 	setSpeechSentenceId: (id: string | null) => void;
 	setSummarySentenceId: (id: string | null) => void;
@@ -74,6 +77,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 		mode = null,
 		article_id = null,
 		book_id = null,
+		path = null,
 		data = null,
 		content = ""
 	} = initialState;
@@ -85,6 +89,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					mode,
 					article_id,
 					book_id,
+					path,
 					data,
 					content,
 					summaries: parseSummaries(data),
@@ -105,6 +110,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 						book_id: id,
 						mode: get().article_id ? 'article' : (id ? 'book' : null)
 					}),
+					setPath: (path) => set({ path }),
 					setData: (data: ArticleData | BookData | null) => {
 						set({ data, summaries: parseSummaries(data) });
 					},
@@ -119,10 +125,11 @@ const createReaderStore = (initialState: InitialState = {}) => {
 			{
 				name: 'reader-storage',
 				// 使用之前在 Dashboard 中定义的帮助函数同步到 URL
-				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id'])),
+				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id', 'path'])),
 				partialize: (state) => ({
 					article_id: state.article_id,
 					book_id: state.book_id,
+					path: state.path,
 					speechMode: state.speechMode
 				}),
 				// 在从 URL 恢复状态后，重新计算一次 mode
