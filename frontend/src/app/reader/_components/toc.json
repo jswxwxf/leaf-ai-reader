@@ -6,12 +6,6 @@
     "children": []
   },
   {
-    "title": "版权页",
-    "path": "text00001.html",
-    "level": 0,
-    "children": []
-  },
-  {
     "title": "译者说明",
     "path": "text00002.html",
     "level": 0,
@@ -39,110 +33,7 @@
     "title": "绪论",
     "path": "text00006.html",
     "level": 0,
-    "children": [
-      {
-        "title": "§1.何谓佛教逻辑",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§2.逻辑在佛教史上的地位",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§3.佛教哲学的第一阶段",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§4.佛教哲学的第二阶段",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§5.佛教哲学的第三阶段",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§6.佛教逻辑在印度哲学中的地位",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§7.陈那之前的佛教逻辑",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§8.陈那的生平",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§9.法称的生平",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§10.法称的著作",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§11.《量评释论》各品的顺序",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§12.释文派的诸注家",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§13.迦湿弥罗派或阐义派",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§14.第三派或明教派的注家",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§15.后佛教逻辑和印度唯名论与实在论的斗争",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§16.中国和日本的佛教逻辑",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      },
-      {
-        "title": "§17.西藏和蒙古的佛教逻辑",
-        "path": "text00006.html",
-        "level": 1,
-        "children": []
-      }
-    ]
+    "children": []
   },
   {
     "title": "第一部分 实在与知识",
@@ -208,275 +99,25 @@
         "title": "第一章 刹那存在论（Kṣaṇika-vāda）",
         "path": "text00015.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.问题的提出",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.实在是能动的",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.从时空同一性而来的论证",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.持续性与广延性是非实在的",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.直接感知（现量）的论证",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.识别并不能证明持续性",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.从分析存在概念而来的论证",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.从分析非存在概念而来的论证",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§9.寂护的公式",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§10.变化与消灭",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§11.运动是非连续的",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§12.消灭是先天规定的",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§13.从矛盾律演绎出来的刹那性",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§14.点刹那是一种实在吗",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§15.瞬时性理论的历史",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§16.欧洲的类似理论",
-            "path": "text00015.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第二章 因果关系",
         "path": "text00016.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.功能相依的因果关系",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.因果律的公式",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.因果性与实在性是同一的",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.两种因果性",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.因之多重性",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.因的无穷性",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.因果性和自由意志",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.缘起的四种意义",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§9.欧洲的类似理论",
-            "path": "text00016.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第三章 感觉认识（现量）",
         "path": "text00017.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.现量（pratyakṣam）的定义",
-            "path": "text00017.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.法称的实验",
-            "path": "text00017.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.现量与虚妄（错乱）",
-            "path": "text00017.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.现量（直觉）的种类",
-            "path": "text00017.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.印度哲学中现量观的历史",
-            "path": "text00017.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.欧洲的类似理论",
-            "path": "text00017.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第四章 终极实在",
         "path": "text00018.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.何谓终极实在?",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.个别者是终极的实在",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.实在不可言说",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.实在产生生动的表象",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.终极实在是能动的",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.单子与原子",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.实在即肯定",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.反对的意见",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§9.实在观的演化",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§10.欧洲的类似理论",
-            "path": "text00018.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -489,275 +130,25 @@
         "title": "第一章 判断",
         "path": "text00019.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.纯感知向概念活动的过渡",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.知性的第一步",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.何谓判断",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.判断与概念的综合",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.判断及命名",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.范畴",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.被视为分析的判断",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.在客观上有效的判断",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§9.判断论的历史",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§10.欧洲的类似理论",
-            "path": "text00019.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第二章 比量",
         "path": "text00020.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.判断与推理",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.三项",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.关于比量的种种定义",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.比量与比量果（推理与结果）",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.比量在多大程度上是真的知识",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.理由的三个方面（因三相）",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.法称论关系",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.两种依赖关系",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§9.分析的与综合的判断",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§10.最终的范畴表",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§11.范畴表中的各项是互相排斥的吗",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§12.佛教的关系表是穷尽的吗",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§13.共相一般与必然性判断",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§14.纯知性的使用界限",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§15.比量观的历史轮廓",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§16.欧洲的类似理论",
-            "path": "text00020.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第三章 为他比量（三段论式）",
         "path": "text00021.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.定义",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.为他比量的各支",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.比量形式与归纳",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.三支比量式的格",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.三支比量式的价值",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.对被视为为他比量的三支论式的历史简述",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.欧洲的与佛教的推论式",
-            "path": "text00021.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第四章 逻辑谬误",
         "path": "text00022.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.分类",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.与实在性相违的谬误（不成因过）",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.矛盾理由的谬误（相违因过）",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.不确定理由的谬误（不定因过）",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.二律背反的谬误（相违决定因过）",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.法称的补充",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.历史",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.欧洲逻辑中的类似理论",
-            "path": "text00022.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },
@@ -770,173 +161,25 @@
         "title": "第一章 否定性的判断",
         "path": "text00023.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.否定的本质",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.否定是一种比量",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.否定性三支论式的格和简单否定格",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.其他的十种格式",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.否定的意义",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.仅存于经验范围中的矛盾性与因果性",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.关于超感觉对象的否定",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§8.这种理论在印度的发展",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§9.欧洲的类似理论",
-            "path": "text00023.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第二章 矛盾律",
         "path": "text00024.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.矛盾的起源",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.逻辑矛盾",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.能动的对立",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.别性律（Law of Otherness）",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.对矛盾律和别性律的不同表述",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§6.印度其他派别的矛盾观",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§7.欧洲的类似理论",
-            "path": "text00024.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第三章 共相（一般universals）",
         "path": "text00025.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.事物的静止的一般性被行动的相似性所代替",
-            "path": "text00025.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.关于共相问题的历史",
-            "path": "text00025.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.欧洲的类似理论",
-            "path": "text00025.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       },
       {
         "title": "第四章 辩证法",
         "path": "text00026.html",
         "level": 1,
-        "children": [
-          {
-            "title": "§1.陈那的名言论（theory of names）",
-            "path": "text00026.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§2.胜主慧论名言的否定意义",
-            "path": "text00026.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§3.寂护和莲花戒论语词的否定意义",
-            "path": "text00026.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§4.佛教辩证法发展的历史简述",
-            "path": "text00026.html",
-            "level": 2,
-            "children": []
-          },
-          {
-            "title": "§5.欧洲的类似理论",
-            "path": "text00026.html",
-            "level": 2,
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
   },

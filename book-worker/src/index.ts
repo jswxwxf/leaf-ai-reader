@@ -15,6 +15,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { EpubParser } from "./epub";
 import { crawlArticle } from "./article";
 import { toCompactText, generateSummary } from "./utils/summary";
+import { normalizeChapters } from "./utils/chapter";
 
 export default class extends WorkerEntrypoint<Env> {
 	/**
@@ -87,10 +88,11 @@ export default class extends WorkerEntrypoint<Env> {
 
 		console.log(`[Indexer] Successfully parsed book: ${metadata.title}`);
 
-		// 4.1 上传目录 (TOC) 到 R2 并获取总章节数
-		const totalCount = this.countChapters(metadata.chapters);
+		// 4.1 规范化并上传目录 (TOC) 到 R2 并获取总章节数
+		const normalizedChapters = normalizeChapters(metadata.chapters);
+		const totalCount = this.countChapters(normalizedChapters);
 		const tocR2Key = `books/${userId}/${bookId}/toc.json`;
-		await this.env.LEAF_BOOK_BUCKET.put(tocR2Key, JSON.stringify(metadata.chapters), {
+		await this.env.LEAF_BOOK_BUCKET.put(tocR2Key, JSON.stringify(normalizedChapters), {
 			httpMetadata: { contentType: "application/json" },
 		});
 		console.log(`[Indexer] Successfully uploaded toc.json to ${tocR2Key}, total chapters: ${totalCount}`);
