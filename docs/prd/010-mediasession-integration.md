@@ -1,4 +1,4 @@
-# PRD-011: MediaSession 系统级媒体控制集成
+# PRD-010: MediaSession 系统级媒体控制集成
 
 ## 1. 需求背景与目标
 
