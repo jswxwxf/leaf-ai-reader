@@ -67,7 +67,7 @@ export function Summary() {
   const { jumpToSentence } = useReader();
 
   return (
-    <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:order-0 lg:w-80 lg:h-full lg:border-l lg:border-b-0">
+    <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:w-80 lg:h-full lg:border-l lg:border-b-0 lg:order-0">
       <div className="hidden lg:block p-4 flex-none border-b border-base-200">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Star className="w-4 h-4 text-warning" /> AI 核心摘要

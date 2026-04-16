@@ -24,24 +24,24 @@ export default class extends WorkerEntrypoint<Env> {
 	/**
 	 * 处理 HTTP 请求，防止部署报错并支持基础的状态验证。
 	 */
-	// async fetch(request: Request): Promise<Response> {
-	// 	const url = new URL(request.url);
-	// 	if (url.pathname === "/debug") {
-	// 		const userId = "local-dev";
-	// 		const bookId = "fb0aefba-28e0-44e6-ae1c-5f597fb2177d";
-	// 		const chapterPath = 'text00028.html'
-	// 		try {
-	// 			const result = await this.processChapter(userId, bookId, chapterPath);
-	// 			return Response.json(result);
-	// 		} catch (e: any) {
-	// 			return new Response(e.message, { status: 500 });
-	// 		}
-	// 	}
+	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		if (url.pathname === "/debug") {
+			const userId = "local-dev";
+			const bookId = "fb0aefba-28e0-44e6-ae1c-5f597fb2177d";
+			const chapterPath = 'text00028.html'
+			try {
+				const result = await this.processChapter(userId, bookId, chapterPath);
+				return Response.json(result);
+			} catch (e: any) {
+				return new Response(e.message, { status: 500 });
+			}
+		}
 
-	// 	return new Response("Leaf Book Worker is running.", {
-	// 		headers: { "Content-Type": "text/plain;charset=UTF-8" },
-	// 	});
-	// }
+		return new Response("Leaf Book Worker is running.", {
+			headers: { "Content-Type": "text/plain;charset=UTF-8" },
+		});
+	}
 
 
 	/**
@@ -159,15 +159,9 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 
 	async processChapter(userId: string, bookId: string, chapterPath: string) {
-		console.log(`[Worker] Processing chapter: book=${bookId}, path=${chapterPath}`);
+		console.log(`[Worker] Started pure processing for: book=${bookId}, path=${chapterPath}`);
 
-		// 0. 检查是否已经处理过
 		const contentKey = `books/${userId}/${bookId}/content/${chapterPath}`;
-		const existing = await this.env.LEAF_BOOK_BUCKET.head(contentKey);
-		if (existing) {
-			console.log(`[Worker] Chapter already processed, returning cached: ${contentKey}`);
-			return { success: true, key: contentKey, cached: true };
-		}
 
 		// 1. 从 D1 获取该书的物理根目录 (root_dir)
 		const book = await this.env.LEAF_BOOK_DB.prepare(

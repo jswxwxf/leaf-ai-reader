@@ -1,5 +1,5 @@
 import { Header } from "./header";
-import { ChaptersWrapper } from "./chapters";
+import { ChaptersWrapper, MobileChaptersDrawer } from "./chapters";
 import { Content } from "./content";
 import { Summary } from "./summary";
 import { Footer } from "./footer";
@@ -46,27 +46,39 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 		content = await getArticle(data.content);
 	}
 
+	const isBookMode = !!book_id;
+
 	return (
 		<ReaderStoreProvider
 			initialState={{
 				article_id,
 				book_id,
+				mode: article_id ? 'article' : (book_id ? 'book' : null),
 				data,
 				content,
 			}}
 		>
-			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden">
+			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden relative">
 				<Header isPopup={isPopup} />
 
 				{/* 中间主要区域 */}
 				<main className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-					{/* 仅在非文章模式（即书籍模式）下显示目录 */}
-					{!article_id && <ChaptersWrapper />}
-
-					<Content />
-
+					{/* 摘要区域：通过内部的 order-first 实现在中窄屏居顶，在大屏受限于容器排布归位 */}
 					<Summary />
+
+					{/* 章节+正文容器：在中、大屏下始终保持 flex-row 并排 */}
+					<div className="flex flex-1 flex-row overflow-hidden lg:order-first">
+						{isBookMode && (
+							<aside className="w-64 hidden md:flex flex-col h-full flex-none">
+								<ChaptersWrapper />
+							</aside>
+						)}
+						<Content />
+					</div>
 				</main>
+
+				{/* 移动端专用挂件 */}
+				{isBookMode && <MobileChaptersDrawer />}
 
 				<Footer />
 			</div>

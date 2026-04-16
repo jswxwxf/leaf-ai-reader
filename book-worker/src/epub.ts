@@ -122,11 +122,11 @@ export class EpubParser {
 			chapters = spineItems
 				.map((ref: any) => {
 					const idref = ref["@_idref"];
-					const href = manifestMap.get(idref);
-					if (!href) return null;
+					const item = manifestMap.get(idref);
+					if (!item) return null;
 					return {
 						title: idref,
-						path: rootDir + href,
+						path: item.href, // 保持相对于 rootDir
 						level: 0,
 						children: [],
 					};
@@ -134,7 +134,7 @@ export class EpubParser {
 				.filter(Boolean) as Chapter[];
 		}
 
-		// 7. 提取封面图 (保持原有)
+		// 7. 提取封面图
 		let coverPath = "";
 		let coverMime = "";
 		const metaItems = Array.isArray(metadata.meta) ? metadata.meta : [metadata.meta];
@@ -276,4 +276,3 @@ export class EpubParser {
 		return content;
 	}
 }
-

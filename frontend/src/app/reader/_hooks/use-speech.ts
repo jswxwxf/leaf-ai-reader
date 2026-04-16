@@ -36,7 +36,7 @@ export function useSpeech() {
 
   const play = async () => {
     // 朗读开始时，申请保持屏幕唤醒
-    await requestWakeLock();
+    requestWakeLock();
 
     // 1. 确定当前要读的句子（始终从 ref 读取最新值）
     const targetId = speechSentenceIdRef.current ?? "s-1";

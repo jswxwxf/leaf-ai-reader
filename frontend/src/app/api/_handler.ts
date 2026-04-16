@@ -13,11 +13,11 @@ export interface HandlerContext {
 
 /**
  * 业务逻辑处理函数的类型定义
- * 可以返回普通的 JSON 对象，也可以返回标准的 NextResponse
+ * 第一个参数是注入的环境与用户信息，后续参数是 Next.js 原始传递的参数 (request, context 等)
  */
 export type HandlerLogic<T = any> = (
 	context: HandlerContext,
-	request: Request
+	...args: any[]
 ) => Promise<T | NextResponse>;
 
 /**
@@ -25,7 +25,7 @@ export type HandlerLogic<T = any> = (
  * 负责：鉴权、环境获取、错误捕获、标准化响应
  */
 export function createHandler<T>(logic: HandlerLogic<T>) {
-	return async function (request: Request) {
+	return async function (...args: any[]) {
 		try {
 			// 1. 获取当前用户并校验鉴权
 			const user = await getCurrentUser();
@@ -37,11 +37,12 @@ export function createHandler<T>(logic: HandlerLogic<T>) {
 			const cloudflare = getCloudflareContext();
 
 			// 3. 执行核心业务逻辑
+			// 第一个参数是我们封装的 Context，后面透传 Next.js 原始的所有参数 (...args)
 			const result = await logic({
 				user,
 				env: cloudflare.env as CloudflareEnv,
 				ctx: cloudflare.ctx,
-			}, request);
+			}, ...args);
 
 			// 4. 根据业务层返回结果封装响应
 			if (result instanceof Response) {

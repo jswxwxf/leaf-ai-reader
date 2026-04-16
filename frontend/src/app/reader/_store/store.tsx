@@ -17,6 +17,8 @@ export interface AISummary {
 	start_sId: string;
 }
 
+import { request } from '@/lib/request';
+
 /**
  * 初始状态定义
  */
@@ -44,8 +46,10 @@ export interface ReaderState {
 	speechSentenceId: string | null;
 	isManualScrolling: boolean;
 	isLoading: boolean;
+	isContentLoading: boolean;
 	isPlaying: boolean;
 	speechMode: SpeechMode;
+	isChaptersOpen: boolean;
 }
 
 /**
@@ -57,11 +61,14 @@ export interface ReaderActions {
 	setBookId: (id: string | null) => void;
 	setPath: (path: string | null) => void;
 	setContent: (content: string) => void;
+	setIsContentLoading: (isLoading: boolean) => void;
 	setSpeechSentenceId: (id: string | null) => void;
 	setSummarySentenceId: (id: string | null) => void;
 	setIsManualScrolling: (isManual: boolean) => void;
 	setIsPlaying: (isPlaying: boolean) => void;
 	setSpeechMode: (mode: SpeechMode) => void;
+	setChaptersOpen: (isOpen: boolean) => void;
+	fetchBookChapter: (bookId: string, path: string) => Promise<void>;
 }
 
 /**
@@ -97,8 +104,10 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					speechSentenceId: null,
 					isManualScrolling: false,
 					isLoading: false,
+					isContentLoading: false,
 					isPlaying: false,
 					speechMode: 'sentence',
+					isChaptersOpen: false,
 				},
 				(set, get) => ({
 					setMode: (mode) => set({ mode }),
@@ -115,11 +124,21 @@ const createReaderStore = (initialState: InitialState = {}) => {
 						set({ data, summaries: parseSummaries(data) });
 					},
 					setContent: (content) => set({ content }),
+					setIsContentLoading: (isContentLoading) => set({ isContentLoading }),
 					setSummarySentenceId: (summarySentenceId) => set({ summarySentenceId }),
 					setSpeechSentenceId: (speechSentenceId) => set({ speechSentenceId }),
 					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
 					setIsPlaying: (isPlaying) => set({ isPlaying }),
 					setSpeechMode: (speechMode) => set({ speechMode }),
+					setChaptersOpen: (isChaptersOpen) => set({ isChaptersOpen }),
+					fetchBookChapter: async (bookId, path) => {
+						const res = await request<{ status: string; content?: string }>(
+							`/api/books/${bookId}/chapters/${encodeURIComponent(path)}`
+						);
+						if (res.status === 'ready' && res.content) {
+							set({ content: res.content, isContentLoading: false });
+						}
+					},
 				})
 			),
 			{
