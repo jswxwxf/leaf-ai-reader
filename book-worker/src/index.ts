@@ -203,6 +203,14 @@ export default class extends WorkerEntrypoint<Env> {
 			httpMetadata: { contentType: 'text/html; charset=utf-8' }
 		});
 
+		// 5. 生成并保存 AI 摘要 (即便为空也要写入，作为处理完成的最终信号)
+		const summaryJson = await this._runAISummary(decodedPath, processedHtml);
+		const summaryKey = `${contentKey}.summary.json`;
+		await this.env.LEAF_BOOK_BUCKET.put(summaryKey, summaryJson || JSON.stringify({ summaries: [] }), {
+			httpMetadata: { contentType: 'application/json; charset=utf-8' }
+		});
+		console.log(`[Worker] Saved chapter summary to R2 (Final): ${summaryKey}`);
+
 		return { success: true, key: contentKey };
 	}
 
@@ -238,30 +246,7 @@ export default class extends WorkerEntrypoint<Env> {
 			console.log(`[Worker] Successfully saved article content to R2: ${contentKey}`);
 
 			// 4. AI 摘要生成
-			let summaryJson = null;
-			// 只有在生产环境，或者在开发环境且提供了 GEMINI_API_KEY 时才运行 AI 摘要
-			const shouldRunAI = (this.env as any).NODE_ENV !== 'development';
-
-			if (shouldRunAI) {
-				try {
-					console.log(`[Worker] Starting AI summary for ${parsedArticle.title}...`);
-					const compactText = toCompactText(parsedArticle.content);
-					const summaryResult = await generateSummary(
-						this.env.AI,
-						compactText,
-						this.env.GEMINI_API_KEY,
-						(this.env as any).GEMINI_API_BASE_URL
-					);
-					if (summaryResult) {
-						summaryJson = JSON.stringify(summaryResult);
-						console.log(`[Worker] Successfully generated AI summary (${summaryResult.summaries?.length || 0} items)`);
-					}
-				} catch (aiError) {
-					console.error("[Worker] AI Summary calculation failed (but continuing process):", aiError);
-				}
-			} else {
-				console.log("[Worker] Skipping AI summary in development environment (no Gemini API Key set)");
-			}
+			const summaryJson = await this._runAISummary(parsedArticle.title || "Unknown Article", parsedArticle.content);
 
 			// 5. 更新 D1 状态为 ready (同时保存摘要内容)
 			await this.env.LEAF_BOOK_DB.prepare(
@@ -291,5 +276,40 @@ export default class extends WorkerEntrypoint<Env> {
 
 			throw e;
 		}
+	}
+
+	/**
+	 * 统一的 AI 摘要执行逻辑
+	 */
+	private async _runAISummary(title: string, content: string): Promise<string | null> {
+		const isDev = (this.env as any).NODE_ENV === 'development';
+		const hasKey = !!this.env.GEMINI_API_KEY;
+
+		// 只有在非开发环境，或者开发环境配置了 API Key 的情况下才运行
+		if (isDev && !hasKey) {
+			console.log(`[Worker] Skipping AI summary for ${title} in dev (no API key)`);
+			return null;
+		}
+
+		try {
+			console.log(`[Worker] Starting AI summary calculation for: ${title}`);
+			const compactText = toCompactText(content);
+			
+			const summaryResult = await generateSummary(
+				this.env.AI,
+				compactText,
+				this.env.GEMINI_API_KEY,
+				(this.env as any).GEMINI_API_BASE_URL
+			);
+
+			if (summaryResult) {
+				console.log(`[Worker] Successfully generated AI summary for ${title} (${summaryResult.summaries?.length || 0} items)`);
+				return JSON.stringify(summaryResult);
+			}
+		} catch (e) {
+			console.error(`[Worker] AI Summary generation failed for ${title}:`, e);
+		}
+
+		return null;
 	}
 }

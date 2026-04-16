@@ -15,32 +15,49 @@ export const GET = createHandler(async ({ env, ctx, user }, request, { params })
 
   const userId = user.sub;
   const contentKey = `books/${userId}/${bookId}/content/${path}`;
+  const summaryKey = `${contentKey}.summary.json`;
 
-  // 2. 尝试从 R2 获取已缓存的章节内容
-  const object = await env.LEAF_BOOK_BUCKET.get(contentKey);
+  // 2. 尝试从 R2 获取已缓存的章节内容和对应的 AI 摘要
+  const [object, summaryObject] = await Promise.all([
+    env.LEAF_BOOK_BUCKET.get(contentKey),
+    env.LEAF_BOOK_BUCKET.get(summaryKey)
+  ]);
 
-  if (object) {
-    const text = await object.text();
-    
-    if (text === "__PROCESSING__") {
-      const secondsElapsed = (Date.now() - object.uploaded.getTime()) / 1000;
-      
-      // 如果占位符已经存在超过 30 秒，说明之前的处理可能失败，允许重新触发
-      if (secondsElapsed < 30) {
-        return { status: 'processing' };
-      }
-      console.log(`[API] Placeholder expired (${Math.round(secondsElapsed)}s), re-triggering for: ${contentKey}`);
-    } else {
-      // 否则返回正式正文
-      return { 
-        status: 'ready', 
-        content: text 
-      };
+  // 以摘要文件作为“哨兵”：它是在流程最后一步才落盘的
+  const summaryText = summaryObject ? await summaryObject.text() : null;
+  const isSummaryProcessing = summaryText === "__PROCESSING__";
+  const isSummaryReady = !!summaryText && !isSummaryProcessing;
+
+  // 1. 最终状态：摘要已就绪（意味着正文必然也已写入）
+  if (isSummaryReady) {
+    const text = (await object?.text()) || "";
+    let summaryArr = null;
+    try {
+      const parsed = JSON.parse(summaryText!);
+      summaryArr = parsed.summaries || parsed;
+    } catch (e) {
+      console.error(`[API] Failed to parse summary for ${path}:`, e);
     }
+
+    return { 
+      status: 'ready', 
+      content: text,
+      summary: summaryArr
+    };
   }
 
-  // 3. 首次请求或占位符已过期：先写占位符，再异步触发 Worker 处理
-  await env.LEAF_BOOK_BUCKET.put(contentKey, "__PROCESSING__", {
+  // 2. 处理中状态：摘要哨兵标记为 PROCESSING
+  if (isSummaryProcessing) {
+    const secondsElapsed = (Date.now() - summaryObject!.uploaded.getTime()) / 1000;
+    if (secondsElapsed < 45) { // AI 摘要可能较慢，放宽到 45s
+      return { status: 'processing' };
+    }
+    console.log(`[API] Summary sentinel expired (${Math.round(secondsElapsed)}s), re-triggering: ${summaryKey}`);
+  }
+
+  // 3. 初始触发：摘要文件不存在或已过期
+  // 仅在摘要文件上写入占位符作为进度锁定
+  await env.LEAF_BOOK_BUCKET.put(summaryKey, "__PROCESSING__", {
     httpMetadata: { contentType: 'text/plain; charset=utf-8' }
   });
 

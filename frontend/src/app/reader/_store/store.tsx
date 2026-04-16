@@ -68,6 +68,7 @@ export interface ReaderActions {
 	setIsManualScrolling: (isManual: boolean) => void;
 	setIsPlaying: (isPlaying: boolean) => void;
 	setSpeechMode: (mode: SpeechMode) => void;
+	setSummaries: (summaries: AISummary[]) => void;
 	setChaptersOpen: (isOpen: boolean) => void;
 	setContentRef: (ref: React.RefObject<HTMLDivElement | null> | null) => void;
 	fetchBookChapter: (bookId: string, path: string) => Promise<void>;
@@ -133,14 +134,19 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
 					setIsPlaying: (isPlaying) => set({ isPlaying }),
 					setSpeechMode: (speechMode) => set({ speechMode }),
+					setSummaries: (summaries) => set({ summaries }),
 					setChaptersOpen: (isChaptersOpen) => set({ isChaptersOpen }),
 					setContentRef: (contentRef) => set({ contentRef }),
 					fetchBookChapter: async (bookId, path) => {
-						const res = await request<{ status: string; content?: string }>(
+						const res = await request<{ status: string; content?: string; summary?: any[] }>(
 							`/api/books/${bookId}/chapters/${encodeURIComponent(path)}`
 						);
-						if (res.status === 'ready' && res.content) {
-							set({ content: res.content, isContentLoading: false });
+						if (res.content) {
+							set({ 
+								content: res.content, 
+								summaries: res.summary || [], 
+								isContentLoading: false 
+							});
 						}
 					},
 				})

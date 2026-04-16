@@ -90,12 +90,13 @@ const Chapters = ({
  * 阅读器章节目录侧边栏组件
  */
 export function ChaptersWrapper() {
-  const { data, isContentLoading, setPath, setContent, setIsContentLoading, fetchBookChapter } = useReaderStore(
+  const { data, isContentLoading, setPath, setContent, setSummaries, setIsContentLoading, fetchBookChapter } = useReaderStore(
     useShallow((state) => ({
       data: state.data,
       isContentLoading: state.isContentLoading,
       setPath: state.setPath,
       setContent: state.setContent,
+      setSummaries: state.setSummaries,
       setIsContentLoading: state.setIsContentLoading,
       fetchBookChapter: state.fetchBookChapter,
     }))
@@ -126,10 +127,11 @@ export function ChaptersWrapper() {
   useEffect(() => {
     if (pathFromUrl) {
       setPath(pathFromUrl);
-      setContent(""); // 切换章节时先清空
+      setContent(""); // 切换章节时先清空正文
+      setSummaries([]); // 同步清空摘要高亮
       setIsContentLoading(true); // 开启加载状态
     }
-  }, [pathFromUrl, setPath, setContent, setIsContentLoading]);
+  }, [pathFromUrl, setPath, setContent, setSummaries, setIsContentLoading]);
 
   // 3. 挂载轮询逻辑
   const pollItems = [{ status: isContentLoading ? 'processing' : 'ready' }];
