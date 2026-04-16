@@ -283,11 +283,19 @@ export default class extends WorkerEntrypoint<Env> {
 	 */
 	private async _runAISummary(title: string, content: string): Promise<string | null> {
 		const isDev = (this.env as any).NODE_ENV === 'development';
-		const hasKey = !!this.env.GEMINI_API_KEY;
+		
+		// 开发环境下强行跳过 AI，返回 Mock 数据以填充哨兵文件
+		if (isDev) {
+			console.log(`[Worker] Skipping AI summary for ${title} in dev mode.`);
+			return JSON.stringify({
+				summaries: [],
+				source: 'mock-dev'
+			});
+		}
 
-		// 只有在非开发环境，或者开发环境配置了 API Key 的情况下才运行
-		if (isDev && !hasKey) {
-			console.log(`[Worker] Skipping AI summary for ${title} in dev (no API key)`);
+		// 生产环境下如果没有 Key 则跳过
+		if (!this.env.GEMINI_API_KEY) {
+			console.warn('[Worker] GEMINI_API_KEY not set, skipping AI summary.');
 			return null;
 		}
 

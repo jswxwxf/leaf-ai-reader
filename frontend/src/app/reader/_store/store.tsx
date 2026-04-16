@@ -158,20 +158,8 @@ const createReaderStore = (initialState: InitialState = {}) => {
 				partialize: (state) => ({
 					article_id: state.article_id,
 					book_id: state.book_id,
-					path: state.path,
-					speechMode: state.speechMode
-				}),
-				// 在从 URL 恢复状态后，重新计算一次 mode
-				merge: (persistedState: any, currentState) => {
-					const article_id = persistedState?.article_id ?? currentState.article_id;
-					const book_id = persistedState?.book_id ?? currentState.book_id;
-
-					return {
-						...currentState,
-						...persistedState,
-						mode: article_id ? 'article' : (book_id ? 'book' : null)
-					};
-				},
+					path: state.path
+				})
 			}
 		)
 	);

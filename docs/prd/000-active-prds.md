@@ -12,6 +12,7 @@
 - [x] **PRD-008: 逐句逐词朗读高亮** ([008-sentence-highlighting.md](./008-sentence-highlighting.md)) — 已实现双层联动高亮系统、TTS 接力朗读及键盘快捷键导航
 - [x] **PRD-009: 朗读模式切换** ([009-speech-modes.md](./009-speech-modes.md)) — 已实现三种调度模式与跨闭包陈旧值修复
 - [x] **PRD-010: MediaSession 系统级媒体控制** ([010-mediasession-integration.md](./010-mediasession-integration.md)) — 已实现静音保活与系统锁屏媒体控制
-- [ ] **PRD-011: 图书 EPUB 实时提取与渲染** ([011-render-book-reader.md](./011-render-book-reader.md)) — **[Phase 2]** 待实现实时解压与图片中转代理
+- [ ] **PRD-011: 图书 EPUB 实时提取与渲染** ([011-render-book-reader.md](./011-render-book-reader.md)) — **[Phase 2]** 已实现 API 提取与句子 ID 注入，待处理图片资源
+- [ ] **PRD-012: 章节翻页导航** ([012-chapter-pager-navigation.md](./012-chapter-pager-navigation.md)) — **[Phase 1]** 计划实现底部控制栏章节切换（已拆分逻辑同步方案）
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*

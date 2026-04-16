@@ -178,13 +178,13 @@ export function MobileChaptersDrawer() {
   if (!isChaptersOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] md:hidden">
+    <div className="fixed inset-0 z-100 md:hidden">
       {/* 遮罩层 */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={() => setChaptersOpen(false)}
       />
-      
+
       {/* 抽屉内容 */}
       <div className="absolute inset-y-0 left-0 w-80 max-w-[85%] shadow-2xl animate-in slide-in-from-left duration-300">
         <ChaptersWrapper />
