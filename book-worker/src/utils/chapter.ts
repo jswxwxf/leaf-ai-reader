@@ -8,14 +8,17 @@ import { Chapter } from "../epub";
  * 2. 父子合并：如果一个节点的所有子节点（经过规则1处理后）都指向该节点相同的物理文件，则清空子节点
  */
 export function normalizeChapters(chapters: Chapter[]): Chapter[] {
-	if (!chapters || chapters.length === 0) return [];
+	// 0. 黑名单关键词（仅过滤重复的目录页）
+	const BLACKLIST_REGEX = /目录|Contents|Table of Contents|TOC/i;
 
-	// 1. 同级去重：保留物理文件切换的第一个入口
-	const filtered = chapters.filter((ch, index) => {
-		if (index === 0) return true;
-		// 比较当前项与前一项的路径（忽略锚点，因为我们在提取阶段已经 split("#")[0] 了）
-		return ch.path !== chapters[index - 1].path;
-	});
+	// 1. 过滤黑名单并执行同级去重：保留物理文件切换的第一个入口
+	const filtered = chapters
+		.filter(ch => !BLACKLIST_REGEX.test(ch.title?.trim() || ""))
+		.filter((ch, index, arr) => {
+			if (index === 0) return true;
+			// 比较当前项与前一项的路径
+			return ch.path !== arr[index - 1].path;
+		});
 
 	// 2. 递归递归处理子节点，并应用父子合并逻辑
 	return filtered.map((ch) => {

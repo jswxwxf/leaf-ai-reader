@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useReaderStore, useReaderStoreRaw } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { useScrollspy } from "../_hooks/use-scrollspy";
@@ -14,21 +14,33 @@ interface Props { }
  * 阅读器正文区域组件
  */
 export function Content({ }: Props) {
+  // 定义容器引用，用于将 DOM 作用域限制在当前组件内
+  const sectionRef = useRef<HTMLDivElement>(null);
+
   // 使用 useShallow 合并订阅，减少重渲染次数
-  const { content, isContentLoading, setSpeechSentenceId, setIsPlaying } = useReaderStore(
+  const { content, path, isContentLoading, setSpeechSentenceId, setIsPlaying } = useReaderStore(
     useShallow((state) => ({
       content: state.content,
+      path: state.path,
       isContentLoading: state.isContentLoading,
       setSpeechSentenceId: state.setSpeechSentenceId,
       setIsPlaying: state.setIsPlaying,
     }))
   );
-  // 直接持有 store 实例（不订阅），用于事件处理器中一次性读取状态
+  // 直接持有 store 实例（不订阅），用于事件处理器或 Effect 中一次性读取/更新状态
   const rawStore = useReaderStoreRaw();
 
+  // 组件挂载时，将容器引用同步到 Store 中供其它 Hook/组件使用
+  useEffect(() => {
+    const { setContentRef } = rawStore.getState();
+    setContentRef(sectionRef);
+    // 销毁时清理引用
+    return () => setContentRef(null);
+  }, [rawStore]);
+
   /**
-   * 核心重置逻辑：当章节内容发生物理变更时（包括切章节时的清空），
-   * 必须强制重置语音状态，防止残留的句子 ID 干扰新章节的朗读定位。
+   * 核心重置逻辑：只有当路径（章节）真正发生变更时，才重置进度。
+   * 这样可以避免 content 异步加载完成时的二次触发（误伤）。
    */
   useEffect(() => {
     // 1. 物理中断语音引擎
@@ -40,7 +52,7 @@ export function Content({ }: Props) {
     if (typeof CSS !== 'undefined' && (CSS as any).highlights) {
       (CSS as any).highlights.get("word-focus")?.clear();
     }
-  }, [content, setSpeechSentenceId, setIsPlaying]);
+  }, [path, setSpeechSentenceId, setIsPlaying]);
 
   // 激活滚动监听
   useScrollspy();
@@ -49,11 +61,15 @@ export function Content({ }: Props) {
    * 处理正文区域的点击事件 (采用事件委托)
    */
   const handleContentClick = (e: React.MouseEvent) => {
+    // 基于当前容器范围内进行局部查找，避免 ID 碰撞干扰
+    const container = sectionRef.current;
+    if (!container) return;
+
     const target = e.target as HTMLElement;
-    // 寻找最近的句子元素 (以 s- 开头的 ID)
+    // 仅在当前容器内寻找最近的句子元素
     const sentenceEl = target.closest('[id^="s-"]');
 
-    if (sentenceEl && sentenceEl.id) {
+    if (sentenceEl && sentenceEl.id && container.contains(sentenceEl)) {
       const targetId = sentenceEl.id;
 
       // 在事件处理器里一次性读取当前值，不需要响应式订阅
@@ -70,7 +86,10 @@ export function Content({ }: Props) {
   };
 
   return (
-    <section className={`flex-1 overflow-y-auto bg-base-200/50 px-4 md:px-8 scroll-smooth relative scroll-pt-20 custom-scrollbar ${styles.reader_content}`}>
+    <section 
+      ref={sectionRef}
+      className={`flex-1 overflow-y-auto bg-base-200/50 px-4 md:px-8 scroll-smooth relative scroll-pt-20 custom-scrollbar ${styles.reader_content}`}
+    >
       {/* 挂载独立的滚动协调器（无渲染） */}
       <Scroller />
 
@@ -81,6 +100,7 @@ export function Content({ }: Props) {
         </div>
       ) : (
         <article
+          key={path || 'initial'}
           className="max-w-2xl lg:max-w-3xl mx-auto prose prose-neutral lg:prose-lg py-10 pb-[60vh] cursor-pointer"
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: content }}

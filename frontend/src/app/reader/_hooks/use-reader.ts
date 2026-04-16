@@ -7,12 +7,13 @@ import { useShallow } from "zustand/react/shallow";
  * 封装阅读器常用的复合动作和逻辑
  */
 export function useReader() {
-  const { setSummarySentenceId, setSpeechSentenceId, setIsManualScrolling, setIsPlaying } = useReaderStore(
+  const { setSummarySentenceId, setSpeechSentenceId, setIsManualScrolling, setIsPlaying, contentRef } = useReaderStore(
     useShallow((state) => ({
       setSummarySentenceId: state.setSummarySentenceId,
       setSpeechSentenceId: state.setSpeechSentenceId,
       setIsManualScrolling: state.setIsManualScrolling,
       setIsPlaying: state.setIsPlaying,
+      contentRef: state.contentRef,
     }))
   );
 
@@ -36,7 +37,7 @@ export function useReader() {
     setSummarySentenceId(sId);
     setSpeechSentenceId(sId);
 
-    const el = document.getElementById(sId);
+    const el = contentRef?.current?.querySelector(`[id="${sId}"]`) as HTMLElement;
     const unlock = () => setIsManualScrolling(false);
 
     // 3. 元素不存在时直接解锁

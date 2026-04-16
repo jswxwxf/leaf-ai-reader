@@ -50,6 +50,7 @@ export interface ReaderState {
 	isPlaying: boolean;
 	speechMode: SpeechMode;
 	isChaptersOpen: boolean;
+	contentRef: React.RefObject<HTMLDivElement | null> | null;
 }
 
 /**
@@ -68,6 +69,7 @@ export interface ReaderActions {
 	setIsPlaying: (isPlaying: boolean) => void;
 	setSpeechMode: (mode: SpeechMode) => void;
 	setChaptersOpen: (isOpen: boolean) => void;
+	setContentRef: (ref: React.RefObject<HTMLDivElement | null> | null) => void;
 	fetchBookChapter: (bookId: string, path: string) => Promise<void>;
 }
 
@@ -108,6 +110,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					isPlaying: false,
 					speechMode: 'sentence',
 					isChaptersOpen: false,
+					contentRef: null,
 				},
 				(set, get) => ({
 					setMode: (mode) => set({ mode }),
@@ -131,6 +134,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					setIsPlaying: (isPlaying) => set({ isPlaying }),
 					setSpeechMode: (speechMode) => set({ speechMode }),
 					setChaptersOpen: (isChaptersOpen) => set({ isChaptersOpen }),
+					setContentRef: (contentRef) => set({ contentRef }),
 					fetchBookChapter: async (bookId, path) => {
 						const res = await request<{ status: string; content?: string }>(
 							`/api/books/${bookId}/chapters/${encodeURIComponent(path)}`

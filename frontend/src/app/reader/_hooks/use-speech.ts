@@ -15,6 +15,7 @@ export function useSpeech() {
     isPlaying,
     setIsPlaying,
     speechMode,
+    contentRef,
   } = useReaderStore(
     useShallow((state) => ({
       speechSentenceId: state.speechSentenceId,
@@ -22,6 +23,7 @@ export function useSpeech() {
       isPlaying: state.isPlaying,
       setIsPlaying: state.setIsPlaying,
       speechMode: state.speechMode,
+      contentRef: state.contentRef,
     }))
   );
 
@@ -40,7 +42,10 @@ export function useSpeech() {
 
     // 1. 确定当前要读的句子（始终从 ref 读取最新值）
     const targetId = speechSentenceIdRef.current ?? "s-1";
-    const el = document.getElementById(targetId);
+    const container = contentRef?.current;
+    
+    // 从当前阅读器容器内进行局部查找，避免 ID 冲突
+    const el = container?.querySelector(`[id="${targetId}"]`) as HTMLElement;
 
     if (!el || !el.textContent) {
       console.warn(`未找到目标句子 (${targetId})`);
@@ -88,7 +93,7 @@ export function useSpeech() {
 
       const currentNum = parseInt(targetId.replace("s-", ""));
       const nextId = `s-${currentNum + 1}`;
-      const nextEl = document.getElementById(nextId);
+      const nextEl = container?.querySelector(`[id="${nextId}"]`);
 
       // 已到文章末尾，停止播放并释放锁
       if (!nextEl) {
@@ -148,7 +153,7 @@ export function useSpeech() {
     const nextNum = Math.max(1, currentNum + delta);
     const nextId = `s-${nextNum}`;
 
-    if (document.getElementById(nextId)) {
+    if (contentRef?.current?.querySelector(`[id="${nextId}"]`)) {
       setSpeechSentenceId(nextId);
     }
   };

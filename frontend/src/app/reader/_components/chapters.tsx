@@ -2,12 +2,28 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useReaderStore } from "../_store/store";
 import type { Chapter, BookData } from "@/lib/book";
 import { usePolling } from "../../dashboard/_hooks/use-polling";
+
+/**
+ * 递归查找第一个有效的叶子章节路径（即没有子章节的真正文章）
+ */
+const findFirstChapter = (items: Chapter[]): string | null => {
+  for (const item of items) {
+    // 情况 A: 如果有子章节，优先深入子章节寻找最前面的叶子
+    if (item.children && item.children.length > 0) {
+      const childPath = findFirstChapter(item.children);
+      if (childPath) return childPath;
+    }
+    // 情况 B: 如果没有子章节（叶子节点）且有路径，这才是我们要的“第一章”
+    if (item.path) return item.path;
+  }
+  return null;
+};
 
 /**
  * 递归检查某个章节及其所有子章节中是否有选中的项
@@ -85,6 +101,7 @@ export function ChaptersWrapper() {
     }))
   );
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // 从 URL 中获取当前的 path
   const pathFromUrl = searchParams.get("path");
@@ -94,7 +111,18 @@ export function ChaptersWrapper() {
   // 用于在 fetchData 没改变 Store 时（如处理中）强制触发组件重渲染，从而维持 usePolling 的后续计时
   const [pollTick, setPollTick] = useState(0);
 
-  // 1. 同步 URL 状态到 Store 并重置内容（触发加载态）
+  // 1. 自动归位：如果打开书籍但没有指定章节，自动跳转到第一章
+  useEffect(() => {
+    if (bookId && chapters.length > 0 && !pathFromUrl) {
+      const firstPath = findFirstChapter(chapters);
+      if (firstPath) {
+        // 使用 replace 防止在历史记录里留下中间态
+        router.replace(`/reader?book_id=${bookId}&path=${encodeURIComponent(firstPath)}`);
+      }
+    }
+  }, [bookId, chapters, pathFromUrl, router]);
+
+  // 2. 同步 URL 状态到 Store 并重置内容（触发加载态）
   useEffect(() => {
     if (pathFromUrl) {
       setPath(pathFromUrl);
@@ -103,7 +131,7 @@ export function ChaptersWrapper() {
     }
   }, [pathFromUrl, setPath, setContent, setIsContentLoading]);
 
-  // 2. 挂载轮询逻辑
+  // 3. 挂载轮询逻辑
   const pollItems = [{ status: isContentLoading ? 'processing' : 'ready' }];
 
   usePolling(

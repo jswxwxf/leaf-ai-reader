@@ -11,18 +11,22 @@ export function useScrollspy() {
     summaries,
     setSummarySentenceId,
     isManualScrolling,
-    content
+    content,
+    contentRef,
   } = useReaderStore(
     useShallow((state) => ({
       summaries: state.summaries,
       setSummarySentenceId: state.setSummarySentenceId,
       isManualScrolling: state.isManualScrolling,
       content: state.content,
+      contentRef: state.contentRef,
     }))
   );
 
   useEffect(() => {
-    if (summaries.length === 0) return;
+    if (summaries.length === 0 || !contentRef?.current) return;
+
+    const container = contentRef.current;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -37,16 +41,16 @@ export function useScrollspy() {
       },
       {
         root: null,
-        rootMargin: "-80% 0px -10% 0px", // 偏下方 10% 区域触发
+        rootMargin: "-20% 0px -60% 0px", // 集中在屏幕中上方区域触发
         threshold: [0],
       }
     );
 
     summaries.forEach((s) => {
-      const el = document.getElementById(s.start_sId);
+      const el = container.querySelector(`[id="${s.start_sId}"]`);
       if (el) observer.observe(el);
     });
 
     return () => observer.disconnect();
-  }, [summaries, setSummarySentenceId, content, isManualScrolling]);
+  }, [summaries, setSummarySentenceId, content, isManualScrolling, contentRef]);
 }
