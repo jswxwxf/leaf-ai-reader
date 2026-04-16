@@ -24,9 +24,11 @@ export interface BookData {
 	published_at?: string;
 	status: 'uploading' | 'processing' | 'ready' | 'error';
 	cover_r2_key?: string | null;
-	total_chapters?: number;
+	bookmark?: string | null;
+	progress?: number;
 	created_at: number;
 	chapters?: Chapter[]; // 注入的目录数据
+	flattenChapters?: Chapter[]; // 展平后的目录数据
 }
 
 /**
@@ -105,6 +107,36 @@ export async function getBookChapters(
 		return [];
 	}
 }
+/**
+ * 从 R2 获取展平后的书籍目录 (flatten-chapters.json)
+ */
+export async function getFlattenChapters(
+	id: string,
+	cloudflare?: { env: CloudflareEnv; ctx?: ExecutionContext }
+): Promise<Chapter[]> {
+	// 1. 鉴权
+	const user = await getCurrentUser();
+	if (!user?.sub) {
+		throw new Error('Unauthorized');
+	}
+
+	// 2. 获取 Cloudflare 环境
+	const { env } = cloudflare || getCloudflareContext();
+
+	// 3. 构建 R2 Key 并读取
+	const flattenTocKey = `books/${user.sub}/${id}/flatten-chapters.json`;
+	try {
+		const object = await env.LEAF_BOOK_BUCKET.get(flattenTocKey);
+		if (!object) {
+			console.warn(`[lib/book] Flatten TOC not found for book: ${id}`);
+			return [];
+		}
+		return await object.json() as Chapter[];
+	} catch (e) {
+		console.error(`[lib/book] Failed to fetch Flatten TOC for book ${id}:`, e);
+		return [];
+	}
+}
 
 /**
  * 删除书籍 (Server Action / 内部逻辑)
@@ -138,7 +170,7 @@ export async function deleteBook(
 	const cleanupTask = async () => {
 		try {
 			const prefix = `books/${userId}/${id}/`;
-			
+
 			// 列表查询该前缀下的所有文件
 			const listed = await env.LEAF_BOOK_BUCKET.list({ prefix });
 			const keys = listed.objects.map(o => o.key);
@@ -157,6 +189,35 @@ export async function deleteBook(
 	ctx.waitUntil(cleanupTask());
 
 	// 告知 Next.js 刷新仪表盘页面的缓存数据
+	revalidatePath('/dashboard');
+
+	return { success: true };
+}
+
+/**
+ * 更新书籍进度 (Server Action)
+ */
+export async function updateBookProgress(
+	bookId: string,
+	bookmark: string,
+	progress: number,
+	cloudflare?: { env: CloudflareEnv; ctx?: ExecutionContext }
+): Promise<{ success: boolean }> {
+	// 1. 鉴权
+	const user = await getCurrentUser();
+	if (!user?.sub) {
+		throw new Error('Unauthorized');
+	}
+
+	// 2. 获取 Cloudflare 环境
+	const { env } = cloudflare || getCloudflareContext();
+
+	// 3. 更新数据库
+	const result = await env.LEAF_BOOK_DB.prepare(
+		"UPDATE books SET bookmark = ?, progress = ? WHERE id = ? AND user_id = ?"
+	).bind(bookmark, progress, bookId, user.sub).run();
+
+	// 4. 刷新控制台缓存
 	revalidatePath('/dashboard');
 
 	return { success: true };

@@ -1,40 +1,56 @@
-# PRD 011: 图书 EPUB 实时提取与渲染 (Phase 2)
+# PRD 011: 图书 EPUB 实时提取与渲染 (Phase 2 & 3)
 
 ## 1. 目标
 
-实现在阅读页面内实时从 R2 加载 EPUB 章节并渲染展示的功能，并确保其兼容逐句朗读高亮特性。
+1. **图片提取**: 实现在阅读页面内展示 EPUB 内部图片的功能，包括实时提取、R2 缓存和地址重写。
+2. **进度保存**: 实现图书阅读进度的持久化存储，支持用户在不同设备/会话间无缝续读。
 
-## 2. 方案
- 
-基于 PRD-003 生成的 `toc.json`，采用“**按需实时提取 (On-demand Extraction)**”模式。
- 
-1. **获取目录**: 前端通过 API 获取 R2 中的 `toc.json`，渲染递归目录树。
-2. **实时解压**: 当用户进入特定章节时，Worker 从 R2 读取原始 EPUB，实时提取对应章节的 HTML/XHTML 内容。
-3. **结构化清洗与注入**: 
-   - 使用 `linkedom` 构建 DOM 树。
-   - 参照小程序/采集文章的清洗逻辑，平坦化冗余容器 (`div`, `span`, `font`)。
-   - **核心增强**: 调用 `injectSentenceIds` 进行句子分割并注入 `id="s-N"` 属性，以支持 PRD-008 朗读高亮。
-   - 重写图片资源路径为内部预览代理地址。
-4. **安全过滤**: 使用 `DOMPurify` 进行最终的 HTML 净化，确保无恶意脚本执行。
-5. **资源缓存**: 提取的图片资源异步缓存至 R2 `assets/` 目录，下次请求直接读取缓存。
+## 2. 核心方案
 
-## 3. 安全性与规范
- 
-EPUB HTML 内容需严格过滤后渲染：
-- **白名单机制**: 仅保留 `p`、`h1-h6`、`img`、`em`、`strong`、`ul`、`ol`、`li`、`blockquote`、`table` 等排版标签。
-- **ID 保护**: 必须保留注入的句子 ID (`id="s-*"`), 它是朗读定位的核心。
-- **图片限制**: src 仅允许指向 R2 预览代理域名。
- 
+### 2.1 图片处理 (Image Extraction & Proxy)
+
+基于“按需实时提取”模式，在 Worker 处理章节 HTML 时同步处理图片：
+
+1. **扫描与提取**: 在 `processChapter` 过程中，解析 HTML 中的 `<img>` 标签。
+2. **R2 存储**: 
+   - 将图片文件从 EPUB 提取并存入 R2，路径规则：`books/${userId}/${bookId}/images/${relPath}`。
+   - 使用图片的原始 MIME 类型进行存储。
+3. **URL 重写**: 将 HTML 中的 `src` 替换为前端代理地址：`/api/books/${bookId}/images/${relPath}`。
+4. **前端代理 (Proxy)**: 前端实现路由拦截 `/api/books/[bookId]/images/[...path]`，从 R2 读取内容并返回（带缓存头）。
+
+### 2.2 阅读进度 (Reading Progress)
+
+1. **数据模型**: 在 D1 中建立 `reading_progress` 表。
+   - `id`, `user_id`, `book_id`, `current_path`, `current_sentence_id`, `updated_at`。
+2. **服务端同步**:
+   - `GET /api/books/[bookId]/progress`: 获取最后一次阅读状态。
+   - `POST /api/books/[bookId]/progress`: 更新当前阅读状态。
+3. **前端策略**:
+   - **初始化**: 进入阅读器时，若 URL 无 `path` 参数，则自动从后端同步进度并重定向。
+   - **自动保存**: 监听章节切换事件，或定期（如每 30 秒）持久化当前状态。
+
+## 3. 技术规范
+
+- **图片安全**: 代理接口需校验 `user_id` 和 `book_id` 权限，防止横向越权访问。
+- **性能**: 图片资源在 R2 存储时需带有强缓存头 (`Cache-Control`)。
+- **一致性**: 阅读进度更新应采用 `UPSERT` 逻辑。
+
 ## 4. 任务清单
- 
-- [x] **实时解压 API**: 在 `book-worker` 中支持 `/api/books/:id/chapters/*` 接口解压 HTML。
-- [x] **通用清洗引擎**: 已实现 DOM 平坦化与句子分割 ID 注入。
-- [ ] **资源处理逻辑**: 实现图片路径重写、预览代理（Proxy）及 R2 自动缓存逻辑。
+
+- [x] **实时解压 API**: `book-worker` 已支持。
+- [x] **通用清洗引擎**: 已支持 DOM 平坦化与句子分割。
+- [ ] **图片提取逻辑**:
+    - [ ] `book-worker` 增加图片扫描与 R2 写入。
+    - [ ] `book-worker` 增加 HTML `img src` 重写逻辑。
+    - [ ] `frontend` 实现图片预览代理接口。
+- [ ] **阅读进度持久化**:
+    - [ ] D1 数据库迁移：创建 `reading_progress` 表。
+    - [ ] `frontend` 实现进度同步 API。
+    - [ ] `frontend` Reader 注入进度加载与自动保存逻辑。
 
 ## 5. 进度
- 
+
 - **状态**: 进行中 (In Progress)
+- **最近更新**: 2026-04-17 (新增图片提取与进度保存计划)
 - **依赖**: 
-  - PRD-003 (已完成：EPUB 索引生成)
-  - PRD-006 (已完成：阅读页基础 UI)
-  - PRD-008 (计划中：朗读高亮协议)
+  - PRD-003, PRD-006, PRD-012 (章节翻页)

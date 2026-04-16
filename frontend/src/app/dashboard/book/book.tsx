@@ -113,6 +113,20 @@ export function Book({ book }: Props) {
 							{book.published_at.split('T')[0]}
 						</p>
 					)}
+					{/* 进度显示 */}
+					{book.status === 'ready' && (
+						<div className="mt-2 pt-2 border-t border-base-200/50">
+							<div className="flex items-center justify-between mb-1 opacity-80">
+								<span>进度</span>
+								<span className="font-bold">{book.progress || 0}%</span>
+							</div>
+							<progress 
+								className="progress progress-primary w-full h-1.5 bg-base-300" 
+								value={book.progress || 0} 
+								max="100"
+							></progress>
+						</div>
+					)}
 				</div>
 			</div>
 		</Link>

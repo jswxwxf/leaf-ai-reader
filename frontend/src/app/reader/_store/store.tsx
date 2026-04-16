@@ -27,6 +27,7 @@ export type InitialState = {
 	article_id?: string | null;
 	book_id?: string | null;
 	path?: string | null;
+	speechMode?: SpeechMode;
 	data?: ArticleData | BookData | null;
 	content?: string;
 };
@@ -89,7 +90,8 @@ const createReaderStore = (initialState: InitialState = {}) => {
 		book_id = null,
 		path = null,
 		data = null,
-		content = ""
+		content = "",
+		speechMode = 'sentence'
 	} = initialState;
 
 	return createStore<ReaderStoreState>()(
@@ -109,7 +111,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					isLoading: false,
 					isContentLoading: false,
 					isPlaying: false,
-					speechMode: 'sentence',
+					speechMode,
 					isChaptersOpen: false,
 					contentRef: null,
 				},
@@ -154,11 +156,12 @@ const createReaderStore = (initialState: InitialState = {}) => {
 			{
 				name: 'reader-storage',
 				// 使用之前在 Dashboard 中定义的帮助函数同步到 URL
-				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id', 'path'])),
+				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id', 'path', 'speechMode'])),
 				partialize: (state) => ({
 					article_id: state.article_id,
 					book_id: state.book_id,
-					path: state.path
+					path: state.path,
+					speechMode: state.speechMode
 				})
 			}
 		)

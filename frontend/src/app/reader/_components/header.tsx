@@ -31,9 +31,10 @@ export function Header({ isPopup = true }: Props) {
 					className="btn btn-ghost btn-circle active:scale-90 transition-all font-bold"
 					title="返回"
 					onClick={() => {
-						// 主动停止朗读，并强制映射返回仪表盘
+						// 主动停止朗读，并根据模式返回对应的仪表盘视图
 						window.speechSynthesis.cancel();
-						window.location.href = '/dashboard';
+						const backUrl = isBookMode ? '/dashboard?view=books' : '/dashboard?view=articles';
+						window.location.href = backUrl;
 					}}
 				>
 					<ArrowLeft className="w-5 h-5" />
@@ -51,7 +52,7 @@ export function Header({ isPopup = true }: Props) {
 					</button>
 				)}
 			</div>
-			<div className="flex-1 px-2 min-w-0 text-center md:text-left">
+			<div className="flex-1 px-2 min-w-0">
 				<h1 className="text-lg font-bold truncate">
 					{data?.title || "正在加载..."}
 				</h1>

@@ -40,3 +40,15 @@ export function normalizeChapters(chapters: Chapter[]): Chapter[] {
 		return ch;
 	});
 }
+
+/**
+ * 递归展平章节树，仅保留具有有效路径的叶子节点
+ */
+export function flattenChapters(items: Chapter[]): Chapter[] {
+	return items.reduce((acc, item) => {
+		if (item.children && item.children.length > 0) {
+			return acc.concat(flattenChapters(item.children));
+		}
+		return item.path ? acc.concat(item) : acc;
+	}, [] as Chapter[]);
+}

@@ -16,7 +16,7 @@ import { EpubParser } from "./epub";
 import { crawlArticle } from "./article";
 import { parseHTML } from 'linkedom';
 import * as fflate from 'fflate';
-import { normalizeChapters } from './utils/chapter';
+import { normalizeChapters, flattenChapters } from './utils/chapter';
 import { cleanHtml } from './utils/html';
 import { toCompactText, generateSummary } from "./utils/summary";
 
@@ -92,14 +92,21 @@ export default class extends WorkerEntrypoint<Env> {
 
 		console.log(`[Indexer] Successfully parsed book: ${metadata.title}`);
 
-		// 4.1 规范化并上传目录 (TOC) 到 R2 并获取总章节数
+		// 4.1 规范化并上传目录 (TOC) 到 R2
 		const normalizedChapters = normalizeChapters(metadata.chapters);
-		const totalCount = this.countChapters(normalizedChapters);
 		const tocR2Key = `books/${userId}/${bookId}/toc.json`;
 		await this.env.LEAF_BOOK_BUCKET.put(tocR2Key, JSON.stringify(normalizedChapters), {
 			httpMetadata: { contentType: "application/json" },
 		});
-		console.log(`[Indexer] Successfully uploaded toc.json to ${tocR2Key}, total chapters: ${totalCount}`);
+
+		// 4.1.2 展平章节并上传到 R2
+		const flattenedChapters = flattenChapters(normalizedChapters);
+		const flattenTocR2Key = `books/${userId}/${bookId}/flatten-chapters.json`;
+		await this.env.LEAF_BOOK_BUCKET.put(flattenTocR2Key, JSON.stringify(flattenedChapters), {
+			httpMetadata: { contentType: "application/json" },
+		});
+
+		console.log(`[Indexer] Successfully uploaded toc.json and flatten-chapters.json`);
 
 		// 4.2 更新书籍元数据
 		try {
@@ -108,7 +115,6 @@ export default class extends WorkerEntrypoint<Env> {
 				 SET title = ?, 
 				     author = ?, 
 					 published_at = ?,
-					 total_chapters = ?, 
 					 cover_r2_key = ?, 
 					 root_dir = ?,
 					 status = 'ready' 
@@ -117,7 +123,6 @@ export default class extends WorkerEntrypoint<Env> {
 				metadata.title,
 				metadata.author,
 				metadata.publishDate,
-				totalCount,
 				updatedCoverKey,
 				metadata.rootDir,
 				bookId,
@@ -135,27 +140,9 @@ export default class extends WorkerEntrypoint<Env> {
 				title: metadata.title,
 				author: metadata.author,
 				publishedAt: metadata.publishDate,
-				chaptersCount: totalCount,
 				coverR2Key: updatedCoverKey,
 			}
 		};
-	}
-
-	/**
-	 * 统计所有嵌套章节的总数
-	 */
-	private countChapters(chapters: any[]): number {
-		let count = 0;
-		const traverse = (items: any[]) => {
-			for (const item of items) {
-				count++;
-				if (item.children && item.children.length > 0) {
-					traverse(item.children);
-				}
-			}
-		};
-		traverse(chapters);
-		return count;
 	}
 
 	async processChapter(userId: string, bookId: string, chapterPath: string) {
@@ -283,7 +270,7 @@ export default class extends WorkerEntrypoint<Env> {
 	 */
 	private async _runAISummary(title: string, content: string): Promise<string | null> {
 		const isDev = (this.env as any).NODE_ENV === 'development';
-		
+
 		// 开发环境下强行跳过 AI，返回 Mock 数据以填充哨兵文件
 		if (isDev) {
 			console.log(`[Worker] Skipping AI summary for ${title} in dev mode.`);
@@ -293,16 +280,10 @@ export default class extends WorkerEntrypoint<Env> {
 			});
 		}
 
-		// 生产环境下如果没有 Key 则跳过
-		if (!this.env.GEMINI_API_KEY) {
-			console.warn('[Worker] GEMINI_API_KEY not set, skipping AI summary.');
-			return null;
-		}
-
 		try {
 			console.log(`[Worker] Starting AI summary calculation for: ${title}`);
 			const compactText = toCompactText(content);
-			
+
 			const summaryResult = await generateSummary(
 				this.env.AI,
 				compactText,
@@ -320,4 +301,5 @@ export default class extends WorkerEntrypoint<Env> {
 
 		return null;
 	}
+
 }

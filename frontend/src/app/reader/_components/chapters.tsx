@@ -10,22 +10,6 @@ import type { Chapter, BookData } from "@/lib/book";
 import { usePolling } from "../../dashboard/_hooks/use-polling";
 
 /**
- * 递归查找第一个有效的叶子章节路径（即没有子章节的真正文章）
- */
-const findFirstChapter = (items: Chapter[]): string | null => {
-  for (const item of items) {
-    // 情况 A: 如果有子章节，优先深入子章节寻找最前面的叶子
-    if (item.children && item.children.length > 0) {
-      const childPath = findFirstChapter(item.children);
-      if (childPath) return childPath;
-    }
-    // 情况 B: 如果没有子章节（叶子节点）且有路径，这才是我们要的“第一章”
-    if (item.path) return item.path;
-  }
-  return null;
-};
-
-/**
  * 递归检查某个章节及其所有子章节中是否有选中的项
  */
 const hasActiveChild = (items: Chapter[], targetPath: string): boolean => {
@@ -90,11 +74,10 @@ const Chapters = ({
  * 阅读器章节目录侧边栏组件
  */
 export function ChaptersWrapper() {
-  const { data, isContentLoading, setPath, setContent, setSummaries, setIsContentLoading, fetchBookChapter } = useReaderStore(
+  const { data, isContentLoading, setContent, setSummaries, setIsContentLoading, fetchBookChapter } = useReaderStore(
     useShallow((state) => ({
       data: state.data,
       isContentLoading: state.isContentLoading,
-      setPath: state.setPath,
       setContent: state.setContent,
       setSummaries: state.setSummaries,
       setIsContentLoading: state.setIsContentLoading,
@@ -112,28 +95,7 @@ export function ChaptersWrapper() {
   // 用于在 fetchData 没改变 Store 时（如处理中）强制触发组件重渲染，从而维持 usePolling 的后续计时
   const [pollTick, setPollTick] = useState(0);
 
-  // 1. 自动归位：如果打开书籍但没有指定章节，自动跳转到第一章
-  useEffect(() => {
-    if (bookId && chapters.length > 0 && !pathFromUrl) {
-      const firstPath = findFirstChapter(chapters);
-      if (firstPath) {
-        // 使用 replace 防止在历史记录里留下中间态
-        router.replace(`/reader?book_id=${bookId}&path=${encodeURIComponent(firstPath)}`);
-      }
-    }
-  }, [bookId, chapters, pathFromUrl, router]);
-
-  // 2. 同步 URL 状态到 Store 并重置内容（触发加载态）
-  useEffect(() => {
-    if (pathFromUrl) {
-      setPath(pathFromUrl);
-      setContent(""); // 切换章节时先清空正文
-      setSummaries([]); // 同步清空摘要高亮
-      setIsContentLoading(true); // 开启加载状态
-    }
-  }, [pathFromUrl, setPath, setContent, setSummaries, setIsContentLoading]);
-
-  // 3. 挂载轮询逻辑
+  // 1. 挂载轮询逻辑
   const pollItems = [{ status: isContentLoading ? 'processing' : 'ready' }];
 
   usePolling(
@@ -175,18 +137,16 @@ export function MobileChaptersDrawer() {
     }))
   );
 
-  if (!isChaptersOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-100 md:hidden">
+    <div className={`fixed inset-0 z-100 md:hidden transition-all duration-300 ${isChaptersOpen ? "visible" : "invisible pointer-events-none"}`}>
       {/* 遮罩层 */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isChaptersOpen ? "opacity-100" : "opacity-0"}`}
         onClick={() => setChaptersOpen(false)}
       />
 
       {/* 抽屉内容 */}
-      <div className="absolute inset-y-0 left-0 w-80 max-w-[85%] shadow-2xl animate-in slide-in-from-left duration-300">
+      <div className={`absolute inset-y-0 left-0 w-80 max-w-[85%] shadow-2xl transition-transform duration-300 ${isChaptersOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <ChaptersWrapper />
       </div>
     </div>

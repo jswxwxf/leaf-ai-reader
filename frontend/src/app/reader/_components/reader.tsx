@@ -1,43 +1,52 @@
+import Link from "next/link";
 import { Header } from "./header";
 import { ChaptersWrapper, MobileChaptersDrawer } from "./chapters";
 import { Content } from "./content";
 import { Summary } from "./summary";
 import { Footer } from "./footer";
-import { ReaderStoreProvider } from "../_store/store";
+import { Helper } from "./helper";
+import { ReaderStoreProvider, type SpeechMode } from "../_store/store";
 import { getArticle, getArticleData, type ArticleData } from "@/lib/article";
-import { getBookData, getBookChapters, type BookData } from "@/lib/book";
+import { getBookData, getBookChapters, getFlattenChapters, type BookData } from "@/lib/book";
 
 interface Props {
 	isPopup?: boolean;
 	article_id?: string | null;
 	book_id?: string | null;
+	speechMode?: SpeechMode;
 }
 
 /**
  * 阅读器主框架组件
  * 作为一个服务器组件，它负责承载 StoreProvider 并将初始参数下发给客户端状态机
  */
-export async function Reader({ isPopup = true, article_id, book_id }: Props) {
+export async function Reader({ isPopup = true, article_id, book_id, speechMode }: Props) {
 	let data: ArticleData | BookData | null = null;
 	if (article_id) {
 		data = await getArticleData(article_id);
 	} else if (book_id) {
-		const [bookData, chapters] = await Promise.all([
+		const [bookData, chapters, flattenChapters] = await Promise.all([
 			getBookData(book_id),
-			getBookChapters(book_id)
+			getBookChapters(book_id),
+			getFlattenChapters(book_id)
 		]);
 
 		if (bookData) {
 			bookData.chapters = chapters;
+			bookData.flattenChapters = flattenChapters;
 			data = bookData;
 		}
 	}
 
 	if (!data) {
+		const backView = book_id ? "books" : "articles";
 		return (
 			<div className="flex flex-col items-center justify-center h-screen bg-base-100 text-base-content/60">
 				<div className="text-xl font-medium mb-2">数据加载失败</div>
-				<p className="text-sm">文章不存在或链路已失效</p>
+				<p className="text-sm mb-6">内容不存在或链路已失效</p>
+				<Link href={`/dashboard?view=${backView}`} className="btn btn-primary btn-outline btn-sm px-8">
+					返回
+				</Link>
 			</div>
 		);
 	}
@@ -56,8 +65,10 @@ export async function Reader({ isPopup = true, article_id, book_id }: Props) {
 				mode: article_id ? 'article' : (book_id ? 'book' : null),
 				data,
 				content,
+				speechMode,
 			}}
 		>
+			<Helper />
 			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden relative">
 				<Header isPopup={isPopup} />
 
