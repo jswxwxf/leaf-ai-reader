@@ -10,7 +10,7 @@ const DOMPurify = createDOMPurify(window as any);
  * 通用的 HTML 清理与数字化（分句）工具
  * 使用 id="s-N" 和 class="sentence" 以保持与现有流程兼容
  */
-export function cleanHtml(container: any): string {
+export function cleanHtml(container: any, options?: { bookId?: string, path?: string }): string {
   let sentenceId = 0;
   const getNextId = () => ++sentenceId;
 
@@ -32,7 +32,7 @@ export function cleanHtml(container: any): string {
   };
 
   children.forEach((node: any) => {
-    const html = transformNode(node, getNextId);
+    const html = transformNode(node, getNextId, options);
     if (!html) return;
 
     const isBlock = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre)/i.test(html);
@@ -57,7 +57,7 @@ export function cleanHtml(container: any): string {
       'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code',
       'img'
     ],
-    ALLOWED_ATTR: ['id', 'class', 'src', 'alt'],
+    ALLOWED_ATTR: ['id', 'class', 'src', 'alt', 'loading'],
   });
 }
 
@@ -85,7 +85,31 @@ function normalizeStructure(container: any) {
   container.normalize();
 }
 
-function transformNode(node: any, getNextId: () => number): string {
+/**
+ * 路径归一化：将相对路径转换为相对于镜像根目录的绝对路径
+ */
+function resolvePath(basePath: string, relativePath: string): string {
+  if (relativePath.startsWith('/') || /^[a-z]+:\/\//i.test(relativePath)) {
+    return relativePath.replace(/^\//, '');
+  }
+
+  const baseParts = basePath.split('/').filter(p => p);
+  baseParts.pop(); // 弹出当前文件名，保留所在目录路径
+
+  const relativeParts = relativePath.split('/').filter(p => p);
+
+  for (const part of relativeParts) {
+    if (part === '..') {
+      baseParts.pop();
+    } else if (part !== '.') {
+      baseParts.push(part);
+    }
+  }
+
+  return baseParts.join('/');
+}
+
+function transformNode(node: any, getNextId: () => number, options?: { bookId?: string, path?: string }): string {
   if (node.nodeType === 3) {
     const text = node.textContent || "";
     if (!text.trim()) return "";
@@ -100,8 +124,12 @@ function transformNode(node: any, getNextId: () => number): string {
   if (node.nodeType === 1) {
     const tagName = node.tagName.toLowerCase();
     if (tagName === 'img') {
-      const src = node.getAttribute('data-src') || node.getAttribute('src');
-      return src ? `<img src="${src}">` : "";
+      let src = node.getAttribute('data-src') || node.getAttribute('src') || "";
+      if (src && options?.bookId && options?.path) {
+        const absPath = resolvePath(options.path, src);
+        src = `/api/books/${options.bookId}/resource?path=${encodeURIComponent(absPath)}`;
+      }
+      return src ? `<img src="${src}" loading="lazy">` : "";
     }
     if (tagName === 'br') return "";
 
@@ -110,7 +138,7 @@ function transformNode(node: any, getNextId: () => number): string {
 
     let innerContent = "";
     Array.from(node.childNodes).forEach((child: any) => {
-      innerContent += transformNode(child, getNextId);
+      innerContent += transformNode(child, getNextId, options);
     });
 
     if (!innerContent.trim() && tagName !== 'hr') return "";
@@ -125,3 +153,4 @@ function transformNode(node: any, getNextId: () => number): string {
   }
   return "";
 }
+

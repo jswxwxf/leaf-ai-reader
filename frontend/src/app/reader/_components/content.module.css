@@ -17,3 +17,14 @@
   /* 当使用 scrollIntoView({ block: 'end' }) 时，使元素停在距离底部 15% 处（即 85% 高度位置） */
   scroll-margin-bottom: 15vh;
 }
+
+/* 图片加载占位符 (静态 Skeleton) */
+.reader_content :global(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--rounded-btn, 0.5rem);
+  margin: 1.5rem auto;
+  display: block;
+  background-color: color-mix(in oklch, var(--fallback-bc,oklch(var(--bc)/1)), transparent 92%);
+  min-height: 200px; 
+}

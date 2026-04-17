@@ -183,7 +183,10 @@ export default class extends WorkerEntrypoint<Env> {
 		// 3. 清洗且分句
 		const htmlContent = new TextDecoder().decode(chapterFile);
 		const { document } = parseHTML(htmlContent);
-		const processedHtml = cleanHtml(document.body || document);
+		const processedHtml = cleanHtml(document.body || document, {
+			bookId,
+			path: decodedPath
+		});
 
 		// 4. 存回 R2
 		await this.env.LEAF_BOOK_BUCKET.put(contentKey, processedHtml, {
@@ -199,6 +202,41 @@ export default class extends WorkerEntrypoint<Env> {
 		console.log(`[Worker] Saved chapter summary to R2 (Final): ${summaryKey}`);
 
 		return { success: true, key: contentKey };
+	}
+
+	/**
+	 * 按需提取书籍内部资源 (如图片)
+	 */
+	async processResource(userId: string, bookId: string, internalPath: string) {
+		console.log(`[Worker] Processing resource: book=${bookId}, path=${internalPath}`);
+
+		// 1. 获取 rootDir
+		const book = await this.env.LEAF_BOOK_DB.prepare(
+			"SELECT root_dir FROM books WHERE id = ?"
+		).bind(bookId).first<{ root_dir: string }>();
+		const rootDir = book?.root_dir || "";
+
+		// 2. 加载 EPUB
+		const epubKey = `books/${userId}/${bookId}/original.epub`;
+		const epubObject = await this.env.LEAF_BOOK_BUCKET.get(epubKey);
+		if (!epubObject) throw new Error(`[Worker] EPUB not found: ${epubKey}`);
+
+		const epubBuffer = await epubObject.arrayBuffer();
+		const fullPath = rootDir + decodeURIComponent(internalPath);
+
+		// 3. 提取文件
+		const unzipped = fflate.unzipSync(new Uint8Array(epubBuffer), {
+			filter: (file) => file.name === fullPath
+		});
+
+		const fileData = unzipped[fullPath];
+		if (!fileData) {
+			console.error(`[Worker] Resource not found in zip: ${fullPath}`);
+			return null;
+		}
+
+		// 返回 Uint8Array，RPC 会处理传输
+		return fileData;
 	}
 
 	async processArticle(userId: string, articleId: string) {
