@@ -52,6 +52,7 @@ const Chapters = ({
             ) : (
               <Link
                 href={`/reader?book_id=${bookId}&path=${encodeURIComponent(item.path)}`}
+                prefetch={false}
                 className={`cursor-pointer ${isActive ? "bg-primary/10 text-primary font-medium" : ""}`}
                 onClick={() => setChaptersOpen(false)}
                 ref={(el) => {
