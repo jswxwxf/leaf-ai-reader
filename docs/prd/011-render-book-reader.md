@@ -12,51 +12,45 @@
 采用“极致懒加载”模式：Worker 仅重写路径，图片在滚动到视口时通过后端代理实时从 EPUB 提取并回填缓存。
 
 1. **路径解析与重写**: 
-   - 在 `processChapter` 时，解析 `<img>` 的相对路径为相对于书籍根目录的绝对路径 (`internalPath`)。
-   - 重写 `src` 为：`/api/books/${bookId}/resource?path=${encodeURIComponent(internalPath)}`。
-   - 为所有 `<img>` 标签注入 `loading="lazy"` 属性。
+   - 在 `processChapter` 时，通过 `resolvePath` 工具函数将 `<img>` 的相对路径转换为符合 EPUB 结构的绝对路径。
+   - 重写 `src` 为代理地址：`/api/books/${bookId}/resource?path=${encodeURIComponent(absPath)}`。
+   - 自动注入 `loading="lazy"` 以利用浏览器原生的延迟加载能力。
 2. **镜像存储 (R2)**: 
-   - 资源存储路径完全镜像 EPUB 内部结构：`books/${userId}/${bookId}/content/${internalPath}`。
-   - 这样 R2 的 `content/` 目录即为书籍解压后的完整投影。
+   - 资源存储路径完全镜像 EPUB 内部物理结构：`books/${userId}/${bookId}/content/${path}`。
+   - 这种 1:1 映射确保了 R2 作为书籍解压后的逻辑投影。
 3. **前端资源代理 (Real-time Proxy)**:
-   - 访问代理接口时，优先检查 R2 缓存。
-   - 若缓存未命中（Cache Miss），通过 RPC 调用 Worker 的 `extractResource` 接口。
-   - Worker 从原始 EPUB 中提取二进制流返回，代理接口将其返回给前端并异步写回 R2。
+   - 访问接口时优先检索 R2。若缺失（Cache Miss），则通过 RPC 调用 Worker 的 `processResource` 方法。
+   - **异步回填**：数据返回给用户时，通过 `ctx.waitUntil` 在后台异步写入 R2，不阻塞用户感知到的首屏加载速度。
 
 ### 2.2 阅读进度 (Reading Progress)
 
-1. **数据模型**: 在 D1 中建立 `reading_progress` 表。
-   - `id`, `user_id`, `book_id`, `current_path`, `current_sentence_id`, `updated_at`。
-2. **服务端同步**:
-   - `GET /api/books/[bookId]/progress`: 获取最后一次阅读状态。
-   - `POST /api/books/[bookId]/progress`: 更新当前阅读状态。
-3. **前端策略**:
-   - **初始化**: 进入阅读器时，若 URL 无 `path` 参数，则自动从后端同步进度并重定向。
-   - **自动保存**: 监听章节切换事件，或定期（如每 30 秒）持久化当前状态。
+1. **数据模型**: 在 D1 中建立 `reading_progress` 表或在 `books` 表中维护进度字段。
+2. **服务端同步**: 接口支持获取与更新用户的阅读路径（Chapter Path）及具体句子 ID。
+3. **前端策略**: 采用“Helper 驻留式”更新。监听章节切换，非阻塞式向后端同步进度。
 
 ## 3. 技术规范
 
-- **按需加载**: 利用 `loading="lazy"` 减少首屏网络压力和不必要的 Worker 计算。
-- **镜像结构**: R2 路径必须与 `internalPath` 严格一致，便于管理和维护。
-- **图片安全**: 代理接口需校验用户的书籍访问权限。
-- **性能**: 图片资源在响应时需带上 `Cache-Control: public, max-age=31536000, immutable`。
+- **按需加载**: 利用 `loading="lazy"` 减少首屏网络压力和不必要的服务器计算开销。
+- **UI 占位符 (Skeleton)**: 为防止布局抖动 (CLS)，图片加载期间显示带有 `min-height` 的静态灰色背景块，且背景色自动适配系统深/浅色模式。
+- **命名规范**: 所有资源提取处理逻辑统一以 `processResource` 命名，保持与 `processChapter` 的一致性。
+- **兼容性平衡**: `cleanHtml` 引擎在处理文章爬虫（无 bookId 场景）时需保持向下兼容，不执行路径重写逻辑。
+- **安全与性能**: 资源代理需校验权限，并携带强缓存头 `Cache-Control: public, max-age=31536000, immutable`。
 
 ## 4. 任务清单
 
-- [x] **实时解压 API**: `book-worker` 已支持。
-- [x] **通用清洗引擎**: 已支持 DOM 平坦化与句子分割。
+- [x] **基础设施**: R2 Bucket 与 D1 配置支持实时资源存取。
 - [x] **图片提取逻辑**:
-    - [x] `book-worker` 实现路径解析与 URL 重写逻辑（注入 `lazy` 加载）。
-    - [x] `book-worker` 新增 `extractResource` RPC 提取接口。
-    - [x] `frontend` 实现基于 R2 缓存优先的资源代理接口。
+    - [x] `book-worker` 实现基于 `resolvePath` 的 URL 重写机制。
+    - [x] `book-worker` 实现 `processResource` RPC 提取接口。
+    - [x] `frontend` 实现基于 R2 缓存优先且带后台回写的资源代理接口。
+    - [x] `frontend` 注入静态图片占位符 CSS (Skeleton UI)。
 - [x] **阅读进度持久化**:
-    - [x] D1 数据库迁移：在 `books` 表中增加 `bookmark` 和 `progress` 字段。
-    - [x] `frontend` 实现进度同步 Server Action (`updateBookProgress`)。
-    - [x] `frontend` Reader 界面集成进度加载与自动同步逻辑 (`Helper.tsx`)。
+    - [x] D1 数据库迁移：在 `books` 表中增加对应的进度记录逻辑。
+    - [x] `frontend` 调用 Server Action / API 更新进度。
 
 ## 5. 进度
 
-- **状态**: 进行中 (In Progress)
-- **最近更新**: 2026-04-17 (新增图片提取与进度保存计划)
+- **状态**: 已完成 (Completed)
+- **最近更新**: 2026-04-17 (全链路功能验收通过)
 - **依赖**: 
-  - PRD-003, PRD-006, PRD-012 (章节翻页)
+  - PRD-008 (视觉规范), PRD-012 (章节翻页)

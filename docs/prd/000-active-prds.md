@@ -12,7 +12,8 @@
 - [x] **PRD-008: 逐句逐词朗读高亮** ([008-sentence-highlighting.md](./008-sentence-highlighting.md)) — 已实现双层联动高亮系统、TTS 接力朗读及键盘快捷键导航
 - [x] **PRD-009: 朗读模式切换** ([009-speech-modes.md](./009-speech-modes.md)) — 已实现三种调度模式与跨闭包陈旧值修复
 - [x] **PRD-010: MediaSession 系统级媒体控制** ([010-mediasession-integration.md](./010-mediasession-integration.md)) — 已实现静音保活与系统锁屏媒体控制
-- [ ] **PRD-011: 图书 EPUB 实时提取与渲染** ([011-render-book-reader.md](./011-render-book-reader.md)) — **[Phase 2]** 已实现 API 提取与句子 ID 注入，待处理图片资源
-- [ ] **PRD-012: 章节翻页导航** ([012-chapter-pager-navigation.md](./012-chapter-pager-navigation.md)) — **[Phase 1]** 计划实现底部控制栏章节切换（已拆分逻辑同步方案）
+- [x] **PRD-011: 图书 EPUB 实时提取与渲染** ([011-render-book-reader.md](./011-render-book-reader.md)) — 已实现实时图片流代理、R2 异步回填与骨架屏优化
+- [x] **PRD-012: 章节翻页导航** ([012-chapter-pager-navigation.md](./012-chapter-pager-navigation.md)) — 已实现在 Speecher 控制台深度集成的章节双向导航功能
+- [ ] **PRD-013: 多级 HTML 清洗与排版精美化** ([013-multi-stage-html-cleaning.md](./013-multi-stage-html-cleaning.md)) — 计划引入“四阶段管道”模式，将结构转换与排版打磨逻辑解耦
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*

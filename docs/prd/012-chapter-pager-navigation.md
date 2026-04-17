@@ -1,51 +1,46 @@
 # PRD 012: 章节翻页器 (Chapter Pager) 导航功能
 
 ## 1. 目标 (Goals)
-在阅读器底部控制栏提供“上一章”和“下一章”的快速导航功能，提升电子书阅读模式下的连贯性，避免用户频繁打开侧边栏目录切换章节。
+在阅读器底部控制栏提供“上一章”和“下一章”的快速导航功能，提升电子书阅读模式下的连贯性。
 
-## 2. 核心场景 (User Stories)
-- **书籍连贯阅读**：用户读完当前章节后，点击右侧“下一章”直接跳转，内容平滑更新。
-- **快速回顾**：用户需要翻看前一章节内容时，点击左侧“上一章”返回。
-- **语音控制配合**：翻页功能不干扰中间的语音播放控制器（Speecher）。
+## 2. 核心方案 (Final Architecture)
 
-## 3. 技术设计 (Technical Design)
+为了保持 UI 的高度集成与简洁，最终方案未采用独立的 `Pager` 包装器，而是将导航逻辑直接整合进 `Speecher.tsx` 控制台。
 
-### 3.1 架构方案：Pager 包装器
-创建一个名为 `Pager` 的逻辑与 UI 容器组件：
-- **位置**：`/frontend/src/app/reader/_components/pager.tsx`
-- **使用方式**：包裹 `Speecher` 组件。
-- **职责**：
-    - 订阅全局 `ReaderStore` 获取当前书籍数据。
-    - 监听 URL `searchParams` 作为当前路径的唯一事实来源。
+- **逻辑层**：
+  - **线性索引**：利用在书籍处理阶段生成的 `flattenChapters` 数组。
+  - **双向指针**：在 `Speecher` 组件内，通过 `allChapters.findIndex(c => c.path === path)` 实时定位当前章节位置，从而计算出 `prevChapter` 和 `nextChapter`。
+- **UI 层**：
+  - 采用 **Side-aligned** 布局。
+  - 左侧：`<Link>` 指向上一章，且在第一章时自动变为 `pointer-events-none`（半透明禁用感）。
+  - 中间：核心播放与设置控件。
+  - 右侧：`<Link>` 指向下一章。
 
-### 3.2 关键逻辑：章节扁平化
-由于 EPUB 目录是嵌套树状结构，需要通过递归算法将其转换为线性数组：
-- **算法要求**：提取所有带有有效 `path` 的章节（包括父节点和子节点）。
-- **排序**：严格遵循文档原始顺序（Document Order）。
-- **去重**：处理某些 EPUB 中父子节点指向相同路径的情况。
+## 3. 技术实现细节
 
-### 3.3 状态同步 (Critical)
-针对今天发现的“点击不跳转”问题，确定以下同步策略：
-- **解耦侧边栏**：将 URL 到 Store 的同步逻辑从 `ChaptersWrapper` 移至更上层的渲染树（如 `Reader` 组件中的全局管理器）。
-- **URL 驱动**：`Pager` 内部使用 `useSearchParams()` 获取当前路径，确保 UI 状态始终与地址栏同步，不受 Store 初始化延迟影响。
+### 3.1 状态同步
+- **URL 驱动**：使用 Next.js 的 `<Link>` 进行跳转，利用 `Reader` 服务器组件监听 URL 变化，从而触发 Store 中 `content` 和 `path` 的原子更新。
+- **自动重定向**：如果用户仅输入 `book_id` 进入阅读器，系统会自动寻找 `bookmark`（书签）或跳转至 `flattenChapters[0]`（第一章）。
 
-## 4. UI/UX 规范
+### 3.2 性能优化
+- **Prefetch**：在 `Link` 组件上设置 `prefetch={false}`，避免在低速网络下过度预取二进制章节内容。
+- **影子点击区**：为导航链接增加了 invisible 的扩展点击区域（absolute inset），确保移动端单手操作的准确性。
 
-### 4.1 三段式布局
-- **左侧**：`PageButton (Direction: Prev)`
-- **中间**：`children` (预留给 Speecher)
-- **右侧**：`PageButton (Direction: Next)`
+## 4. UI/UX 规范 (Implemented)
 
-### 4.2 响应式适配
-- **宽屏 (md+)**：显示“角度图标 + 章节标题（截断）”。
-- **窄屏 (-md)**：仅显示图标，节省空间，避免拥挤。
+- **左侧**：显示 `< 上一章`。
+- **中间**：`ChevronLeft` + `Play/Square` + `SpeecherSettings` + `ChevronRight`。
+- **右侧**：显示 `下一章 >`。
+- **状态反馈**：当无前置/后置章节时，链接透明度降低，操作失效。
 
-### 4.3 状态反馈
-- **禁用态**：第一章的“前一章”和最后一章的“后一章”需显示为 `disabled` 状态（低透明度，不可点击）。
-- **悬停态**：Hover 时背景变色并提供微小的位移动画。
+## 5. 任务清单 (Task List)
 
-## 5. 待办事项 (Task List)
-- [ ] 实现 `getFlattenedChapters` 通用辅助函数。
-- [ ] 实现 `Pager` 布局组件。
-- [ ] 实现全局 `ReaderSyncManager` 确保跨组件状态同步。
-- [ ] 集成至 `Footer` 组件。
+- [x] **基础设施**：在 `lib/book` 中实现 `getFlattenChapters`。
+- [x] **数据集成**：在 `Reader` 服务器组件中预取扁平化目录并同步至 Client Store。
+- [x] **UI 开发**：在 `Speecher.tsx` 中集成两侧的跳转链接。
+- [x] **交互逻辑**：处理路径编码、禁用状态切换以及与 MediaSession 的协同。
+
+## 6. 进度
+
+- **状态**: 已完成 (Completed)
+- **最近更新**: 2026-04-17 (完成导航与 Speecher 的深度集成方案)
