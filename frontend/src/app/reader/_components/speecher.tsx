@@ -63,8 +63,8 @@ export function Speecher() {
   return (
     <div className={`flex items-center justify-between w-full max-w-lg sm:max-w-2xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}>
       {/* 1. 左侧：上一章 */}
-      {isBookMode && (
-        <div className="flex-none px-1 text-right">
+      {isBookMode ? (
+        <div className="flex-1 basis-0 flex justify-start">
           <Link
             href={prevChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(prevChapter.path)}` : "#"}
             prefetch={false}
@@ -78,10 +78,12 @@ export function Speecher() {
             &lt; 上一章
           </Link>
         </div>
+      ) : (
+        <div className="flex-1 basis-0" />
       )}
 
       {/* 2. 中间：播放核心控制台 */}
-      <div className="flex items-center gap-1 sm:gap-3 justify-center">
+      <div className="flex-none flex items-center gap-1 sm:gap-3 justify-center">
         {/* 上一句按钮 */}
         <button
           className="btn flex items-center justify-center w-[52px] h-[52px] rounded-full bg-primary/10 border-none hover:bg-primary/20 active:scale-95 transition-all flex-none"
@@ -123,8 +125,8 @@ export function Speecher() {
       </div>
 
       {/* 3. 右侧：下一章 */}
-      {isBookMode && (
-        <div className="flex-none px-1 text-left">
+      {isBookMode ? (
+        <div className="flex-1 basis-0 flex justify-end">
           <Link
             href={nextChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(nextChapter.path)}` : "#"}
             prefetch={false}
@@ -138,6 +140,8 @@ export function Speecher() {
             下一章 &gt;
           </Link>
         </div>
+      ) : (
+        <div className="flex-1 basis-0" />
       )}
     </div>
   );

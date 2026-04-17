@@ -26,6 +26,14 @@ export const metadata: Metadata = {
 	referrer: 'no-referrer'
 };
 
+export const viewport = {
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 1,
+	userScalable: false,
+	viewportFit: "cover",
+};
+
 import { FullScreenLoading } from "@/app/full-screen-loading";
 import { PropsWithChildren } from "react";
 import { GlobalModals } from "@/app/global-modals";

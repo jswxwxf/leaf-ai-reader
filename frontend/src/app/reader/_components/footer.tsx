@@ -7,7 +7,7 @@ import { Speecher } from "./speecher";
  */
 export function Footer() {
   return (
-    <footer className="h-20 bg-base-200 border-t border-base-300 px-4 flex flex-none items-center justify-center">
+    <footer className="h-20 bg-base-200 border-t border-base-300 flex flex-none items-center justify-center">
       <Speecher />
     </footer>
   );

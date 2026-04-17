@@ -54,7 +54,7 @@ export function Article({ article }: Props) {
 			{/* 删除按钮 (仅在悬停时显示) */}
 			{status !== 'processing' && (
 				<button
-					className="absolute -top-1.5 -right-1.5 z-20 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
+					className="absolute -top-1.5 -right-1.5 z-20 btn btn-circle btn-xs btn-error opacity-70 lg:opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
 					onClick={handleDelete}
 					title="删除文章"
 				>

@@ -50,7 +50,7 @@ export function Book({ book }: Props) {
 		>
 			{/* 删除按钮 (仅在悬停时显示) */}
 			<button
-				className="absolute top-2 right-2 z-20 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
+				className="absolute top-2 right-2 z-20 btn btn-circle btn-xs btn-error opacity-70 lg:opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
 				onClick={handleDelete}
 				title="删除书籍"
 			>
@@ -90,7 +90,7 @@ export function Book({ book }: Props) {
 				) : (
 					<div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-linear-to-br from-base-300 to-base-200 opacity-60">
 						<BookIcon className="w-8 h-8 mb-2 opacity-20" />
-						<span className="text-[10px] font-medium line-clamp-3 leading-tight opacity-40">
+						<span className="text-[10px] font-medium line-clamp-2 leading-tight opacity-40">
 							{book.title}
 						</span>
 					</div>
@@ -98,11 +98,11 @@ export function Book({ book }: Props) {
 			</figure>
 
 			{/* 书籍信息 */}
-			<div className="card-body p-4 pt-5">
-				<h2 className="card-title text-base font-bold line-clamp-2 leading-tight h-10 items-start mb-1" title={book.title}>
+			<div className="card-body p-3 pt-3">
+				<h2 className="card-title text-base font-bold line-clamp-2 leading-tight items-start mb-0.5" title={book.title}>
 					{book.title}
 				</h2>
-				<div className="text-[11px] opacity-60 space-y-1 mt-2">
+				<div className="text-[11px] opacity-60 space-y-0.5 mt-1">
 					<p className="truncate" title={book.author || '未知'}>
 						<span className="opacity-70">作者：</span>
 						{book.author || '未知'}

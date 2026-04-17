@@ -79,7 +79,7 @@ export async function Reader({ isPopup = true, article_id, book_id, path, speech
 			}}
 		>
 			<Helper />
-			<div className="flex flex-col h-screen bg-base-100 text-base-content overflow-hidden relative">
+			<div className="flex flex-col h-dvh bg-base-100 text-base-content overflow-hidden relative pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
 				<Header isPopup={isPopup} />
 
 				{/* 中间主要区域 */}
