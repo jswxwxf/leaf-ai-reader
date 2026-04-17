@@ -14,7 +14,7 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
   let sentenceId = 0;
   const getNextId = () => ++sentenceId;
 
-  // 1. 结构平坦化
+  // 1. Pre-pass (DOM 级规范化)
   normalizeStructure(container);
 
   const children = Array.from(container.childNodes);
@@ -47,10 +47,14 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
 
   flushBuffer();
 
+  // 2. Main-pass (数字化/序列化)
   const rawHtml = fragments.join('\n');
 
-  // 2. 安全净化
-  return DOMPurify.sanitize(rawHtml, {
+  // 3. Secondary-pass (排版精美化/二次清洗 - NEW)
+  const refinedHtml = refineHtml(rawHtml);
+
+  // 4. Post-pass (安全净化)
+  return DOMPurify.sanitize(refinedHtml, {
     ALLOWED_TAGS: [
       'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'span', 'strong', 'b', 'em', 'i', 'sub', 'sup', 'del',
@@ -59,6 +63,29 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
     ],
     ALLOWED_ATTR: ['id', 'class', 'src', 'alt', 'loading'],
   });
+}
+
+/**
+ * 二次清洗逻辑：针对输出的 HTML 字符串进行排版打磨
+ */
+function refineHtml(html: string): string {
+  if (!html) return '';
+  
+  return html
+    // 1. 句子缝合 (Sentence Healing)
+    // 如果两个 sentence span 之间只隔着 sup/sub 或空格，且前一个句子没有结束标点，则合并它们
+    // 匹配模式：</span> + (空格/sup/sub) + <span id="s-N">
+    .replace(/([^。！？!?.])<\/span>(\s*(?:<sup>.*?<\/sup>|<sub>.*?<\/sub>)\s*)<span class="sentence" id="s-\d+">/gi, '$1$2')
+
+    // 2. 清理空段落（包含常见的 &nbsp; 或全角空格等实体）
+    .replace(/<p>\s*(?:&nbsp;|&#160;|&#8203;|\u200B)*\s*<\/p>/gi, '')
+    
+    // 3. 清理可能产生的双重 p 包装（容错）
+    .replace(/<p>\s*(<p>.*?<\/p>)\s*<\/p>/gis, '$1')
+    
+    // 4. 将连续的 3 个或以上换行/空格压缩
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function normalizeStructure(container: any) {
@@ -109,12 +136,22 @@ function resolvePath(basePath: string, relativePath: string): string {
   return baseParts.join('/');
 }
 
-function transformNode(node: any, getNextId: () => number, options?: { bookId?: string, path?: string }): string {
+function transformNode(
+  node: any, 
+  getNextId: () => number, 
+  options?: { bookId?: string, path?: string }, 
+  skipSplitting: boolean = false
+): string {
   if (node.nodeType === 3) {
     const text = node.textContent || "";
     if (!text.trim()) return "";
     if (/^\s+$/.test(text) && text.includes('\n')) return " ";
     
+    // 如果处于分句豁免区（如在 sup 内部），则不进行分句，直接输出文本
+    if (skipSplitting) {
+      return text;
+    }
+
     // 使用原有的 id="s-N" 和 class="sentence"
     return splitSentences(text)
       .map(s => `<span class="sentence" id="s-${getNextId()}">${s}</span>`)
@@ -135,10 +172,15 @@ function transformNode(node: any, getNextId: () => number, options?: { bookId?: 
 
     const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code'];
     const INLINE_TAGS = ['strong', 'b', 'em', 'i', 'sub', 'sup', 'del'];
+    // 豁免名单：在这些标签内的文本不触发分句逻辑
+    const NON_SPLITTABLE_TAGS = ['sub', 'sup'];
 
     let innerContent = "";
+    // 如果当前标签在豁免名单内，或者父级已经开启了豁免标志，则下级也豁免
+    const currentSkipSplitting = skipSplitting || NON_SPLITTABLE_TAGS.includes(tagName);
+
     Array.from(node.childNodes).forEach((child: any) => {
-      innerContent += transformNode(child, getNextId, options);
+      innerContent += transformNode(child, getNextId, options, currentSkipSplitting);
     });
 
     if (!innerContent.trim() && tagName !== 'hr') return "";

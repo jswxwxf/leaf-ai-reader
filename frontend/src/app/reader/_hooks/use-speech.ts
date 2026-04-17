@@ -6,6 +6,36 @@ import { useEffect, useRef } from "react";
 import { useWakeLock } from "./use-wake-lock";
 
 /**
+ * 获取元素的文本内容，并将特定标签（如 sup, sub）的内容替换为等长空格
+ * 目的是在 TTS 朗读时静音跳过这些引文，同时保持字符偏移量不变，确保高亮精准。
+ */
+function getTextWithMasking(node: Node): string {
+  let text = "";
+  node.childNodes.forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      text += child.textContent || "";
+    } else if (
+      child.nodeType === Node.ELEMENT_NODE &&
+      (child.nodeName === "SUP" || child.nodeName === "SUB")
+    ) {
+      const content = child.textContent || "";
+      // 智能阈值判断：
+      // 如果上标/下标内的文字超过 8 个字符，认为可能是实质内容（如补充注释），则正常朗读；
+      // 否则认为是引文标号（如 [1]），执行静音占位。
+      if (content.length > 8) {
+        text += content;
+      } else {
+        text += " ".repeat(content.length);
+      }
+    } else {
+      // 递归处理其他元素节点
+      text += getTextWithMasking(child);
+    }
+  });
+  return text;
+}
+
+/**
  * 语音朗读核心逻辑 Hook
  */
 export function useSpeech() {
@@ -69,7 +99,9 @@ export function useSpeech() {
 
     // 3. 创建朗读任务 (对标点进行处理，防止 TTS 误读并引导停顿)
     // 注意：采用 1:1 或 2:2 替换以保持字符串长度不变，确保 onboundary 的 charIndex 索引不位移
-    const processedText = el.textContent
+    // 使用 getTextWithMasking 自动将引文 (sup/sub) 转换为等长空格以实现静音跳过
+    const maskedText = getTextWithMasking(el);
+    const processedText = maskedText
       .replace(/\p{Extended_Pictographic}/gu, (m) => ' '.repeat(m.length)) // 将 emoji 替换为等长空格，防止误读且保持索引对齐
       .replaceAll('——', '--')
       .replaceAll('”“', '”，')
@@ -91,15 +123,21 @@ export function useSpeech() {
       setIsPlaying(false);
       clearHighlight();
 
-      const currentNum = parseInt(targetId.replace("s-", ""));
-      const nextId = `s-${currentNum + 1}`;
-      const nextEl = container?.querySelector(`[id="${nextId}"]`);
+      const container = contentRef?.current;
+      if (!container) return;
+
+      // 寻找下一个句子的 ID (不再依赖 ID+1，而是基于 DOM 顺序)
+      const sentences = Array.from(container.querySelectorAll('.sentence'));
+      const currentIndex = sentences.findIndex(el => el.id === targetId);
+      const nextEl = sentences[currentIndex + 1] as HTMLElement;
 
       // 已到文章末尾，停止播放并释放锁
       if (!nextEl) {
         releaseWakeLock();
         return;
       }
+
+      const nextId = nextEl.id;
 
       // 无论哪种模式，都将焦点移至下一句
       setSpeechSentenceId(nextId);
@@ -145,16 +183,15 @@ export function useSpeech() {
 
   const step = (delta: number) => {
     stop();
-    let currentNum = 0;
-    if (speechSentenceId) {
-      currentNum = parseInt(speechSentenceId.replace("s-", ""));
-    }
+    const container = contentRef?.current;
+    if (!container || !speechSentenceId) return;
 
-    const nextNum = Math.max(1, currentNum + delta);
-    const nextId = `s-${nextNum}`;
+    const sentences = Array.from(container.querySelectorAll('.sentence'));
+    const currentIndex = sentences.findIndex(el => el.id === speechSentenceId);
+    const nextEl = sentences[currentIndex + delta] as HTMLElement;
 
-    if (contentRef?.current?.querySelector(`[id="${nextId}"]`)) {
-      setSpeechSentenceId(nextId);
+    if (nextEl) {
+      setSpeechSentenceId(nextEl.id);
     }
   };
 

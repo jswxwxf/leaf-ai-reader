@@ -15,20 +15,47 @@ export function useWordHighlight() {
   }, [canHighlight]);
 
   /**
+   * 在复杂的 DOM 树中根据字符偏移量寻找对应的文本节点和具体偏移
+   */
+  const findOffsetNode = (root: HTMLElement, targetIndex: number) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let currentNode = walker.nextNode();
+    let currentIndex = 0;
+
+    while (currentNode) {
+      const nodeLength = currentNode.textContent?.length || 0;
+      if (currentIndex + nodeLength >= targetIndex) {
+        return {
+          node: currentNode,
+          offset: targetIndex - currentIndex
+        };
+      }
+      currentIndex += nodeLength;
+      currentNode = walker.nextNode();
+    }
+    return null;
+  };
+
+  /**
    * 高亮指定元素的特定范围
    * @param el 目标容器元素
    * @param charIndex 起始字符索引
    * @param charLength 字符长度 (由 SpeechSynthesisUtterance event 提供)
    */
   const highlightWord = useCallback((el: HTMLElement, charIndex: number, charLength?: number) => {
-    if (!canHighlight || !el.firstChild || charLength === undefined) {
+    if (!canHighlight || charLength === undefined) {
       return;
     }
 
     try {
+      const start = findOffsetNode(el, charIndex);
+      const end = findOffsetNode(el, charIndex + charLength);
+
+      if (!start || !end) return;
+
       const range = new Range();
-      range.setStart(el.firstChild, charIndex);
-      range.setEnd(el.firstChild, charIndex + charLength);
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
 
       const highlights = (CSS as any).highlights;
       let wordHighlight = highlights.get('word-focus');

@@ -25,50 +25,43 @@
     - 处理图片路径重写。
 - **状态**: 核心稳定逻辑。
 
-### Phase 3: Refinement (Secondary-pass / 字符串级) —— **本次重点**
+### Phase 3: Refinement (Secondary-pass / 字符串级)
 - **职责**: 排版细节打磨。
 - **动作**: 
-    - **清理空行**: 移除所有类似于 `<p></p>` 或 `<p>&nbsp;</p>` 的多余段落。
-    - **修剪空白**: 处理句子间的异常空格或换行。
-    - **逻辑合并**: 针对特定模式（如连续的三个 `<br>`）进行降级或合并。
-    - **特定源处理**: 针对微信等特定来源的广告块、引导关注块进行字符串特征移除。
+    - **句子缝合 (Healing)**: 针对被 `sup/sub` 物理切断的段落，利用正则 `([^。！？!?.])<\/span>(\s*<sup.*?>...<\/sup>\s*)<span...>` 自动合并分片，恢复句子的逻辑完整性。
+    - **清理空段落**: 移除所有类似于 `<p></p>` 或包含零宽空格的冗余标签。
+    - **逻辑合并**: 压缩多余换行，保持视觉整齐。
 
 ### Phase 4: Sanitization (Post-pass / 安全级)
 - **职责**: 最后关卡，确保输出安全且闭合。
-- **动作**: `DOMPurify` 过滤。
-- **状态**: 保持现有逻辑。
 
-## 3. 技术设计
+## 3. 技术实现与副作用处理 (Critical Lessons)
 
-### 3.1 核心改动点
-在 `cleanHtml` 函数中引入 `refineHtml` 私有函数：
+### 3.1 前端：智能朗读过滤
+- **DOM 感知**: 摒弃 `textContent`，改用 `getTextWithMasking` 递归遍历 DOM。
+- **智能阈值**: 设置 **8 字符** 逻辑。<= 8 字符通过空格占位实现静音；> 8 字符则视为实质注释内容正常朗读。
 
-```typescript
-export function cleanHtml(container: any, options?: Options): string {
-  // 1. Pre-pass (DOM)
-  normalizeStructure(container);
+### 3.2 前端：高亮索引修复 (IndexSizeError)
+- **挑战**: 缝合后的句子包含多个文本节点，传统 `el.firstChild` 获取方式会导致索引越界崩溃。
+- **方案**: 引入 `TreeWalker` 扫描机制。在高亮时动态累加文本片段长度，实现多节点跨越式精准定位。
 
-  // 2. Main-pass (Conversion)
-  const rawHtml = fragments.join('\n');
-
-  // 3. Secondary-pass (Refinement - NEW)
-  const refinedHtml = refineHtml(rawHtml);
-
-  // 4. Post-pass (Sanitize)
-  return DOMPurify.sanitize(refinedHtml, ...);
-}
-```
+### 3.3 前端：非连续 ID 跳转
+- **挑战**: 句子缝合导致 DOM 中的 `s-ID` 序列产生跳跃（如从 17 直接跳到 20），传统的 `ID + 1` 跳转逻辑会导致朗读中断。
+- **方案**: 废弃 ID 数学计算。改用 `querySelectorAll('.sentence')` 进行 DOM 顺序寻路，确保即使 ID 不连续也能准确找到“下一句”。
 
 ## 4. 任务清单
 
-- [ ] **框架重构**: 在 `utils/html.ts` 中注入 `refineHtml` 处理阶段。
-- [ ] **基础规则集**:
-    - [ ] 移除各种形式的空行/空段落。
-    - [ ] 统一并清理非破折号类别的连续空格。
-- [ ] **特定源适配**: 增加对微信公众号文章常见干扰信息的字符串级剔除规则。
-- [ ] **性能监控**: 确保正则表达式不会引起 ReDoS（正规表达式拒绝服务攻击），保持 Worker 高效运行。
+- [x] **Task 1: 后端清洗管道化与一清增强**
+    - [x] **一清豁免**: `sup/sub` 内不产生独立句子 ID。
+    - [x] **二清缝合**: 实现正则级的句子合并逻辑。
+    - [x] **管道构建**: 形成 Pre -> Main -> Secondary -> Post 的标准流。
+- [x] **Task 2: 前端朗读与高亮增强**
+    - [x] **朗读占位**: 实现 `getTextWithMasking` 过滤逻辑。
+    - [x] **阈值策略**: 引入 8 字符智能判定。
+    - [x] **高亮修复**: 实现基于 `TreeWalker` 的多节点 Range 定位。
+    - [x] **寻路修复**: 实现基于 DOM 顺序的章节内跳转。
 
 ## 5. 进度
 
-- **状态**: 计划中 (Planned)
-- **最近更新**: 2026-04-17 (方案评审通过)
+- **状态**: 已完成 (Completed)
+- **最近更新**: 2026-04-17 (全链路协同优化完成，解决了高亮偏移与 ID 跳转副作用)

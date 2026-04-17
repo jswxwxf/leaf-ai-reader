@@ -14,6 +14,6 @@
 - [x] **PRD-010: MediaSession 系统级媒体控制** ([010-mediasession-integration.md](./010-mediasession-integration.md)) — 已实现静音保活与系统锁屏媒体控制
 - [x] **PRD-011: 图书 EPUB 实时提取与渲染** ([011-render-book-reader.md](./011-render-book-reader.md)) — 已实现实时图片流代理、R2 异步回填与骨架屏优化
 - [x] **PRD-012: 章节翻页导航** ([012-chapter-pager-navigation.md](./012-chapter-pager-navigation.md)) — 已实现在 Speecher 控制台深度集成的章节双向导航功能
-- [ ] **PRD-013: 多级 HTML 清洗与排版精美化** ([013-multi-stage-html-cleaning.md](./013-multi-stage-html-cleaning.md)) — 计划引入“四阶段管道”模式，将结构转换与排版打磨逻辑解耦
+- [x] **PRD-013: 多级 HTML 清洗与排版精美化** ([013-multi-stage-html-cleaning.md](./013-multi-stage-html-cleaning.md)) — 已实现四阶段清洗管道、智能引文朗读跳过及精准高亮补丁
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*
