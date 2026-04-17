@@ -5,6 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
+import { useSpeech } from "../_hooks/use-speech";
 import { useEffect, useRef } from "react";
 
 /**
@@ -66,7 +67,16 @@ export function Summary() {
     }))
   );
   const { jumpToSentence } = useReader();
+  const { play, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
+
+  const handleToggle = () => {
+    if (isPlaying) {
+      stop();
+    } else {
+      play();
+    }
+  };
 
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:w-80 lg:h-full lg:border-l lg:border-b-0 lg:order-0">
@@ -93,6 +103,12 @@ export function Summary() {
             {data?.status === 'ready' ? '暂无核心摘要' : '摘要生成中...'}
           </div>
         )}
+        {/* 底部留白区域，点击可触发播放/暂停，仅在大屏垂直布局时有效 */}
+        <div 
+          className="flex-1 hidden lg:block cursor-pointer" 
+          onClick={handleToggle}
+          title={isPlaying ? "点击停止" : "点击播放"}
+        />
       </div>
       {highlightCss && <style dangerouslySetInnerHTML={{ __html: highlightCss }} />}
     </aside>

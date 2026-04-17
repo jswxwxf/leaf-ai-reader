@@ -61,7 +61,7 @@ export function Speecher() {
   };
 
   return (
-    <div className={`flex items-center justify-between w-full max-w-lg sm:max-w-2xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}>
+    <div className={`flex items-center justify-between w-full max-w-md md:max-w-xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}>
       {/* 1. 左侧：上一章 */}
       {isBookMode ? (
         <div className="flex-1 basis-0 flex justify-start">

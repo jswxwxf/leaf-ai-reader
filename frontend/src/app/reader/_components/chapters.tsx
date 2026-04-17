@@ -8,6 +8,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useReaderStore } from "../_store/store";
 import type { Chapter, BookData } from "@/lib/book";
 import { usePolling } from "../../dashboard/_hooks/use-polling";
+import { useSpeech } from "../_hooks/use-speech";
 
 /**
  * 递归检查某个章节及其所有子章节中是否有选中的项
@@ -109,6 +110,16 @@ export function ChaptersWrapper() {
     }
   );
 
+  const { play, stop, isPlaying } = useSpeech();
+
+  const handleToggle = () => {
+    if (isPlaying) {
+      stop();
+    } else {
+      play();
+    }
+  };
+
   if (!bookId) return null;
 
   return (
@@ -118,10 +129,16 @@ export function ChaptersWrapper() {
           <Menu className="w-4 h-4" /> 章节目录
         </h2>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-        <ul className="menu menu-sm bg-base-100 rounded-box w-full p-0">
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col">
+        <ul className="menu menu-sm bg-base-100 rounded-box w-full p-0 flex-none">
           <Chapters items={chapters} bookId={bookId} path={pathFromUrl} />
         </ul>
+        {/* 底部留白区域，点击可触发播放/暂停 */}
+        <div 
+          className="flex-1 cursor-pointer" 
+          onClick={handleToggle}
+          title={isPlaying ? "点击停止" : "点击播放"}
+        />
       </div>
     </div>
   );
