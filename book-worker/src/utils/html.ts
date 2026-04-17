@@ -72,17 +72,21 @@ function refineHtml(html: string): string {
   if (!html) return '';
   
   return html
-    // 1. 句子缝合 (Sentence Healing)
-    // 如果两个 sentence span 之间只隔着 sup/sub 或空格，且前一个句子没有结束标点，则合并它们
-    // 匹配模式：</span> + (空格/sup/sub) + <span id="s-N">
-    .replace(/([^。！？!?.])<\/span>(\s*(?:<sup>.*?<\/sup>|<sub>.*?<\/sub>)\s*)<span class="sentence" id="s-\d+">/gi, '$1$2')
+    // 1. Span 提升 (Span Promotion)
+    // 将 <b><span class="sentence" id="s-N">文本</span></b> 转换为 <span class="sentence" id="s-N"><b>文本</b></span>
+    .replace(/<(strong|b|em|i|del|a)([^>]*)>\s*<span class="sentence" id="s-(\d+)">(.*?)<\/span>\s*<\/\1>/gi, '<span class="sentence" id="s-$3"><$1$2>$4</$1></span>')
 
-    // 2. 清理空段落（包含常见的 &nbsp; 或全角空格等实体）
+    // 2. 句子缝合 (Sentence Healing)
+    // 关键修正：支持跨越 sup, sub 引文标签。
+    // 排除集包含：。！？；：!?…… 以及各类闭合引号/括号
+    .replace(/([^。！？；：!?……\.\!\\?\;”’』」》）〉】〗｝\"'\)\]\}：:])<\/span>(\s*(?:<br\s*\/?>|<sup>.*?<\/sup>|<sub>.*?<\/sub>|\s)*)<span class="sentence" id="s-\d+">/gi, '$1$2')
+
+    // 3. 清理空段落
     .replace(/<p>\s*(?:&nbsp;|&#160;|&#8203;|\u200B)*\s*<\/p>/gi, '')
     
-    // 3. 清理可能产生的双重 p 包装（容错）
+    // 4. 清理可能产生的双重 p 包装（容错）
     .replace(/<p>\s*(<p>.*?<\/p>)\s*<\/p>/gis, '$1')
-    
+
     // 4. 将连续的 3 个或以上换行/空格压缩
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -137,16 +141,16 @@ function resolvePath(basePath: string, relativePath: string): string {
 }
 
 function transformNode(
-  node: any, 
-  getNextId: () => number, 
-  options?: { bookId?: string, path?: string }, 
+  node: any,
+  getNextId: () => number,
+  options?: { bookId?: string, path?: string },
   skipSplitting: boolean = false
 ): string {
   if (node.nodeType === 3) {
     const text = node.textContent || "";
     if (!text.trim()) return "";
     if (/^\s+$/.test(text) && text.includes('\n')) return " ";
-    
+
     // 如果处于分句豁免区（如在 sup 内部），则不进行分句，直接输出文本
     if (skipSplitting) {
       return text;
@@ -172,7 +176,7 @@ function transformNode(
 
     const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code'];
     const INLINE_TAGS = ['strong', 'b', 'em', 'i', 'sub', 'sup', 'del'];
-    // 豁免名单：在这些标签内的文本不触发分句逻辑
+    // 豁免名单：在这些标签内的文本不触发分句逻辑（通常仅限不含实质内容、仅为标记的标签）
     const NON_SPLITTABLE_TAGS = ['sub', 'sup'];
 
     let innerContent = "";

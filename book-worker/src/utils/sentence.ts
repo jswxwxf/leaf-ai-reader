@@ -7,7 +7,7 @@ export function splitSentences(text: string): string[] {
 	if (!text.trim()) return [];
 
 	const sentences: string[] = [];
-	const terminators = "。！？；!?……";
+	const terminators = "。！？；：!?……:";
 	const closers = "”’』」》）〉】〗｝\"')]}";
 
 	let current = "";
