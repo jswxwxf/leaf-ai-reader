@@ -19,6 +19,7 @@ export default async function ReaderPage({ searchParams }: Props) {
 			isPopup={false} 
 			article_id={article_id} 
 			book_id={book_id} 
+			path={path}
 			speechMode={speechMode}
 		/>
 	);

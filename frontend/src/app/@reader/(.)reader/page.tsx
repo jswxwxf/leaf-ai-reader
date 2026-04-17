@@ -25,6 +25,7 @@ export default async function ReaderInterceptPage({ searchParams }: Props) {
 				isPopup={true} 
 				article_id={article_id} 
 				book_id={book_id} 
+				path={path}
 				speechMode={speechMode}
 			/>
 		</div>

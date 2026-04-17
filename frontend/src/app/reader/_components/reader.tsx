@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Header } from "./header";
 import { ChaptersWrapper, MobileChaptersDrawer } from "./chapters";
 import { Content } from "./content";
@@ -13,6 +14,7 @@ interface Props {
 	isPopup?: boolean;
 	article_id?: string | null;
 	book_id?: string | null;
+	path?: string | null;
 	speechMode?: SpeechMode;
 }
 
@@ -20,7 +22,7 @@ interface Props {
  * 阅读器主框架组件
  * 作为一个服务器组件，它负责承载 StoreProvider 并将初始参数下发给客户端状态机
  */
-export async function Reader({ isPopup = true, article_id, book_id, speechMode }: Props) {
+export async function Reader({ isPopup = true, article_id, book_id, path, speechMode }: Props) {
 	let data: ArticleData | BookData | null = null;
 	if (article_id) {
 		data = await getArticleData(article_id);
@@ -35,6 +37,14 @@ export async function Reader({ isPopup = true, article_id, book_id, speechMode }
 			bookData.chapters = chapters;
 			bookData.flattenChapters = flattenChapters;
 			data = bookData;
+
+			// [服务端跳转逻辑] 如果只有 book_id 而没有 path，自动重定向到书签或第一章
+			if (book_id && !path) {
+				const targetPath = bookData.bookmark || flattenChapters[0]?.path;
+				if (targetPath) {
+					redirect(`/reader?book_id=${book_id}&path=${encodeURIComponent(targetPath)}`);
+				}
+			}
 		}
 	}
 
