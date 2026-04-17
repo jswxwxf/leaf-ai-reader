@@ -43,10 +43,10 @@
     - [ ] `book-worker` 增加图片扫描与 R2 写入。
     - [ ] `book-worker` 增加 HTML `img src` 重写逻辑。
     - [ ] `frontend` 实现图片预览代理接口。
-- [ ] **阅读进度持久化**:
-    - [ ] D1 数据库迁移：创建 `reading_progress` 表。
-    - [ ] `frontend` 实现进度同步 API。
-    - [ ] `frontend` Reader 注入进度加载与自动保存逻辑。
+- [x] **阅读进度持久化**:
+    - [x] D1 数据库迁移：在 `books` 表中增加 `bookmark` 和 `progress` 字段。
+    - [x] `frontend` 实现进度同步 Server Action (`updateBookProgress`)。
+    - [x] `frontend` Reader 界面集成进度加载与自动同步逻辑 (`Helper.tsx`)。
 
 ## 5. 进度
 
