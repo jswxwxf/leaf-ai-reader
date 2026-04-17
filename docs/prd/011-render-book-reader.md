@@ -7,16 +7,21 @@
 
 ## 2. 核心方案
 
-### 2.1 图片处理 (Image Extraction & Proxy)
+### 2.1 图片处理 (Image Resource Proxy)
 
-基于“按需实时提取”模式，在 Worker 处理章节 HTML 时同步处理图片：
+采用“极致懒加载”模式：Worker 仅重写路径，图片在滚动到视口时通过后端代理实时从 EPUB 提取并回填缓存。
 
-1. **扫描与提取**: 在 `processChapter` 过程中，解析 HTML 中的 `<img>` 标签。
-2. **R2 存储**: 
-   - 将图片文件从 EPUB 提取并存入 R2，路径规则：`books/${userId}/${bookId}/images/${relPath}`。
-   - 使用图片的原始 MIME 类型进行存储。
-3. **URL 重写**: 将 HTML 中的 `src` 替换为前端代理地址：`/api/books/${bookId}/images/${relPath}`。
-4. **前端代理 (Proxy)**: 前端实现路由拦截 `/api/books/[bookId]/images/[...path]`，从 R2 读取内容并返回（带缓存头）。
+1. **路径解析与重写**: 
+   - 在 `processChapter` 时，解析 `<img>` 的相对路径为相对于书籍根目录的绝对路径 (`internalPath`)。
+   - 重写 `src` 为：`/api/books/${bookId}/resource?path=${encodeURIComponent(internalPath)}`。
+   - 为所有 `<img>` 标签注入 `loading="lazy"` 属性。
+2. **镜像存储 (R2)**: 
+   - 资源存储路径完全镜像 EPUB 内部结构：`books/${userId}/${bookId}/content/${internalPath}`。
+   - 这样 R2 的 `content/` 目录即为书籍解压后的完整投影。
+3. **前端资源代理 (Real-time Proxy)**:
+   - 访问代理接口时，优先检查 R2 缓存。
+   - 若缓存未命中（Cache Miss），通过 RPC 调用 Worker 的 `extractResource` 接口。
+   - Worker 从原始 EPUB 中提取二进制流返回，代理接口将其返回给前端并异步写回 R2。
 
 ### 2.2 阅读进度 (Reading Progress)
 
@@ -31,18 +36,19 @@
 
 ## 3. 技术规范
 
-- **图片安全**: 代理接口需校验 `user_id` 和 `book_id` 权限，防止横向越权访问。
-- **性能**: 图片资源在 R2 存储时需带有强缓存头 (`Cache-Control`)。
-- **一致性**: 阅读进度更新应采用 `UPSERT` 逻辑。
+- **按需加载**: 利用 `loading="lazy"` 减少首屏网络压力和不必要的 Worker 计算。
+- **镜像结构**: R2 路径必须与 `internalPath` 严格一致，便于管理和维护。
+- **图片安全**: 代理接口需校验用户的书籍访问权限。
+- **性能**: 图片资源在响应时需带上 `Cache-Control: public, max-age=31536000, immutable`。
 
 ## 4. 任务清单
 
 - [x] **实时解压 API**: `book-worker` 已支持。
 - [x] **通用清洗引擎**: 已支持 DOM 平坦化与句子分割。
-- [ ] **图片提取逻辑**:
-    - [ ] `book-worker` 增加图片扫描与 R2 写入。
-    - [ ] `book-worker` 增加 HTML `img src` 重写逻辑。
-    - [ ] `frontend` 实现图片预览代理接口。
+- [x] **图片提取逻辑**:
+    - [x] `book-worker` 实现路径解析与 URL 重写逻辑（注入 `lazy` 加载）。
+    - [x] `book-worker` 新增 `extractResource` RPC 提取接口。
+    - [x] `frontend` 实现基于 R2 缓存优先的资源代理接口。
 - [x] **阅读进度持久化**:
     - [x] D1 数据库迁移：在 `books` 表中增加 `bookmark` 和 `progress` 字段。
     - [x] `frontend` 实现进度同步 Server Action (`updateBookProgress`)。
