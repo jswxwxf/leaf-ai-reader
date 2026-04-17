@@ -100,6 +100,7 @@ export function Content({ }: Props) {
         </div>
       ) : (
         <article
+          id="leaf-reader-content"
           key={path || 'initial'}
           className="max-w-2xl lg:max-w-3xl mx-auto prose prose-neutral lg:prose-lg py-10 pb-[20vh] cursor-pointer"
           onClick={handleContentClick}

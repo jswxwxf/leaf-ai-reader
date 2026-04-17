@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
+import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { useEffect, useRef } from "react";
 
 /**
@@ -65,6 +66,7 @@ export function Summary() {
     }))
   );
   const { jumpToSentence } = useReader();
+  const highlightCss = useSummaryHighlight(summaries);
 
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:w-80 lg:h-full lg:border-l lg:border-b-0 lg:order-0">
@@ -92,6 +94,7 @@ export function Summary() {
           </div>
         )}
       </div>
+      {highlightCss && <style dangerouslySetInnerHTML={{ __html: highlightCss }} />}
     </aside>
   );
 }
