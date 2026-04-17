@@ -57,7 +57,7 @@ export async function generateSummary(
 ### 重要指引
 1. **忽略 ID 干扰**：输入文本中的 [s-ID] 仅用于定位起始位置。请不要理会 ID 的数量，仅从逻辑和语义上对文章进行分段。
 2. **合并分段**：你必须将几十个甚至上百个连续的句子归纳为 3 到 8 个逻辑大块。
-3. **极简总结**：每个逻辑块生成一条 15 字以内的总结，并标明在该块起始处的 start_sId。
+3. **极简原创总结**：每条项必须控制在 15 字以内且必须标明 start_sId。**严禁摘抄原文或搬运原句**，必须由你用自己的语言进行高度概括。
 4. **均匀分布**：摘要点必须分布在全文的不同阶段。**严禁在几句话或极短篇幅内出现多个摘要点**。每个摘要点应代表一个显著的逻辑跨度。
 
 ### 约束
@@ -96,7 +96,7 @@ export async function generateSummary(
     const response: any = await ai.run('@cf/meta/llama-3.1-70b-instruct', {
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `请提炼全文核心脉络（只需 3-8 条摘要）：\n\n${safeContent}` },
+        { role: 'user', content: `请提炼全文核心脉络（只需 3-8 条极简摘要，禁止摘抄原文，且每条摘要严控在 15 字以内）：\n\n${safeContent}` },
       ],
       response_format: {
         type: 'json_schema',
@@ -108,7 +108,7 @@ export async function generateSummary(
               items: {
                 type: 'object',
                 properties: {
-                  summary: { type: 'string' },
+                  summary: { type: 'string', description: '极简总结，不超过 15 字' },
                   start_sId: { type: 'string' }
                 },
                 required: ['summary', 'start_sId']
