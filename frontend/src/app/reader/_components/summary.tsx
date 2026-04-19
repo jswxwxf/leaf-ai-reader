@@ -82,7 +82,7 @@ export function Summary() {
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:w-80 lg:h-full lg:border-l lg:border-b-0 lg:order-0">
       <div className="hidden lg:block p-4 flex-none border-b border-base-200">
         <h2 className="text-sm font-semibold flex items-center gap-2">
-          <Star className="w-4 h-4 text-warning" /> AI 核心摘要
+          <Star className="w-4 h-4 text-warning" /> 摘要
         </h2>
       </div>
       <div className="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-y-auto p-3 space-x-3 lg:space-x-0 space-y-0 lg:space-y-3 custom-scrollbar snap-x snap-mandatory">
@@ -99,13 +99,13 @@ export function Summary() {
             );
           })
         ) : (
-          <div className="py-10 text-center opacity-40 text-sm">
+          <div className="py-10 text-center opacity-40 text-sm w-full">
             {data?.status === 'ready' ? '暂无核心摘要' : '摘要生成中...'}
           </div>
         )}
         {/* 底部留白区域，点击可触发播放/暂停，仅在大屏垂直布局时有效 */}
-        <div 
-          className="flex-1 hidden lg:block cursor-pointer" 
+        <div
+          className="flex-1 hidden lg:block cursor-pointer"
           onClick={handleToggle}
           title={isPlaying ? "点击停止" : "点击播放"}
         />

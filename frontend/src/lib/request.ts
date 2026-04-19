@@ -4,7 +4,8 @@
  */
 export async function request<T>(
 	input: RequestInfo | URL, 
-	init?: RequestInit
+	init?: RequestInit,
+	options: { silent?: boolean } = {}
 ): Promise<T> {
 	try {
 		const response = await fetch(input, init);
@@ -34,7 +35,11 @@ export async function request<T>(
 		console.error(`[Request Error] ${input}:`, error);
 		
 		const message = error instanceof Error ? error.message : '发生了未知错误';
-		alert(message);
+		
+		// 仅在非静默模式下弹出 alert
+		if (!options.silent) {
+			alert(message);
+		}
 		
 		// 将错误重新抛出，让调用方配合 finally 自动处理
 		throw error;

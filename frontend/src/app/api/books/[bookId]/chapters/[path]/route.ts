@@ -8,6 +8,7 @@ import { createHandler } from '../../../../_handler';
 export const GET = createHandler(async ({ env, ctx, user }, request, { params }) => {
   // 1. 从 Next.js context 中获取动态路由参数
   const { bookId, path } = await params;
+  const isPrefetch = request.nextUrl.searchParams.get('prefetch') === '1';
 
   if (!bookId || !path) {
     return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
@@ -30,6 +31,11 @@ export const GET = createHandler(async ({ env, ctx, user }, request, { params })
 
   // 1. 最终状态：摘要已就绪（意味着正文必然也已写入）
   if (isSummaryReady) {
+    if (isPrefetch) {
+      console.log(`[API] Prefetch hit (ready) for: ${path}`);
+      return { status: 'ready', prefetched: true };
+    }
+    console.log(`[API] Serving ready content from R2 for: ${path}`);
     const text = (await object?.text()) || "";
     let summaryArr = null;
     try {
@@ -39,8 +45,8 @@ export const GET = createHandler(async ({ env, ctx, user }, request, { params })
       console.error(`[API] Failed to parse summary for ${path}:`, e);
     }
 
-    return { 
-      status: 'ready', 
+    return {
+      status: 'ready',
       content: text,
       summary: summaryArr
     };

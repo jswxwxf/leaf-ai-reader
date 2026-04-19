@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
-import { type Chapter, type BookData, updateBookProgress } from "@/lib/book";
+import { type BookData, updateBookProgress } from "@/lib/book";
+import { request } from "@/lib/request";
 
 /**
  * 阅读器全局逻辑助手 (Helper)
@@ -13,7 +14,6 @@ import { type Chapter, type BookData, updateBookProgress } from "@/lib/book";
  * 2. 其它需要单例并驻留在 Store 环境下的逻辑
  */
 export function Helper() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const bookIdFromUrl = searchParams.get("book_id");
   const pathFromUrl = searchParams.get("path");
@@ -58,6 +58,24 @@ export function Helper() {
           });
         }
       }
+
+      // 3. 异步静默预取邻居章节 (前后各 2 章)
+      // 使用 setTimeout 稍微延迟，避免抢占当前章节的加载带宽
+      setTimeout(() => {
+        const index = flattenChapters.findIndex(
+          (c) => decodeURIComponent(c.path) === decodeURIComponent(pathFromUrl)
+        );
+        if (index === -1) return;
+
+        const neighbors = [index - 1, index - 2, index + 1, index + 2];
+        neighbors.forEach(idx => {
+          if (idx >= 0 && idx < flattenChapters.length) {
+            const neighbor = flattenChapters[idx];
+            // 使用极简请求且开启 silent 模式，仅触发后端处理而不弹出 alert
+            request(`/api/books/${bookIdFromUrl}/chapters/${encodeURIComponent(neighbor.path)}?prefetch=1`, undefined, { silent: true });
+          }
+        });
+      }, 1000);
     }
   }, [pathFromUrl, bookIdFromUrl, flattenChapters, setPath, setContent, setSummaries, setIsContentLoading]);
 
