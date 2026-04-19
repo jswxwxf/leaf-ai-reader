@@ -10,28 +10,42 @@ import { useWakeLock } from "./use-wake-lock";
  * 目的是在 TTS 朗读时静音跳过这些引文，同时保持字符偏移量不变，确保高亮精准。
  */
 function getTextWithMasking(node: Node): string {
+  // 定义统一的清洗函数，消除重复的正则逻辑并保持字符长度一致
+  const sanitize = (str: string) =>
+    str
+      .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)/g, (m) => " ".repeat(m.length))
+      .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
+      .replaceAll("——", "--")
+      .replaceAll("”“", "”，")
+      .replaceAll('"', " ");
+
   let text = "";
-  node.childNodes.forEach((child) => {
+
+  // 通过 for...of 配合 continue 扁平化处理逻辑，消除嵌套深坑
+  for (const child of Array.from(node.childNodes)) {
+    // 1. 处理纯文本节点
     if (child.nodeType === Node.TEXT_NODE) {
-      text += child.textContent || "";
-    } else if (
-      child.nodeType === Node.ELEMENT_NODE &&
-      (child.nodeName === "SUP" || child.nodeName === "SUB")
-    ) {
-      const content = child.textContent || "";
-      // 智能阈值判断：
-      // 如果上标/下标内的文字超过 8 个字符，认为可能是实质内容（如补充注释），则正常朗读；
-      // 否则认为是引文标号（如 [1]），执行静音占位。
-      if (content.length > 8) {
-        text += content;
-      } else {
-        text += " ".repeat(content.length);
-      }
-    } else {
-      // 递归处理其他元素节点
-      text += getTextWithMasking(child);
+      text += sanitize(child.textContent || "");
+      continue;
     }
-  });
+
+    // 2. 忽略非元素节点
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+
+    // 3. 处理注脚类标签 (SUP/SUB)
+    const isNote = child.nodeName === "SUP" || child.nodeName === "SUB";
+    if (isNote) {
+      const content = child.textContent || "";
+      // 智能阈值：文字够长则清洗后朗读，较短（通常为序号）则静音填充
+      text +=
+        content.length > 8 ? sanitize(content) : " ".repeat(content.length);
+      continue;
+    }
+
+    // 4. 处理普通元素节点（递归）
+    text += getTextWithMasking(child);
+  }
+
   return text;
 }
 
@@ -97,15 +111,10 @@ export function useSpeech() {
     setIsPlaying(true);
     clearHighlight();
 
-    // 3. 创建朗读任务 (对标点进行处理，防止 TTS 误读并引导停顿)
-    // 注意：采用 1:1 或 2:2 替换以保持字符串长度不变，确保 onboundary 的 charIndex 索引不位移
-    // 使用 getTextWithMasking 自动将引文 (sup/sub) 转换为等长空格以实现静音跳过
-    const maskedText = getTextWithMasking(el);
-    const processedText = maskedText
-      .replace(/\p{Extended_Pictographic}/gu, (m) => ' '.repeat(m.length)) // 将 emoji 替换为等长空格，防止误读且保持索引对齐
-      .replaceAll('——', '--')
-      .replaceAll('”“', '”，')
-      .replaceAll('"', ' '); // 仅处理会产生噪音的半角双引号，保持长度对齐
+    // 3. 创建朗读任务
+    // 使用 getTextWithMasking 自动完成引文静音、Emoji 过滤及标点归一化
+    // 该函数保证了 1:1 的替换比例，确保 onboundary 的 charIndex 获取到精准的高亮坐标
+    const processedText = getTextWithMasking(el);
     const utterance = new SpeechSynthesisUtterance(processedText);
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
