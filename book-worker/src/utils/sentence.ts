@@ -7,7 +7,7 @@ export function splitSentences(text: string): string[] {
 	if (!text.trim()) return [];
 
 	const sentences: string[] = [];
-	const terminators = "。！？；：!?……:";
+	const terminators = "。！？；：!?……";
 	const closers = "”’』」》）〉】〗｝\"')]}";
 
 	let current = "";
@@ -34,7 +34,7 @@ export function splitSentences(text: string): string[] {
 		// 检查是否遇到结束标点
 		if (terminators.includes(char)) {
 			// 特殊处理：如果处于书名号或各种括号内部，且当前是冒号，则不断句
-			if (depth > 0 && (char === '：' || char === ':')) {
+			if (depth > 0 && char === '：') {
 				continue;
 			}
 
