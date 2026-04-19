@@ -78,7 +78,11 @@ export function Speecher() {
           </Link>
         </div>
       ) : (
-        <div className="flex-1 basis-0" />
+        <div 
+          className="flex-1 basis-0 cursor-pointer" 
+          onClick={handleToggle}
+          title={isPlaying ? "停止朗读" : "开始朗读"}
+        />
       )}
 
       {/* 2. 中间：播放核心控制台 */}
@@ -139,7 +143,11 @@ export function Speecher() {
           </Link>
         </div>
       ) : (
-        <div className="flex-1 basis-0" />
+        <div 
+          className="flex-1 basis-0 cursor-pointer" 
+          onClick={handleToggle}
+          title={isPlaying ? "停止朗读" : "开始朗读"}
+        />
       )}
     </div>
   );
