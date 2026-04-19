@@ -67,6 +67,8 @@ export function Speecher() {
         <div className="flex-1 basis-0 flex justify-start">
           <Link
             href={prevChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(prevChapter.path)}` : "#"}
+            scroll={false}
+            prefetch={false}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${prevChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >
@@ -132,6 +134,8 @@ export function Speecher() {
         <div className="flex-1 basis-0 flex justify-end">
           <Link
             href={nextChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(nextChapter.path)}` : "#"}
+            scroll={false}
+            prefetch={false}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${nextChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >

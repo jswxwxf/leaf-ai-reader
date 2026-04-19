@@ -53,6 +53,7 @@ const Chapters = ({
             ) : (
               <Link
                 href={`/reader?book_id=${bookId}&path=${encodeURIComponent(item.path)}`}
+                scroll={false}
                 prefetch={false}
                 className={`cursor-pointer ${isActive ? "bg-primary/10 text-primary font-medium" : ""}`}
                 onClick={() => setChaptersOpen(false)}
@@ -134,8 +135,8 @@ export function ChaptersWrapper() {
           <Chapters items={chapters} bookId={bookId} path={pathFromUrl} />
         </ul>
         {/* 底部留白区域，点击可触发播放/暂停 */}
-        <div 
-          className="flex-1 cursor-pointer" 
+        <div
+          className="flex-1 cursor-pointer"
           onClick={handleToggle}
           title={isPlaying ? "点击停止" : "点击播放"}
         />
