@@ -13,11 +13,12 @@ function getTextWithMasking(node: Node): string {
   // 定义统一的清洗函数，消除重复的正则逻辑并保持字符长度一致
   const sanitize = (str: string) =>
     str
+      .replace(/https?:\/\//g, (m) => " ".repeat(m.length))
       .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)/g, (m) => " ".repeat(m.length))
       .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
+      .replace(/["']/g, " ")
       .replaceAll("——", "--")
-      .replaceAll("”“", "”，")
-      .replace(/["']/g, " ");
+      .replaceAll("”“", "”，");
 
   let text = "";
 
