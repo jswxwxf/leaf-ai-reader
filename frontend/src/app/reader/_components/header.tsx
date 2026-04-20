@@ -3,6 +3,7 @@
 import { ArrowLeft, Menu } from "lucide-react";
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
+import { ReadingProgress } from "./progress";
 
 interface Props {
 	isPopup?: boolean;
@@ -23,7 +24,7 @@ export function Header({ isPopup = true }: Props) {
 	const isBookMode = mode === 'book';
 
 	return (
-		<header className="navbar bg-base-200 border-b border-base-300 px-4 h-14 flex-none gap-2">
+		<header className="navbar bg-base-200 border-b border-base-300 px-4 h-14 flex-none gap-2 relative">
 			<div className="flex-none flex items-center gap-1">
 				{/* 只有在弹窗/拦截路由模式下才显示返回按钮 */}
 				{/* {isPopup && ( */}
@@ -57,6 +58,8 @@ export function Header({ isPopup = true }: Props) {
 					{data?.title || "正在加载..."}
 				</h1>
 			</div>
+
+			<ReadingProgress />
 		</header>
 	);
 }
