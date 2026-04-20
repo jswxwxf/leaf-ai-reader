@@ -1,6 +1,6 @@
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
-import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
+import { scrollIntoViewIfNeeded, isSafari, delay } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
 import { useEffect, useRef } from "react";
 import { useWakeLock } from "./use-wake-lock";
@@ -109,6 +109,9 @@ export function useSpeech() {
 
     // 2. 停止当前正在进行的朗读并清理旧高亮
     window.speechSynthesis.cancel();
+    // iOS Safari 的 cancel 是异步的，留出清理时间避免竞争导致随机跳过字符或句子
+    if (isSafari) await delay(50);
+
     setIsPlaying(true);
     clearHighlight();
 

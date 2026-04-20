@@ -30,3 +30,8 @@ export function scrollIntoViewIfNeeded(el: HTMLElement) {
 export const isSafari =
   typeof navigator !== 'undefined' &&
   /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+/**
+ * 异步延迟函数
+ */
+export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
