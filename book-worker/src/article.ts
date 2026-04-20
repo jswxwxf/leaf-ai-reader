@@ -1,7 +1,6 @@
 import { parseHTML } from 'linkedom';
-import { Readability } from '@mozilla/readability';
-import { extract } from './crawlers/wechat';
-import { injectSentenceIds } from './utils/sentence';
+import { extract as wechatExtract } from './crawlers/wechat';
+import { cleanHtml } from './utils/html';
 
 /**
  * 爬虫解析结果接口
@@ -38,38 +37,65 @@ export async function crawlArticle(url: string): Promise<CrawlResult> {
 	// 2. 使用 linkedom 在内存中构建 DOM
 	const { document } = parseHTML(html);
 
-	const isWechat = url.includes("mp.weixin.qq.com") || !!document.getElementById("js_content");
+	const urlObj = new URL(url);
+	const isWechat = urlObj.hostname.includes("mp.weixin.qq.com") || !!document.getElementById("js_content");
 
 	let title = "";
 	let content = "";
-	let source = new URL(url).hostname;
+	let source = urlObj.hostname;
+
+	// 3. 提取标题 (优先从 meta 或特定 ID 获取)
+	title = document.querySelector('meta[property="og:title"]')?.getAttribute('content') ||
+		document.getElementById("activity-name")?.textContent?.trim() ||
+		document.querySelector('h1')?.textContent?.trim() ||
+		document.title?.trim() ||
+		"无标题文章";
+
+	// 4. 定位正文容器
+	let contentElement: any = null;
 
 	if (isWechat) {
-		console.log("[Crawler] Detected Wechat article, using wechat extractor...");
-		const result = extract(document, html);
+		// 微信特化逻辑
+		const result = wechatExtract(document, html);
 		if (result) {
-			title = result.title;
+			title = result.title || title;
 			content = result.content;
 			source = result.source;
 		}
-	}
+	} else {
+		// 通用网站方案：尝试常见正文容器选择器
+		const selectors = [
+			'article',
+			'main',
+			'[role="main"]',
+			'#js_content', // 即使不是微信域名，如果有这个 ID 也优先使用
+			'#main-content',
+			'#content',
+			'#main',
+			'.article',
+			'.post-content',
+			'.content'
+		];
 
-
-	// 4. 兜底方案：如果手动提取失败或不是微信，尝试使用 Readability
-	if (!content) {
-		console.log("[Crawler] Using Readability as fallback...");
-		const reader = new Readability(document);
-		const parsed = reader.parse();
-		if (parsed) {
-			title = title || parsed.title || "无标题";
-			source = parsed.siteName || source;
-			
-			// 对于 Readability 结果，我们只进行最小化的句子拆分，不剔除任何 HTML 标签
-			content = injectSentenceIds(parsed.content || "");
+		for (const selector of selectors) {
+			const el = document.querySelector(selector);
+			// 简单的启发式规则：内容长度显著才认为找到了正文
+			if (el && el.textContent.trim().length > 200) {
+				contentElement = el;
+				break;
+			}
 		}
+
+		// 极端兜底：如果都没找到，使用 body
+		if (!contentElement) {
+			contentElement = document.body;
+		}
+
+		// 使用通用的 cleanHtml 进行清洗和数字化（分句）
+		content = cleanHtml(contentElement);
 	}
 
-	if (!content) {
+	if (!content || content.trim().length < 50) {
 		throw new Error("未能从页面中提取到有效的文章正文。");
 	}
 

@@ -94,18 +94,42 @@ function refineHtml(html: string): string {
 
 function normalizeStructure(container: any) {
   const tagsToStrip = ['span', 'font', 'div', 'fieldset', 'a'];
+  // 彻底移除且不保留内容的标签
+  const tagsToRemove = ['script', 'style', 'noscript', 'template', 'iframe', 'canvas', 'video', 'audio', 'svg', 'button', 'input', 'select', 'textarea'];
+
   const walk = (node: any) => {
     let child = node.firstChild;
     while (child) {
       const next = child.nextSibling;
-      if (child.nodeType === 3 && !child.textContent.trim()) {
+
+      // 1. 移除注释、文档类型等非实质性节点
+      if (child.nodeType !== 1 && child.nodeType !== 3) {
         node.removeChild(child);
-      } else if (child.nodeType === 1) {
-        walk(child);
+        child = next;
+        continue;
+      }
+
+      if (child.nodeType === 1) {
         const tag = child.tagName.toLowerCase();
+
+        // 2. 彻底移除黑名单标签及其所有子节点
+        if (tagsToRemove.includes(tag)) {
+          node.removeChild(child);
+          child = next;
+          continue;
+        }
+
+        walk(child);
+
+        // 3. 剥离外壳、保留内容的标签 (如无属性的 div)
         const isSimpleDiv = tag === 'div' && !child.id && !child.className;
         if (tagsToStrip.includes(tag) && (tag !== 'div' || isSimpleDiv)) {
           while (child.firstChild) node.insertBefore(child.firstChild, child);
+          node.removeChild(child);
+        }
+      } else if (child.nodeType === 3) {
+        // 4. 清理空白文本节点
+        if (!child.textContent.trim()) {
           node.removeChild(child);
         }
       }
