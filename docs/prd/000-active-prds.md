@@ -17,5 +17,6 @@
 - [x] **PRD-013: 多级 HTML 清洗与排版精美化** ([013-multi-stage-html-cleaning.md](./013-multi-stage-html-cleaning.md)) — 已实现四阶段清洗管道、智能引文朗读跳过及精准高亮补丁
 - [ ] **PRD-014: 自定义总结管理** ([014-custom-summary-management.md](./014-custom-summary-management.md)) — 待规划
 - [ ] **PRD-015: 通用 SpeechBox 组件** ([015-generic-speech-box.md](./015-generic-speech-box.md)) — 待规划
+- [ ] **PRD-016: 图片文本 OCR 提取** ([016-image-ocr-extraction.md](./016-image-ocr-extraction.md)) — 待规划
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*
