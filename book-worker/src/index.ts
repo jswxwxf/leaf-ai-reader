@@ -193,13 +193,12 @@ export default class extends WorkerEntrypoint<Env> {
 			httpMetadata: { contentType: 'text/html; charset=utf-8' }
 		});
 
-		// 5. 生成并保存 AI 摘要 (即便为空也要写入，作为处理完成的最终信号)
-		const summaryJson = await this._runAISummary(decodedPath, processedHtml);
+		// 5. 写入摘要占位符
 		const summaryKey = `${contentKey}.summary.json`;
-		await this.env.LEAF_BOOK_BUCKET.put(summaryKey, summaryJson || JSON.stringify({ summaries: [] }), {
+		await this.env.LEAF_BOOK_BUCKET.put(summaryKey, JSON.stringify({ summaries: [] }), {
 			httpMetadata: { contentType: 'application/json; charset=utf-8' }
 		});
-		console.log(`[Worker] Saved chapter summary to R2 (Final): ${summaryKey}`);
+		console.log(`[Worker] Chapter processing done (summary skipped): ${chapterPath}`);
 
 		return { success: true, key: contentKey };
 	}
@@ -270,16 +269,13 @@ export default class extends WorkerEntrypoint<Env> {
 			});
 			console.log(`[Worker] Successfully saved article content to R2: ${contentKey}`);
 
-			// 4. AI 摘要生成
-			const summaryJson = await this._runAISummary(parsedArticle.title || "Unknown Article", parsedArticle.content);
-
-			// 5. 更新 D1 状态为 ready (同时保存摘要内容)
+			// 4. 更新 D1 状态为 ready (初始摘要设为 null，待手动触发)
 			await this.env.LEAF_BOOK_DB.prepare(
 				"UPDATE articles SET title = ?, content = ?, summary = ?, source = ?, status = 'ready' WHERE id = ?"
 			).bind(
 				parsedArticle.title || article.title,
 				contentKey,
-				summaryJson,
+				null,
 				parsedArticle.source,
 				articleId
 			).run();

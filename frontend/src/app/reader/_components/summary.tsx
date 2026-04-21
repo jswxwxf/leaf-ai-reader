@@ -136,7 +136,7 @@ export function Summary() {
             onClick={(e) => { e.stopPropagation(); handleSummarize(); }}
             disabled={isSummarizing}
             className={`btn btn-ghost btn-xs btn-circle ${isSummarizing ? 'loading' : ''}`}
-            title="重新生成摘要"
+            title="生成摘要"
           >
             {!isSummarizing && <RefreshCw className="w-3 h-3 opacity-60" />}
           </button>
@@ -156,17 +156,19 @@ export function Summary() {
             );
           })
         ) : (
-          <div className="py-10 text-center w-full space-y-3">
+          <div className="py-10 text-center w-full space-y-4 px-6">
             <p className="opacity-40 text-sm">
-              {data?.status === 'ready' ? '暂无核心摘要' : '摘要生成中...'}
+              {isSummarizing || data?.status !== 'ready'
+                ? '摘要生成中...'
+                : '暂无摘要'}
             </p>
             {!isContentLoading && data?.status === 'ready' && (
               <button
                 onClick={handleSummarize}
                 disabled={isSummarizing}
-                className={`btn btn-outline btn-sm btn-primary ${isSummarizing ? 'loading' : ''}`}
+                className={`btn btn-primary shadow-lg ${isSummarizing ? 'loading' : 'btn-md w-full lg:btn-sm'}`}
               >
-                {isSummarizing ? '正在重新生成' : '重新生成摘要'}
+                {isSummarizing ? '正在生成' : '生成摘要'}
               </button>
             )}
           </div>
