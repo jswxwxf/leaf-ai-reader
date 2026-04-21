@@ -144,7 +144,10 @@ export function Summary() {
       </div>
       <div className="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-y-auto p-3 space-x-3 lg:space-x-0 space-y-0 lg:space-y-3 custom-scrollbar snap-x snap-mandatory">
         {summaries.length > 0 ? (
-          summaries.map((item, index) => {
+          summaries
+            // 临时补丁：通过内容进行去重。防止 AI 意外生成重复摘要或存储层合并逻辑异常导致重复显示。
+            .filter((item, index, self) => index === self.findIndex((t) => t.summary === item.summary))
+            .map((item, index) => {
             const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
             return (
               <SummaryItem
@@ -157,7 +160,7 @@ export function Summary() {
           })
         ) : (
           <div className="py-10 text-center w-full space-y-4 px-6">
-            <p className="opacity-40 text-sm">
+            <p className="opacity-40 text-sm hidden sm:block">
               {isSummarizing || data?.status !== 'ready'
                 ? '摘要生成中...'
                 : '暂无摘要'}

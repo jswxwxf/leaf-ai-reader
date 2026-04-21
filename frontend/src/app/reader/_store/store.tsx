@@ -4,6 +4,7 @@ import React, { createContext, use, useState } from 'react';
 import { createStore, useStore } from 'zustand';
 import { combine, persist, createJSONStorage } from 'zustand/middleware';
 import { createUrlSearchStorage } from '@/lib/zustand-helpers';
+import { request } from '@/lib/request';
 
 import { type ArticleData } from '@/lib/article';
 import { type BookData } from '@/lib/book';
@@ -16,8 +17,6 @@ export interface AISummary {
 	summary: string;
 	start_sId: string;
 }
-
-import { request } from '@/lib/request';
 
 /**
  * 初始状态定义
@@ -144,10 +143,10 @@ const createReaderStore = (initialState: InitialState = {}) => {
 							`/api/books/${bookId}/chapters/${encodeURIComponent(path)}`
 						);
 						if (res.content) {
-							set({ 
-								content: res.content, 
-								summaries: res.summary || [], 
-								isContentLoading: false 
+							set({
+								content: res.content,
+								summaries: res.summary || [],
+								isContentLoading: false
 							});
 						}
 					},

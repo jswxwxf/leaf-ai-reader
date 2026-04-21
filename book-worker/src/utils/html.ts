@@ -35,7 +35,7 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
     const html = transformNode(node, getNextId, options);
     if (!html) return;
 
-    const isBlock = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre)/i.test(html);
+    const isBlock = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre|br)/i.test(html);
 
     if (isBlock) {
       flushBuffer();
@@ -59,7 +59,7 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
       'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'span', 'strong', 'b', 'em', 'i', 'sub', 'sup', 'del',
       'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code',
-      'img'
+      'img', 'br'
     ],
     ALLOWED_ATTR: ['id', 'class', 'src', 'alt', 'loading'],
   });
@@ -70,7 +70,7 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
  */
 function refineHtml(html: string): string {
   if (!html) return '';
-  
+
   return html
     // 1. Span 提升 (Span Promotion)
     // 将 <b><span class="sentence" id="s-N">文本</span></b> 转换为 <span class="sentence" id="s-N"><b>文本</b></span>
@@ -83,12 +83,18 @@ function refineHtml(html: string): string {
 
     // 3. 清理空段落
     .replace(/<p>\s*(?:&nbsp;|&#160;|&#8203;|\u200B)*\s*<\/p>/gi, '')
-    
-    // 4. 清理可能产生的双重 p 包装（容错）
+
+    // 4. 清理无意义的 br 包装段落 (常见于微信公众号)
+    .replace(/<p>\s*<br\s*\/?>\s*<\/p>/gi, '')
+
+    // 5. 清理可能产生的双重 p 包装（容错）
     .replace(/<p>\s*(<p>.*?<\/p>)\s*<\/p>/gis, '$1')
 
-    // 4. 将连续的 3 个或以上换行/空格压缩
-    .replace(/\n{3,}/g, '\n\n')
+    // 6. 将连续的 3 个或以上 <br /> 压缩为 2 个
+    .replace(/(?:<br\s*\/?>\s*){3,}/gi, '<br /><br />')
+
+    // 7. 将连续的 2 个或以上纯换行/空格压缩
+    .replace(/\n{2,}/g, '\n')
     .trim();
 }
 
@@ -196,7 +202,7 @@ function transformNode(
       }
       return src ? `<img src="${src}" loading="lazy">` : "";
     }
-    if (tagName === 'br') return "";
+    if (tagName === 'br') return "<br />";
 
     const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code'];
     const INLINE_TAGS = ['strong', 'b', 'em', 'i', 'sub', 'sup', 'del'];

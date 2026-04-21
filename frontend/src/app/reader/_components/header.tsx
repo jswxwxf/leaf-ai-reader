@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, Menu } from "lucide-react";
+import { showLoading } from "@/app/full-screen-loading";
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { ReadingProgress } from "./progress";
@@ -32,7 +33,8 @@ export function Header({ isPopup = true }: Props) {
 					className="btn btn-ghost btn-circle active:scale-90 transition-all font-bold"
 					title="返回"
 					onClick={() => {
-						// 主动停止朗读，并根据模式返回对应的仪表盘视图
+						// 显示加载动画并停止朗读
+						showLoading();
 						window.speechSynthesis.cancel();
 						const backUrl = isBookMode ? '/dashboard?view=books' : '/dashboard?view=articles';
 						window.location.href = backUrl;

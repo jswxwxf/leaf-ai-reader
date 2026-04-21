@@ -47,7 +47,7 @@ function getTextWithMasking(node: Node): string {
     text += getTextWithMasking(child);
   }
 
-  return text;
+  return text.toLowerCase();
 }
 
 /**

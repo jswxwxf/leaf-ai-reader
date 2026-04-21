@@ -59,7 +59,6 @@ export function Helper() {
         }
       }
 
-      /* 
       // 3. 异步静默预取邻居章节 (前后各 2 章)
       // 使用 setTimeout 稍微延迟，避免抢占当前章节的加载带宽
       setTimeout(() => {
@@ -76,8 +75,7 @@ export function Helper() {
             request(`/api/books/${bookIdFromUrl}/chapters/${encodeURIComponent(neighbor.path)}?prefetch=1`, undefined, { silent: true });
           }
         });
-      }, 1000);
-      */
+      }, 1500);
     }
   }, [pathFromUrl, bookIdFromUrl, flattenChapters, setPath, setContent, setSummaries, setIsContentLoading]);
 
