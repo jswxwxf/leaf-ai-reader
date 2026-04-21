@@ -19,11 +19,11 @@ export function UploadArticle() {
 		const url = (formData.get('url') as string)?.trim();
 		if (!url) return null;
 
-		// 限制支持的域名
-		const urlPattern = /^https?:\/\/(mp\.weixin\.qq\.com|.*\.quanxue\.cn)\/.+/i;
+		// 验证内容是否为网址
+		const urlPattern = /^https?:\/\/.+/i;
 		if (!urlPattern.test(url)) {
 			showAlert({
-				message: '目前仅支持微信公众号或劝学网 (quanxue.cn) 的文章'
+				message: '请输入有效的文章网址 (需以 http:// 或 https:// 开头)'
 			});
 			return null;
 		}
@@ -49,7 +49,7 @@ export function UploadArticle() {
 			<input
 				type="text"
 				name="url"
-				placeholder="粘贴文章网址 (公众号、劝学网等)"
+				placeholder="粘贴文章网址 (公众号、专栏、新闻链接等)"
 				disabled={isPending}
 				className="input input-bordered join-item w-full focus:outline-none focus:border-primary border-r-0"
 			/>
