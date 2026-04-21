@@ -326,7 +326,11 @@ export default class extends WorkerEntrypoint<Env> {
 				this.env.AI,
 				compactText,
 				this.env.GEMINI_API_KEY,
-				(this.env as any).GEMINI_API_BASE_URL
+				[
+					this.env.GEMINI_API_KEY_B,
+					this.env.GEMINI_API_KEY_C,
+					this.env.GEMINI_API_KEY_D
+				]
 			);
 
 			if (summaryResult) {

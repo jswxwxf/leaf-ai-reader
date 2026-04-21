@@ -50,7 +50,7 @@ export async function generateSummary(
   ai: any,
   content: string,
   geminiApiKey?: string,
-  geminiApiBaseUrl?: string
+  secondaryGeminiKeys: (string | undefined)[] = []
 ): Promise<AISummaryResponse | null> {
   const systemPrompt = `你是一个专业的阅读助手。你的任务是为长文章提炼核心脉络。
 
@@ -69,23 +69,25 @@ export async function generateSummary(
     ? content.slice(0, MAX_SAFE_CHARS) + "\n\n...(内容过长，已被系统截断)..."
     : content;
 
-  // 1. 尝试使用 Gemini (优先使用，带一次重试)
-  if (geminiApiKey) {
-    let attempts = 0;
-    while (attempts < 2) {
-      try {
-        console.log(`[AI] Using Gemini 2.5 Flash (Attempt ${attempts + 1})...`);
-        const geminiResponse = await callGemini(geminiApiKey, systemPrompt, safeContent, geminiApiBaseUrl);
-        if (geminiResponse) return geminiResponse;
-      } catch (e: any) {
-        attempts++;
-        if (attempts < 2 && (e.message.includes('503') || e.message.includes('UNAVAILABLE'))) {
-          console.warn(`[AI] Gemini busy (503), waiting 2s for retry...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-        console.warn(`[AI] Gemini failed after ${attempts} attempts: ${e.message}`);
-        break; 
+  // 整理所有可用的 Gemini Key
+  const geminiKeys = [geminiApiKey, ...secondaryGeminiKeys].filter(Boolean) as string[];
+
+  // 1. 尝试使用 Gemini (支持多 Key 轮询)
+  for (let i = 0; i < geminiKeys.length; i++) {
+    const currentKey = geminiKeys[i];
+    const accountLabel = `Account #${i + 1}`;
+
+    try {
+      console.log(`[AI] Using Gemini (${accountLabel})...`);
+      const geminiResponse = await callGemini(currentKey, systemPrompt, safeContent);
+      if (geminiResponse) return geminiResponse;
+    } catch (e: any) {
+      console.warn(`[AI] Gemini (${accountLabel}) failed: ${e.message}`);
+      
+      // 如果还有下一个 Key，继续尝试
+      if (i < geminiKeys.length - 1) {
+        console.log(`[AI] Switching to next available Gemini key...`);
+        continue;
       }
     }
   }
@@ -171,15 +173,11 @@ function parseWorkersAIResponse(response: any): AISummaryResponse | null {
 async function callGemini(
   apiKey: string,
   systemPrompt: string,
-  userContent: string,
-  apiBaseUrl?: string
+  userContent: string
 ): Promise<AISummaryResponse | null> {
   // 升级至 Gemini 2.5 Flash
   const model = "gemini-2.5-flash";
-  // 默认使用官方地址，允许通过环境变量覆盖
-  const baseUrl = apiBaseUrl || "https://generativelanguage.googleapis.com";
-  // 使用 v1beta 以支持 response_mime_type
-  const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const requestBody = {
     contents: [
