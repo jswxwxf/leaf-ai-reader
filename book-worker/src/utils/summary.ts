@@ -58,7 +58,8 @@ export async function generateSummary(
 1. **忽略 ID 干扰**：输入文本中的 [s-ID] 仅用于定位起始位置。请不要理会 ID 的数量，仅从逻辑和语义上对文章进行分段。
 2. **合并分段**：你必须将几十个甚至上百个连续的句子归纳为 3 到 8 个逻辑大块。
 3. **极简原创总结**：每条项必须控制在 15 字以内且必须标明 start_sId。**严禁摘抄原文或搬运原句**，必须由你用自己的语言进行高度概括。
-4. **均匀分布**：摘要点必须分布在全文的不同阶段。**严禁在几句话或极短篇幅内出现多个摘要点**。每个摘要点应代表一个显著的逻辑跨度。
+4. **均匀分布**：摘要点必须分布在全文的不同阶段。**每个摘要点必须对应一个 [s-ID] 标记。**
+5. **绝对纯文本**：总结内容必须是纯文本，**严禁包含任何 HTML 标签 (如 <div>, <p> 等)**。
 
 ### 约束
 - **数量**：全文仅限输出 3-8 条摘要。
@@ -83,7 +84,7 @@ export async function generateSummary(
       if (geminiResponse) return geminiResponse;
     } catch (e: any) {
       console.warn(`[AI] Gemini (${accountLabel}) failed: ${e.message}`);
-      
+
       // 如果还有下一个 Key，继续尝试
       if (i < geminiKeys.length - 1) {
         console.log(`[AI] Switching to next available Gemini key...`);
@@ -140,7 +141,7 @@ export async function generateSummary(
  */
 function parseWorkersAIResponse(response: any): AISummaryResponse | null {
   if (response?.response?.summaries) return response.response as AISummaryResponse;
-  
+
   let contentString = '';
   if (response?.choices?.[0]?.message?.content) {
     contentString = response.choices[0].message.content;
@@ -183,7 +184,7 @@ async function callGemini(
     contents: [
       {
         role: "user",
-        parts: [{ text: `${systemPrompt}\n\n请提炼全文核心脉络（只需 3-8 条摘要）：\n\n${userContent}` }]
+        parts: [{ text: `${systemPrompt}\n\n请提炼以下文章的核心脉络（只需输出 JSON，严禁输出待总结内容以外的任何 HTML 或标志）：\n\n<article>\n${userContent}\n</article>` }]
       }
     ],
     generationConfig: {

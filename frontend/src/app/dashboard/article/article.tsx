@@ -49,20 +49,18 @@ export function Article({ article }: Props) {
 		<div
 			onClick={handleCardClick}
 			className={`group bg-base-100 rounded-xl p-4 shadow-sm border border-base-200 transition-all flex items-center gap-4 relative ${status === 'ready' ? 'hover:border-primary/30 hover:shadow-md active:scale-[0.98] active:bg-base-200 cursor-pointer' : 'cursor-default'
-				} ${status === 'processing' ? 'pointer-events-none' : ''}`}
+				}`}
 		>
 			{/* 删除按钮 (仅在悬停时显示) */}
-			{status !== 'processing' && (
-				<button
-					className="absolute -top-1.5 -right-1.5 z-20 btn btn-circle btn-xs btn-error opacity-70 lg:opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
-					onClick={handleDelete}
-					title="删除文章"
-				>
-					<X className="w-3 h-3 text-white" />
-					{/* 移动端点击区域扩充层：确保小按钮在手机上也能轻松点中 */}
-					<span className="absolute inset-[-12px]" aria-hidden="true" />
-				</button>
-			)}
+			<button
+				className="absolute -top-1.5 -right-1.5 z-20 btn btn-circle btn-xs btn-error opacity-70 lg:opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-sm border-none"
+				onClick={handleDelete}
+				title="删除文章"
+			>
+				<X className="w-3 h-3 text-white" />
+				{/* 移动端点击区域扩充层：确保小按钮在手机上也能轻松点中 */}
+				<span className="absolute inset-[-12px]" aria-hidden="true" />
+			</button>
 
 			{/* 图标/封面区域 */}
 			<div className="w-12 h-12 rounded-lg bg-base-200 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
