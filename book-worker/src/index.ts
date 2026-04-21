@@ -304,6 +304,53 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 
 	/**
+	 * 专门用于重新生成摘要
+	 * 优点：直接读取 R2 中已有的正文，不重新执行解压或爬取
+	 */
+	async processSummary(userId: string, type: 'article' | 'book', id: string, path?: string) {
+		console.log(`[Worker] Manually re-processing summary: type=${type}, id=${id}, path=${path}`);
+
+		let contentKey = "";
+		let title = "";
+
+		if (type === 'book') {
+			if (!path) throw new Error("Path is required for book summary");
+			contentKey = `books/${userId}/${id}/content/${path}`;
+			title = path; // 书籍路径作为临时标题上下文
+		} else {
+			contentKey = `articles/${userId}/${id}/content.html`;
+			// 尝试从 D1 获取标题作为上下文
+			const article = await this.env.LEAF_BOOK_DB.prepare(
+				"SELECT title FROM articles WHERE id = ?"
+			).bind(id).first<{ title: string }>();
+			title = article?.title || "Article";
+		}
+
+		// 1. 从 R2 读取已存在的清洗后的内容
+		const object = await this.env.LEAF_BOOK_BUCKET.get(contentKey);
+		if (!object) throw new Error(`Processed content not found in R2: ${contentKey}`);
+		const content = await object.text();
+
+		// 2. 重新运行 AI 摘要
+		const summaryJson = await this._runAISummary(title, content);
+		const resultSummary = summaryJson ? JSON.parse(summaryJson) : { summaries: [] };
+
+		// 3. 持久化结果
+		if (type === 'book') {
+			const summaryKey = `${contentKey}.summary.json`;
+			await this.env.LEAF_BOOK_BUCKET.put(summaryKey, summaryJson || JSON.stringify({ summaries: [] }), {
+				httpMetadata: { contentType: 'application/json; charset=utf-8' }
+			});
+		} else {
+			await this.env.LEAF_BOOK_DB.prepare(
+				"UPDATE articles SET summary = ? WHERE id = ?"
+			).bind(summaryJson, id).run();
+		}
+
+		return { success: true, summary: resultSummary };
+	}
+
+	/**
 	 * 统一的 AI 摘要执行逻辑
 	 */
 	private async _runAISummary(title: string, content: string): Promise<string | null> {

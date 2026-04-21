@@ -1,12 +1,56 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Star, RefreshCw } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { useSpeech } from "../_hooks/use-speech";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { request } from "@/lib/request";
+
+/**
+ * 封装摘要重刷逻辑的 Hook
+ */
+function useSummarize() {
+  const { mode, article_id, book_id, path, setSummaries } = useReaderStore(
+    useShallow((state) => ({
+      mode: state.mode,
+      article_id: state.article_id,
+      book_id: state.book_id,
+      path: state.path,
+      setSummaries: state.setSummaries,
+    }))
+  );
+
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  const handleSummarize = async () => {
+    if (isSummarizing) return;
+    setIsSummarizing(true);
+    try {
+      const result = await request<{ success: boolean; summaries: AISummary[] }>('/api/reader/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: mode,
+          id: mode === 'book' ? book_id : article_id,
+          path: path
+        })
+      });
+
+      if (result.summaries) {
+        setSummaries(result.summaries);
+      }
+    } catch (e) {
+      // 错误已由 request.ts 内部处理
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  return { isSummarizing, handleSummarize };
+}
 
 /**
  * 单个摘要项组件，负责处理自身的自动滚动逻辑
@@ -58,14 +102,17 @@ export function Summary() {
   const {
     summaries,
     summarySentenceId,
-    data
+    data,
+    isContentLoading,
   } = useReaderStore(
     useShallow((state) => ({
       summaries: state.summaries,
       summarySentenceId: state.summarySentenceId,
       data: state.data,
+      isContentLoading: state.isContentLoading,
     }))
   );
+  const { isSummarizing, handleSummarize } = useSummarize();
   const { jumpToSentence } = useReader();
   const { play, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
@@ -80,10 +127,20 @@ export function Summary() {
 
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:w-80 lg:h-full lg:border-l lg:border-b-0 lg:order-0">
-      <div className="hidden lg:block p-4 flex-none border-b border-base-200">
+      <div className="hidden lg:flex p-4 flex-none border-b border-base-200 items-center justify-between">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Star className="w-4 h-4 text-warning" /> 摘要
         </h2>
+        {!isContentLoading && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleSummarize(); }}
+            disabled={isSummarizing}
+            className={`btn btn-ghost btn-xs btn-circle ${isSummarizing ? 'loading' : ''}`}
+            title="重新生成摘要"
+          >
+            {!isSummarizing && <RefreshCw className="w-3 h-3 opacity-60" />}
+          </button>
+        )}
       </div>
       <div className="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-y-auto p-3 space-x-3 lg:space-x-0 space-y-0 lg:space-y-3 custom-scrollbar snap-x snap-mandatory">
         {summaries.length > 0 ? (
@@ -99,8 +156,19 @@ export function Summary() {
             );
           })
         ) : (
-          <div className="py-10 text-center opacity-40 text-sm w-full">
-            {data?.status === 'ready' ? '暂无核心摘要' : '摘要生成中...'}
+          <div className="py-10 text-center w-full space-y-3">
+            <p className="opacity-40 text-sm">
+              {data?.status === 'ready' ? '暂无核心摘要' : '摘要生成中...'}
+            </p>
+            {!isContentLoading && data?.status === 'ready' && (
+              <button
+                onClick={handleSummarize}
+                disabled={isSummarizing}
+                className={`btn btn-outline btn-sm btn-primary ${isSummarizing ? 'loading' : ''}`}
+              >
+                {isSummarizing ? '正在重新生成' : '重新生成摘要'}
+              </button>
+            )}
           </div>
         )}
         {/* 底部留白区域，点击可触发播放/暂停，仅在大屏垂直布局时有效 */}
