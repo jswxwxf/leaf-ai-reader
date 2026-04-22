@@ -23,6 +23,7 @@ interface AlertConfig {
   title: string;
   message: string;
   buttonText: string;
+  selectable?: boolean;
   resolve?: (value: void | PromiseLike<void>) => void;
 }
 
@@ -39,6 +40,7 @@ const DEFAULT_ALERT: AlertConfig = {
   title: "提示",
   message: "",
   buttonText: "我知道了",
+  selectable: false,
 };
 
 // 使用队列存储在组件挂载前被调用的配置
@@ -192,13 +194,19 @@ export function GlobalModals() {
         className="modal items-start pt-10"
         onClose={handleAlertClose}
       >
-        <div className="modal-box max-w-md rounded-2xl shadow-2xl p-6 border border-neutral/5">
-          <h3 className="text-lg font-bold text-neutral">{alertConfig.title}</h3>
-          <p className="py-4 text-neutral/70 leading-relaxed whitespace-pre-wrap">
-            {alertConfig.message}
-          </p>
+        <div className="modal-box max-w-md rounded-2xl shadow-2xl p-6 border border-neutral/5 flex flex-col max-h-[85vh]">
+          <h3 className="text-lg font-bold text-neutral flex-none">{alertConfig.title}</h3>
+          
+          <div className="flex-1 overflow-y-auto my-4 pr-2">
+            <p 
+              className={`text-neutral/70 leading-relaxed whitespace-pre-wrap text-sm ${alertConfig.selectable ? 'select-all cursor-pointer' : ''}`}
+              onClick={alertConfig.selectable ? (e) => window.getSelection()?.selectAllChildren(e.currentTarget) : undefined}
+            >
+              {alertConfig.message}
+            </p>
+          </div>
 
-          <div className="modal-action">
+          <div className="modal-action flex-none mt-0">
             <button
               className="btn btn-primary text-white rounded-xl w-full min-h-0 h-11 shadow-lg shadow-primary/20 border-none"
               onClick={handleAlertClose}

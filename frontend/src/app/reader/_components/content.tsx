@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useReaderStore, useReaderStoreRaw } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { useScrollspy } from "../_hooks/use-scrollspy";
+import { useOCR } from "../_hooks/use-ocr";
 import { Scroller } from "./scroller";
 import styles from "./content.module.css";
 import { stopSpeech } from "../_hooks/use-speech";
@@ -18,13 +19,15 @@ export function Content({ }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // 使用 useShallow 合并订阅，减少重渲染次数
-  const { content, path, isContentLoading, setSpeechSentenceId, setIsPlaying } = useReaderStore(
+  const { content, path, isContentLoading, setSpeechSentenceId, setIsPlaying, article_id, book_id } = useReaderStore(
     useShallow((state) => ({
       content: state.content,
       path: state.path,
       isContentLoading: state.isContentLoading,
       setSpeechSentenceId: state.setSpeechSentenceId,
       setIsPlaying: state.setIsPlaying,
+      article_id: state.article_id,
+      book_id: state.book_id,
     }))
   );
   // 直接持有 store 实例（不订阅），用于事件处理器或 Effect 中一次性读取/更新状态
@@ -56,6 +59,12 @@ export function Content({ }: Props) {
 
   // 激活滚动监听
   useScrollspy();
+
+  // 激活图片 OCR 装饰器 (PRD-015)
+  useOCR(sectionRef, { 
+    articleId: article_id ?? undefined, 
+    bookId: book_id ?? undefined 
+  });
 
   /**
    * 处理正文区域的点击事件 (采用事件委托)
