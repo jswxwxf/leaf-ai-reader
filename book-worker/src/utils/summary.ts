@@ -44,6 +44,25 @@ export interface AISummaryResponse {
 }
 
 /**
+ * 对 AI 生成的摘要进行规范化处理：去重 + 排序
+ */
+function normalizeSummaries(summaries: AISummary[]): AISummary[] {
+  if (!summaries || !Array.isArray(summaries)) return [];
+
+  return summaries
+    // 1. 去重：防止 AI 产生重复的总结项
+    .filter((item, index, self) =>
+      item.summary && index === self.findIndex((t) => t.summary === item.summary)
+    )
+    // 2. 排序：按 start_sId 提取的数字进行升序排列，确保与原文顺序一致
+    .sort((a, b) => {
+      const aId = parseInt(a.start_sId?.replace(/[^\d]/g, '') || '0', 10);
+      const bId = parseInt(b.start_sId?.replace(/[^\d]/g, '') || '0', 10);
+      return aId - bId;
+    });
+}
+
+/**
  * 调用 AI 生成结构化摘要（默认使用 Gemini，回退至 Workers AI）
  */
 export async function generateSummary(
@@ -81,7 +100,9 @@ export async function generateSummary(
     try {
       console.log(`[AI] Using Gemini (${accountLabel})...`);
       const geminiResponse = await callGemini(currentKey, systemPrompt, safeContent);
-      if (geminiResponse) return geminiResponse;
+      if (geminiResponse) {
+        return { summaries: normalizeSummaries(geminiResponse.summaries) };
+      }
     } catch (e: any) {
       console.warn(`[AI] Gemini (${accountLabel}) failed: ${e.message}`);
 
@@ -129,7 +150,11 @@ export async function generateSummary(
       }
     });
 
-    return parseWorkersAIResponse(response);
+    const workersAIResponse = parseWorkersAIResponse(response);
+    if (workersAIResponse) {
+      return { summaries: normalizeSummaries(workersAIResponse.summaries) };
+    }
+    return null;
   } catch (error) {
     console.error('[AI] All AI providers failed:', error);
     return null;
