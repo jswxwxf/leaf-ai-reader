@@ -17,7 +17,8 @@
 - [x] **PRD-013: 多级 HTML 清洗与排版精美化** ([013-multi-stage-html-cleaning.md](./013-multi-stage-html-cleaning.md)) — 已实现四阶段清洗管道、智能引文朗读跳过及精准高亮补丁
 - [x] **PRD-014: 摘要手动同步重刷新** ([014-manual-summary-regeneration.md](./014-manual-summary-regeneration.md)) — 已实现基于 R2 正文利旧的同步重刷机制
 - [x] **PRD-015: 图片文本 OCR 提取** ([015-image-ocr-extraction.md](./015-image-ocr-extraction.md)) — 已完成
-- [ ] **PRD-016: 自定义总结管理** ([016-custom-summary-management.md](./016-custom-summary-management.md)) — 待规划
-- [ ] **PRD-017: 通用 SpeechBox 组件** ([017-generic-speech-box.md](./017-generic-speech-box.md)) — 待规划
+- [ ] **PRD-016: 粘贴文本创建文章支持** ([016-article-text-upload.md](./016-article-text-upload.md)) — 待实施
+- [ ] **PRD-017: 自定义总结管理** ([017-custom-summary-management.md](./017-custom-summary-management.md)) — 待规划
+- [ ] **PRD-018: 通用 SpeechBox 组件** ([018-generic-speech-box.md](./018-generic-speech-box.md)) — 待规划
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*
