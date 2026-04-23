@@ -162,7 +162,7 @@ export function GlobalModals() {
         className="modal items-start pt-10"
         onClose={handleConfirmCancel}
       >
-        <div className="modal-box max-w-md rounded-2xl shadow-2xl p-6 border border-neutral/5">
+        <div className="modal-box max-w-md rounded-md shadow-2xl p-6 border border-neutral/5">
           <h3 className="text-lg font-bold text-neutral">{confirmConfig.title}</h3>
           <p className="py-4 text-neutral/70 leading-relaxed whitespace-pre-wrap">
             {confirmConfig.message}
@@ -170,13 +170,13 @@ export function GlobalModals() {
 
           <div className="modal-action gap-3">
             <button
-              className="btn btn-ghost hover:bg-neutral/5 rounded-xl px-6 min-h-0 h-10 font-normal"
+              className="btn btn-ghost hover:bg-neutral/5 rounded px-6 min-h-0 h-10 font-normal"
               onClick={handleConfirmCancel}
             >
               {confirmConfig.cancelText}
             </button>
             <button
-              className="btn btn-error text-white rounded-xl px-6 min-h-0 h-10 shadow-lg shadow-error/20 border-none px-8"
+              className="btn btn-error text-white rounded px-6 min-h-0 h-10 shadow-lg shadow-error/20 border-none px-8"
               onClick={handleConfirmAction}
             >
               {confirmConfig.confirmText}
@@ -194,7 +194,7 @@ export function GlobalModals() {
         className="modal items-start pt-10"
         onClose={handleAlertClose}
       >
-        <div className="modal-box max-w-md rounded-2xl shadow-2xl p-6 border border-neutral/5 flex flex-col max-h-[85vh]">
+        <div className="modal-box max-w-md rounded-md shadow-2xl p-6 border border-neutral/5 flex flex-col max-h-[85vh]">
           <h3 className="text-lg font-bold text-neutral flex-none">{alertConfig.title}</h3>
           
           <div className="flex-1 overflow-y-auto my-4 pr-2">
@@ -208,7 +208,7 @@ export function GlobalModals() {
 
           <div className="modal-action flex-none mt-0">
             <button
-              className="btn btn-primary text-white rounded-xl w-full min-h-0 h-11 shadow-lg shadow-primary/20 border-none"
+              className="btn btn-primary text-white rounded w-full min-h-0 h-11 shadow-lg shadow-primary/20 border-none"
               onClick={handleAlertClose}
             >
               {alertConfig.buttonText}
