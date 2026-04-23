@@ -22,4 +22,4 @@
 *   [ ] 是否支持 OCR 结果直接插入笔记或翻译。
 
 ---
-*Status: Initial Planning*
+*Status: Completed*

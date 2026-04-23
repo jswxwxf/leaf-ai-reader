@@ -42,3 +42,7 @@
 - **数据库兼容性**：直接复用 `articles` 表结构。
 - **断句引擎**：必须复用现有的 `book-worker/src/utils/sentence.ts` 逻辑，确保交互体验一致。
 - **最大输入限制**：前端初步限制（如 10 万字），防止超大型文本导致 API 负载过高。
+
+---
+*Status: Completed*
+
