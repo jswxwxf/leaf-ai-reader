@@ -8,14 +8,41 @@ import { createHandler, HandlerContext } from '../../_handler';
  * 使用统一的 createHandler 进行包装，自动处理鉴权和 Cloudflare 上下文
  */
 export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, request: Request) => {
-	// 获取请求体中的 URL
+	// 获取请求体中的内容
 	const { url } = (await request.json()) as { url: string };
 	const articleId = crypto.randomUUID();
-	console.log(`[Articles API] 用户 ${user.sub} 发起采集请求:`, { url, articleId });
+	console.log(`[Articles API] 用户 ${user.sub} 发起请求:`, { 
+		content: url.length > 100 ? url.slice(0, 100) + '...' : url, 
+		articleId 
+	});
 
-	// 1. 初始化 D1 数据库记录 (同步阻塞，确保回执前数据已落库)
-	const title = '正在采集...';
-	const source = new URL(url).hostname;
+	// 1. 识别内容类型 (URL vs 纯文本)
+	const isUrl = /^https?:\/\/.+/i.test(url);
+	let title = '正在采集...';
+	let source = '未知来源';
+	let sourceUrl = url;
+
+	if (isUrl) {
+		try {
+			source = new URL(url).hostname;
+		} catch (e) {
+			console.warn('[Articles API] 非标准 URL 来源:', url);
+		}
+	} else {
+		// 纯文本模式：提取首行作为标题，源设为 "文本"
+		title = url.split('\n')[0].trim().slice(0, 50) || '无标题文本';
+		source = '文本';
+		sourceUrl = 'raw.txt';
+
+		// 将原始文本存入 R2 供 Worker 后续解析
+		const rawKey = `articles/${user.sub}/${articleId}/raw.txt`;
+		await env.LEAF_BOOK_BUCKET.put(rawKey, url, {
+			httpMetadata: { contentType: 'text/plain; charset=utf-8' }
+		});
+		console.log(`[Articles API] 纯文本内容已暂存至 R2: ${rawKey}`);
+	}
+
+	// 2. 初始化 D1 数据库记录
 	await env.LEAF_BOOK_DB.prepare(
 		"INSERT INTO articles (id, user_id, title, source, source_url, status) VALUES (?, ?, ?, ?, ?, ?)"
 	).bind(
@@ -23,7 +50,7 @@ export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, req
 		user.sub,
 		title,
 		source,
-		url,
+		sourceUrl,
 		"processing"
 	).run();
 

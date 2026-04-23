@@ -20,7 +20,7 @@ import { normalizeChapters, flattenChapters } from './utils/chapter';
 import { cleanHtml } from './utils/html';
 import { toCompactText, generateSummary } from "./utils/summary";
 
-export default class extends WorkerEntrypoint<Env> {
+export default class BookWorker extends WorkerEntrypoint<Env> {
 	/**
 	 * 处理 HTTP 请求，防止部署报错并支持基础的状态验证。
 	 */
@@ -250,17 +250,47 @@ export default class extends WorkerEntrypoint<Env> {
 			throw new Error(`[Worker] Article ${articleId} not found in D1 for user ${userId}`);
 		}
 
-		console.log(`[Worker] Starting crawl for: ${article.source_url}`);
-
 		try {
-			// 2. 调用重构后的爬虫工具函数
-			const parsedArticle = await crawlArticle(article.source_url as string);
+			let parsedArticle: { title: string; content: string; source: string };
 
-			if ((this.env as any).NODE_ENV === 'development') {
-				console.log("[Worker] Parsed Article JSON:", JSON.stringify(parsedArticle, null, 2));
+			// 2. 识别内容来源：URL 抓取 vs 纯文本分词
+			if ((article as any).source_url === "raw.txt") {
+				console.log(`[Worker] Processing raw text from R2...`);
+				
+				// 2.1 从 R2 读取原文
+				const rawKey = `articles/${userId}/${articleId}/raw.txt`;
+				const rawObject = await this.env.LEAF_BOOK_BUCKET.get(rawKey);
+				if (!rawObject) throw new Error(`Raw text object not found in R2: ${rawKey}`);
+				const rawText = await rawObject.text();
+
+				console.log(`[Worker] Raw text loaded, length: ${rawText.length}`);
+
+				// 2.2 数字化转换：模拟 HTML 结构并利用 cleanHtml 工具类处理
+				const simulatedBody = rawText.split('\n')
+					.map(line => line.trim())
+					.filter(Boolean)
+					.map(p => `<p>${p}</p>`)
+					.join('\n');
+				
+				const { document } = parseHTML(`<!DOCTYPE html><html><body>${simulatedBody}</body></html>`);
+				const digitalHtml = cleanHtml(document.body);
+				
+				console.log(`[Worker] Digitization complete, final HTML length: ${digitalHtml.length}`);
+
+				parsedArticle = {
+					title: (article as any).title, 
+					content: digitalHtml,
+					source: '文本'
+				};
+			} else {
+				console.log(`[Worker] Starting crawl for: ${article.source_url}`);
+				// 3. 调用爬虫工具函数提取网页内容
+				parsedArticle = await crawlArticle(article.source_url as string);
 			}
 
-			console.log(`[Worker] Successfully extracted article: ${parsedArticle.title}`);
+			if ((this.env as any).NODE_ENV === 'development') {
+				console.log(`[Worker] Successfully prepared article: ${parsedArticle.title}`);
+			}
 
 			// 3. 将正文 HTML 持久化到 R2
 			const contentKey = `articles/${userId}/${articleId}/content.html`;

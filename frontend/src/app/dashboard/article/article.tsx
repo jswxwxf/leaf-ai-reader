@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { ExternalLink, Globe, Loader2, AlertCircle, X } from 'lucide-react';
+import { ExternalLink, Globe, Loader2, AlertCircle, X, FileText } from 'lucide-react';
 import { ArticleData, deleteArticle } from '@/lib/article';
 import { useDashboardStore } from '../_store/store';
 import { showLoading, hideLoading } from '@/app/full-screen-loading';
@@ -68,6 +68,8 @@ export function Article({ article }: Props) {
 					<Loader2 className="w-6 h-6 text-primary animate-spin" />
 				) : status === 'error' ? (
 					<AlertCircle className="w-6 h-6 text-error opacity-60" />
+				) : article.source_url === 'raw.txt' ? (
+					<FileText className="w-6 h-6 opacity-30 group-hover:text-primary group-hover:opacity-100" />
 				) : (
 					<Globe className="w-6 h-6 opacity-30 group-hover:text-primary group-hover:opacity-100" />
 				)}
@@ -83,17 +85,21 @@ export function Article({ article }: Props) {
 					{status !== 'processing' && (
 						<div className="flex items-center text-[11px] opacity-70">
 							<span className="max-w-[100px] truncate">{article.source || '未知来源'}</span>
-							<span className="mx-1 opacity-20">|</span>
-							<a
-								href={article.source_url}
-								target="_blank"
-								rel="noopener noreferrer"
-								onClick={(e) => e.stopPropagation()}
-								className="font-medium hover:text-primary hover:underline transition-colors"
-								title="在新窗口打开原站"
-							>
-								跳转原站
-							</a>
+							{article.source_url !== 'raw.txt' && (
+								<>
+									<span className="mx-1 opacity-20">|</span>
+									<a
+										href={article.source_url}
+										target="_blank"
+										rel="noopener noreferrer"
+										onClick={(e) => e.stopPropagation()}
+										className="font-medium hover:text-primary hover:underline transition-colors"
+										title="在新窗口打开原站"
+									>
+										跳转原站
+									</a>
+								</>
+							)}
 						</div>
 					)}
 					{status === 'processing' && (
