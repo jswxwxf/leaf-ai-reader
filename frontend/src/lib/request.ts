@@ -35,9 +35,13 @@ export async function request<T>(
 		console.error(`[Request Error] ${input}:`, error);
 		
 		const message = error instanceof Error ? error.message : '发生了未知错误';
-		
+		const isNetworkError = error instanceof TypeError && 
+			(message.includes('fetch') || message.includes('NetworkError'));
+		const isAbortError = error instanceof Error && error.name === 'AbortError';
+
 		// 仅在非静默模式下弹出 alert
-		if (!options.silent) {
+		// 排除掉 AbortError (请求中止) 和网络请求基础错误 (Failed to fetch)
+		if (!options.silent && !isAbortError && !isNetworkError) {
 			alert(message);
 		}
 		
