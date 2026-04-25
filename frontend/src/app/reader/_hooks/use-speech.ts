@@ -14,7 +14,7 @@ function getTextWithMasking(node: Node): string {
   const sanitize = (str: string) =>
     str
       .replace(/https?:\/\//g, (m) => " ".repeat(m.length))
-      .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)/g, (m) => " ".repeat(m.length))
+      .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
       .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
       .replace(/["']/g, " ")
       .replaceAll("——", "--")
@@ -88,7 +88,7 @@ export function useSpeech() {
     // 1. 确定当前要读的句子（始终从 ref 读取最新值）
     const targetId = speechSentenceIdRef.current ?? "s-1";
     const container = contentRef?.current;
-    
+
     // 从当前阅读器容器内进行局部查找，避免 ID 冲突
     const el = container?.querySelector(`[id="${targetId}"]`) as HTMLElement;
 
@@ -156,7 +156,14 @@ export function useSpeech() {
       setSpeechSentenceId(nextId);
 
       if (speechMode === 'sentence') {
-        // 逐句模式：停止，但不手动释放锁
+        // 逐句模式：如果当前句太短（小于等于5个字）且不在段落末尾，则自动连读下一句
+        // const isShort = (el.textContent?.trim().length || 0) <= 5;
+        // const isLastInPara = isLastSentenceInParagraph(el as HTMLElement);
+
+        // if (isShort && !isLastInPara) {
+        //   setTimeout(play, 0);
+        //   return;
+        // }
         return;
       }
 
