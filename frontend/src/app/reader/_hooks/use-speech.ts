@@ -18,7 +18,7 @@ function getTextWithMasking(node: Node): string {
       .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
       .replace(/["']/g, " ")
       .replaceAll("——", "--")
-      .replaceAll("”“", "”，");
+      .replace(/”“|」「|》《/g, "”，");
 
   let text = "";
 
