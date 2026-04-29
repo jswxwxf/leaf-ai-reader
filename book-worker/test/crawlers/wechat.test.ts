@@ -201,6 +201,21 @@ describe('WeChat Crawler cleanHtml', () => {
         expect(cleaned).toBe(expected);
     });
 
+    it('应该打印嵌套加粗斜体片段清洗后的结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><em><strong><span><span>想住，</span></span></strong></em><em><strong><span><span>得</span></span></strong></em><em><strong><span><span>再</span></span></strong></em><em><strong><span><span>补几百几千</span></span></strong></em><span><em><strong><span>差价</span></strong></em></span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        console.log(cleaned);
+
+        expect(cleaned).toBe('<p><span class="sentence" id="s-1"><em><strong>想住，</strong></em><em><strong>得</strong></em><em><strong>再</strong></em><em><strong>补几百几千</strong></em><em><strong>差价</strong></em></span></p>');
+    });
+
 });
 
 describe('WeChat JS Content Extraction', () => {

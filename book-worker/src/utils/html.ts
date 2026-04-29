@@ -71,11 +71,19 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
 function refineHtml(html: string): string {
   if (!html) return '';
 
-  return html
-    // 1. Span 提升 (Span Promotion)
-    // 将 <b><span class="sentence" id="s-N">文本</span></b> 转换为 <span class="sentence" id="s-N"><b>文本</b></span>
-    .replace(/<(strong|b|em|i|del|a)([^>]*)>\s*<span class="sentence" id="s-(\d+)">(.*?)<\/span>\s*<\/\1>/gi, '<span class="sentence" id="s-$3"><$1$2>$4</$1></span>')
+  let refined = html;
+  let previousHtml: string;
 
+  do {
+    previousHtml = refined;
+    refined = refined
+      // 1. Span 提升 (Span Promotion)
+      // 将 <b><span class="sentence" id="s-N">文本</span></b> 转换为 <span class="sentence" id="s-N"><b>文本</b></span>
+      // 循环执行可处理 <em><strong><span>...</span></strong></em> 这类多层行内样式。
+      .replace(/<(strong|b|em|i|del|a)([^>]*)>\s*<span class="sentence" id="s-(\d+)">(.*?)<\/span>\s*<\/\1>/gi, '<span class="sentence" id="s-$3"><$1$2>$4</$1></span>');
+  } while (refined !== previousHtml);
+
+  return refined
     // 2. 句子缝合 (Sentence Healing)
     // transformNode 是按 text node 分句的；微信正文又常把同一句拆进多个行内标签。
     // 所以这里把“前一个 sentence span 还没到句末”的相邻 span 合并回去。
