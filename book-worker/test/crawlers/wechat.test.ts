@@ -187,6 +187,20 @@ describe('WeChat Crawler cleanHtml', () => {
         expect(cleaned).toContain('<span class="sentence" id="s-1">作为人类，我们本能的都想要寻求确定性，但是<b>绝对的确定性是不存在的</b>，我们终究得面对不确定。</span>');
     });
 
+    it('应该在加粗标签结束处正确断句', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><font><span><span>最近被热烈讨论的漫剧爆款</span></span></font><font><span><span>——</span></span></font><b><font><span><span>《菩提临世真人</span></span></font><font><span><span>AI版》《斩仙台下，我震惊了诸神》《西游，错把玉帝当亲爹》，我们既可以说是西游的再次胜利，也可以说是凡人的节节败退。</span></span></font></b><font><span><span>其对权力和背景的跪舔，已经到了疯魔的程度。那个</span></span></font><font><span><span>“我自横棍向天笑”的齐天大圣，已变成在菩提祖师怀里撒娇的嘤嘤怪。</span></span></font></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">最近被热烈讨论的漫剧爆款——<b>《菩提临世真人AI版》《斩仙台下，我震惊了诸神》《西游，错把玉帝当亲爹》，我们既可以说是西游的再次胜利，也可以说是凡人的节节败退。</b></span><span class="sentence" id="s-3">其对权力和背景的跪舔，已经到了疯魔的程度。</span><span class="sentence" id="s-4">那个“我自横棍向天笑”的齐天大圣，已变成在菩提祖师怀里撒娇的嘤嘤怪。</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
 });
 
 describe('WeChat JS Content Extraction', () => {
@@ -237,4 +251,3 @@ describe('WeChat JS Content Extraction', () => {
         expect(result?.content).not.toContain('JS内容');
     });
 });
-

@@ -77,9 +77,19 @@ function refineHtml(html: string): string {
     .replace(/<(strong|b|em|i|del|a)([^>]*)>\s*<span class="sentence" id="s-(\d+)">(.*?)<\/span>\s*<\/\1>/gi, '<span class="sentence" id="s-$3"><$1$2>$4</$1></span>')
 
     // 2. 句子缝合 (Sentence Healing)
-    // 关键修正：支持跨越 sup, sub 引文标签。
-    // 排除集包含：。！？；：!?…… 以及各类闭合引号/括号
-    .replace(/([^。！？；：!?……\.\!\\?\;”’』」》）〉】〗｝\"'\)\]\}：:])<\/span>(\s*(?:<br\s*\/?>|<sup>.*?<\/sup>|<sub>.*?<\/sub>|\s)*)<span class="sentence" id="s-\d+">/gi, '$1$2')
+    // transformNode 是按 text node 分句的；微信正文又常把同一句拆进多个行内标签。
+    // 所以这里把“前一个 sentence span 还没到句末”的相邻 span 合并回去。
+    //
+    // 注意：不要只看 `</span>` 前一个字符。
+    // 例如 `<span>...。</b></span><span>下一句</span>` 中，`</span>` 前是 `>`，
+    // 但真正的文本结尾是 `。`。因此正则只定位相邻 span，是否合并交给可见文本判断。
+    .replace(/<\/span>(\s*(?:<br\s*\/?>|<sup>.*?<\/sup>|<sub>.*?<\/sub>|\s)*)<span class="sentence" id="s-\d+">/gi, (match, separator, offset, fullHtml) => {
+      const htmlBeforeBoundary = fullHtml.slice(0, offset);
+      const previousSpanStart = htmlBeforeBoundary.lastIndexOf('<span class="sentence"');
+      const previousSentenceHtml = previousSpanStart >= 0 ? htmlBeforeBoundary.slice(previousSpanStart) : htmlBeforeBoundary;
+
+      return shouldHealSentence(previousSentenceHtml) ? separator : match;
+    })
 
     // 3. 清理空段落
     .replace(/<p>\s*(?:&nbsp;|&#160;|&#8203;|\u200B)*\s*<\/p>/gi, '')
@@ -96,6 +106,16 @@ function refineHtml(html: string): string {
     // 7. 将连续的 2 个或以上纯换行/空格压缩
     .replace(/\n{2,}/g, '\n')
     .trim();
+}
+
+function shouldHealSentence(sentenceHtml: string): boolean {
+  // 只看可见文本最后一个字符，避免被 </b>、</strong> 这类标签结尾误导。
+  const textContent = sentenceHtml.replace(/<[^>]*>/g, '').trim();
+  if (!textContent) return false;
+
+  const lastChar = Array.from(textContent).pop();
+  const sentenceBoundaryChars = '。！？；：!?….;”’』」》）〉】〗｝"\')]}:';
+  return !lastChar || !sentenceBoundaryChars.includes(lastChar);
 }
 
 function normalizeStructure(container: any) {
@@ -229,4 +249,3 @@ function transformNode(
   }
   return "";
 }
-
