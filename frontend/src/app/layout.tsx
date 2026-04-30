@@ -47,11 +47,14 @@ export default function RootLayout({
 	reader,
 }: Props) {
 	return (
-		<html lang="zh" data-theme="light" className={`${customFont.variable}`}>
+		<html lang="zh" data-theme="light">
 			<head>
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml"></link>
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable} ${customFont.className} antialiased`}>
+			<body
+				className={`${geistSans.variable} ${geistMono.variable} ${customFont.variable} antialiased`}
+				style={{ fontFamily: "var(--font-geist-sans), var(--font-custom), sans-serif" }}
+			>
 				<div>
 					{children}
 				</div>
