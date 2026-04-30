@@ -13,6 +13,8 @@ function getTextWithMasking(node: Node): string {
   // 定义统一的清洗函数，消除重复的正则逻辑并保持字符长度一致
   const sanitize = (str: string) =>
     str
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
       .replace(/https?:\/\//g, (m) => " ".repeat(m.length))
       .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
       .replace(/([0-9])\uFE0F?\u20E3/g, (m, digit: string) => digit + " ".repeat(m.length - digit.length))
@@ -121,6 +123,7 @@ export function useSpeech() {
     // 该函数保证了 1:1 的替换比例，确保 onboundary 的 charIndex 获取到精准的高亮坐标
     const processedText = getTextWithMasking(el);
     const utterance = new SpeechSynthesisUtterance(processedText);
+    utterance.lang = "zh-CN";
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
     utterance.rate = isSafari ? 1.3 : 2;
