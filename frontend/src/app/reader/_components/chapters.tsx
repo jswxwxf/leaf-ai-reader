@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useReaderStore } from "../_store/store";
@@ -55,6 +55,7 @@ const Chapters = ({
                 href={`/reader?book_id=${bookId}&path=${encodeURIComponent(item.path)}`}
                 scroll={false}
                 prefetch={false}
+                data-active-chapter={isActive || undefined}
                 className={`cursor-pointer ${isActive ? "bg-primary/10 text-primary font-medium" : ""}`}
                 onClick={() => setChaptersOpen(false)}
                 ref={(el) => {
@@ -77,26 +78,39 @@ const Chapters = ({
  * 阅读器章节目录侧边栏组件
  */
 export function ChaptersWrapper() {
-  const { data, isContentLoading, setContent, setSummaries, setIsContentLoading, fetchBookChapter } = useReaderStore(
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const { data, isContentLoading, fetchBookChapter } = useReaderStore(
     useShallow((state) => ({
       data: state.data,
       isContentLoading: state.isContentLoading,
-      setContent: state.setContent,
-      setSummaries: state.setSummaries,
-      setIsContentLoading: state.setIsContentLoading,
       fetchBookChapter: state.fetchBookChapter,
     }))
   );
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   // 从 URL 中获取当前的 path
   const pathFromUrl = searchParams.get("path");
   const bookId = (data as BookData)?.id;
   const chapters = (data as BookData)?.chapters || [];
 
-  // 用于在 fetchData 没改变 Store 时（如处理中）强制触发组件重渲染，从而维持 usePolling 的后续计时
-  const [pollTick, setPollTick] = useState(0);
+  const scrollActiveChapterIntoView = () => {
+    requestAnimationFrame(() => {
+      const activeChapter = wrapperRef.current?.querySelector('[data-active-chapter="true"]');
+      activeChapter?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        scrollActiveChapterIntoView();
+      }
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   // 1. 挂载轮询逻辑
   const pollItems = [{ status: isContentLoading ? 'processing' : 'ready' }];
@@ -106,7 +120,6 @@ export function ChaptersWrapper() {
     async () => {
       if (bookId && pathFromUrl) {
         await fetchBookChapter(bookId, pathFromUrl);
-        setPollTick(t => t + 1);
       }
     }
   );
@@ -124,7 +137,7 @@ export function ChaptersWrapper() {
   if (!bookId) return null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-base-100 border-r border-base-300">
+    <div ref={wrapperRef} className="flex flex-col h-full overflow-hidden bg-base-100 border-r border-base-300">
       <div className="p-4 flex-none border-b border-base-200">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Menu className="w-4 h-4" /> 章节目录
@@ -146,7 +159,7 @@ export function ChaptersWrapper() {
 }
 
 /**
- * 移动端目录抽屉
+ * lg 以下使用的目录抽屉
  */
 export function MobileChaptersDrawer() {
   const { isChaptersOpen, setChaptersOpen } = useReaderStore(
@@ -157,7 +170,7 @@ export function MobileChaptersDrawer() {
   );
 
   return (
-    <div className={`fixed inset-0 z-100 md:hidden transition-all duration-300 ${isChaptersOpen ? "visible" : "invisible pointer-events-none"}`}>
+    <div className={`fixed inset-0 z-100 lg:hidden transition-all duration-300 ${isChaptersOpen ? "visible" : "invisible pointer-events-none"}`}>
       {/* 遮罩层 */}
       <div
         className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isChaptersOpen ? "opacity-100" : "opacity-0"}`}

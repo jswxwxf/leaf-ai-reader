@@ -83,7 +83,7 @@ function refineHtml(html: string): string {
       .replace(/<(strong|b|em|i|del|a)([^>]*)>\s*<span class="sentence" id="s-(\d+)">(.*?)<\/span>\s*<\/\1>/gi, '<span class="sentence" id="s-$3"><$1$2>$4</$1></span>');
   } while (refined !== previousHtml);
 
-  return refined
+  const polished = refined
     // 2. 句子缝合 (Sentence Healing)
     // transformNode 是按 text node 分句的；微信正文又常把同一句拆进多个行内标签。
     // 所以这里把“前一个 sentence span 还没到句末”的相邻 span 合并回去。
@@ -114,6 +114,8 @@ function refineHtml(html: string): string {
     // 7. 将连续的 2 个或以上纯换行/空格压缩
     .replace(/\n{2,}/g, '\n')
     .trim();
+
+  return balanceSentenceInlineTags(polished);
 }
 
 function shouldHealSentence(sentenceHtml: string): boolean {
@@ -124,6 +126,55 @@ function shouldHealSentence(sentenceHtml: string): boolean {
   const lastChar = Array.from(textContent).pop();
   const sentenceBoundaryChars = '。！？；：!?….;”’』」》）〉】〗｝"\')]}:';
   return !lastChar || !sentenceBoundaryChars.includes(lastChar);
+}
+
+function balanceSentenceInlineTags(html: string): string {
+  const balanceBlock = (blockHtml: string) => {
+    const activeTags: string[] = [];
+
+    return blockHtml.replace(/<span class="sentence" id="s-(\d+)">([\s\S]*?)<\/span>/g, (_match, id, content) => {
+      const balancedContent = balanceSentenceContent(content, activeTags);
+      return `<span class="sentence" id="s-${id}">${balancedContent}</span>`;
+    });
+  };
+
+  return html.replace(/<(p|h[1-6]|li|blockquote|td|th)>([\s\S]*?)<\/\1>/gi, (_match, tag, content) => {
+    return `<${tag}>${balanceBlock(content)}</${tag}>`;
+  });
+}
+
+function balanceSentenceContent(content: string, activeTags: string[]): string {
+  const tagPattern = /<\/?(strong|b|em|i|del)\b[^>]*>/gi;
+  let output = activeTags.map(tag => `<${tag}>`).join('');
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tagPattern.exec(content)) !== null) {
+    output += content.slice(lastIndex, match.index);
+
+    const rawTag = match[0];
+    const tagName = match[1].toLowerCase();
+
+    if (rawTag.startsWith('</')) {
+      const lastOpenIndex = activeTags.lastIndexOf(tagName);
+      if (lastOpenIndex >= 0) {
+        while (activeTags.length > lastOpenIndex) {
+          const closedTag = activeTags.pop();
+          if (closedTag) output += `</${closedTag}>`;
+        }
+      }
+    } else {
+      activeTags.push(tagName);
+      output += rawTag;
+    }
+
+    lastIndex = tagPattern.lastIndex;
+  }
+
+  output += content.slice(lastIndex);
+  output += [...activeTags].reverse().map(tag => `</${tag}>`).join('');
+
+  return output;
 }
 
 function normalizeStructure(container: any) {

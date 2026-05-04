@@ -80,7 +80,7 @@ function SummaryItem({
     <div
       ref={ref}
       onClick={onClick}
-      className={`card flex-none w-[25vw] lg:w-full snap-center cursor-pointer transition-all duration-300 border ${isActive
+      className={`card flex-none w-[25vw] md:w-full snap-center cursor-pointer transition-all duration-300 border ${isActive
         ? "bg-primary/10 border-primary shadow-md translate-x-1"
         : "bg-base-200 border-base-300/50 hover:border-base-300 hover:bg-base-200/80"
         }`}
@@ -126,8 +126,8 @@ export function Summary() {
   };
 
   return (
-    <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 lg:w-80 lg:h-full lg:border-l lg:border-b-0 lg:order-0">
-      <div className="hidden lg:flex p-4 flex-none border-b border-base-200 items-center justify-between">
+    <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 md:w-80 md:h-full md:border-l md:border-b-0 md:order-0">
+      <div className="hidden md:flex p-4 flex-none border-b border-base-200 items-center justify-between">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Star className="w-4 h-4 text-warning" /> 摘要
         </h2>
@@ -142,7 +142,7 @@ export function Summary() {
           </button>
         )}
       </div>
-      <div className="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-y-auto p-3 space-x-3 lg:space-x-0 space-y-0 lg:space-y-3 custom-scrollbar snap-x snap-mandatory">
+      <div className="flex-1 flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto p-3 space-x-3 md:space-x-0 space-y-0 md:space-y-3 custom-scrollbar snap-x snap-mandatory">
         {summaries.length > 0 ? (
           summaries.map((item, index) => {
             const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
@@ -166,16 +166,16 @@ export function Summary() {
               <button
                 onClick={handleSummarize}
                 disabled={isSummarizing}
-                className={`btn btn-primary shadow-lg ${isSummarizing ? 'loading' : 'btn-md w-full lg:btn-sm'}`}
+                className={`btn btn-primary shadow-lg ${isSummarizing ? 'loading' : 'btn-md w-full md:btn-sm'}`}
               >
                 {isSummarizing ? '正在生成' : '生成摘要'}
               </button>
             )}
           </div>
         )}
-        {/* 底部留白区域，点击可触发播放/暂停，仅在大屏垂直布局时有效 */}
+        {/* 底部留白区域，点击可触发播放/暂停，仅在 md 以上垂直布局时有效 */}
         <div
-          className="flex-1 hidden lg:block cursor-pointer"
+          className="flex-1 hidden md:block cursor-pointer"
           onClick={handleToggle}
           title={isPlaying ? "点击停止" : "点击播放"}
         />

@@ -216,6 +216,30 @@ describe('WeChat Crawler cleanHtml', () => {
         expect(cleaned).toBe('<p><span class="sentence" id="s-1"><em><strong>想住，</strong></em><em><strong>得</strong></em><em><strong>再</strong></em><em><strong>补几百几千</strong></em><em><strong>差价</strong></em></span></p>');
     });
 
+    it('应该打印嵌套 strong 微信片段清洗后的结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><span><span>自从2020年的</span></span><strong><span><span>《亚伯拉罕协议》签署以来，阿联酋</span></span><strong><span><span>成为26年来首个与以色列关系正常化的阿拉伯国家。两个国家都有共同的敌人，于是迅速走近。伊朗攻击阿联酋后，阿联酋总统</span></span></strong><span><span>MBZ迅速致电以色列总理内塔尼亚胡，希望获得以色列的支持。内塔尼亚胡一声令下，</span></span><span><span><span><span>一套“铁穹”防空系统被部署到了阿联酋。一整套电池、拦截弹和数十名以色列国防军操作员悄然进驻阿布扎比。这也是以色列首次向阿拉伯国家派出作战部队。</span></span></span></span></strong></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        expect(cleaned).toContain('class="sentence"');
+        expect(cleaned).toContain('自从2020年的');
+        expect(cleaned).toContain('这也是以色列首次向阿拉伯国家派出作战部队。');
+
+        const sentenceContents = Array.from(cleaned.matchAll(/<span class="sentence" id="s-\d+">([\s\S]*?)<\/span>/g))
+            .map(match => match[1]);
+        expect(sentenceContents.length).toBeGreaterThan(0);
+        sentenceContents.forEach(content => {
+            const openStrongCount = content.match(/<strong>/g)?.length ?? 0;
+            const closeStrongCount = content.match(/<\/strong>/g)?.length ?? 0;
+            expect(openStrongCount).toBe(closeStrongCount);
+        });
+    });
+
 });
 
 describe('WeChat JS Content Extraction', () => {

@@ -44,10 +44,10 @@ export function Header({ isPopup = true }: Props) {
 				</button>
 				{/* )} */}
 
-				{/* 移动端目录切换按钮：常驻，只要是书籍模式就显示 */}
+				{/* lg 以下目录以抽屉呈现，因此按钮常驻；lg 起显示左侧章节栏后隐藏 */}
 				{isBookMode && (
 					<button
-						className="btn btn-ghost btn-circle md:hidden active:scale-90 transition-all"
+						className="btn btn-ghost btn-circle lg:hidden active:scale-90 transition-all"
 						onClick={() => setChaptersOpen(true)}
 						title="打开目录"
 					>

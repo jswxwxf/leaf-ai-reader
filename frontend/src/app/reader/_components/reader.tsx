@@ -82,15 +82,15 @@ export async function Reader({ isPopup = true, article_id, book_id, path, speech
 			<div className="flex flex-col h-dvh bg-base-100 text-base-content overflow-hidden relative pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
 				<Header isPopup={isPopup} />
 
-				{/* 中间主要区域 */}
-				<main className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-					{/* 摘要区域：通过内部的 order-first 实现在中窄屏居顶，在大屏受限于容器排布归位 */}
+				{/* 中间主要区域：小屏上下排，md 起正文和摘要两栏，lg 起增加章节栏 */}
+				<main className="flex flex-col md:flex-row flex-1 overflow-hidden">
+					{/* 摘要区域：小屏在顶部横向滚动，md 起固定为右侧栏 */}
 					<Summary />
 
-					{/* 章节+正文容器：在中、大屏下始终保持 flex-row 并排 */}
-					<div className="flex flex-1 flex-row overflow-hidden lg:order-first">
+					{/* 章节+正文容器：md 起排在摘要左侧；章节目录只在 lg 起作为常驻侧栏显示 */}
+					<div className="flex flex-1 flex-row overflow-hidden md:order-first">
 						{isBookMode && (
-							<aside className="w-64 hidden md:flex flex-col h-full flex-none">
+							<aside className="w-64 hidden lg:flex flex-col h-full flex-none">
 								<ChaptersWrapper />
 							</aside>
 						)}
@@ -98,7 +98,7 @@ export async function Reader({ isPopup = true, article_id, book_id, path, speech
 					</div>
 				</main>
 
-				{/* 移动端专用挂件 */}
+				{/* lg 以下使用抽屉目录，避免中等屏竖屏被章节栏挤占 */}
 				{isBookMode && <MobileChaptersDrawer />}
 
 				<Footer />

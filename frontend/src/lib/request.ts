@@ -1,6 +1,8 @@
+import { showToast } from "@/app/global-toasts";
+
 /**
  * request 是对 fetch 的透明封装
- * 仅添加了：判断 response.ok、解析 JSON 和统一的错误 alert
+ * 仅添加了：判断 response.ok、解析 JSON 和统一的错误 toast
  */
 export async function request<T>(
 	input: RequestInfo | URL, 
@@ -39,10 +41,10 @@ export async function request<T>(
 			(message.includes('fetch') || message.includes('NetworkError'));
 		const isAbortError = error instanceof Error && error.name === 'AbortError';
 
-		// 仅在非静默模式下弹出 alert
+		// 仅在非静默模式下显示 toast
 		// 排除掉 AbortError (请求中止) 和网络请求基础错误 (Failed to fetch)
 		if (!options.silent && !isAbortError && !isNetworkError) {
-			alert(message);
+			showToast({ type: "error", message });
 		}
 		
 		// 将错误重新抛出，让调用方配合 finally 自动处理
