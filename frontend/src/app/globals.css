@@ -2,3 +2,7 @@
 @plugin "daisyui";
 @plugin "@tailwindcss/typography";
 @plugin "@tailwindcss/forms";
+
+@theme {
+  --breakpoint-compact: 560px;
+}

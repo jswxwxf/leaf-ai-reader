@@ -82,13 +82,13 @@ export async function Reader({ isPopup = true, article_id, book_id, path, speech
 			<div className="flex flex-col h-dvh bg-base-100 text-base-content overflow-hidden relative pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
 				<Header isPopup={isPopup} />
 
-				{/* 中间主要区域：小屏上下排，md 起正文和摘要两栏，lg 起增加章节栏 */}
-				<main className="flex flex-col md:flex-row flex-1 overflow-hidden">
-					{/* 摘要区域：小屏在顶部横向滚动，md 起固定为右侧栏 */}
+				{/* 中间主要区域：小屏上下排，compact 起正文和摘要两栏，lg 起增加章节栏 */}
+				<main className="flex flex-col compact:flex-row flex-1 overflow-hidden">
+					{/* 摘要区域：小屏在顶部横向滚动，compact 起固定为右侧栏 */}
 					<Summary />
 
-					{/* 章节+正文容器：md 起排在摘要左侧；章节目录只在 lg 起作为常驻侧栏显示 */}
-					<div className="flex flex-1 flex-row overflow-hidden md:order-first">
+					{/* 章节+正文容器：compact 起排在摘要左侧；章节目录只在 lg 起作为常驻侧栏显示 */}
+					<div className="flex flex-1 flex-row overflow-hidden compact:order-first">
 						{isBookMode && (
 							<aside className="w-64 hidden lg:flex flex-col h-full flex-none">
 								<ChaptersWrapper />
