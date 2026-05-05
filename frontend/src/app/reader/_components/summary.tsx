@@ -126,7 +126,7 @@ export function Summary() {
   };
 
   return (
-    <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 compact:w-56 md:w-80 compact:h-full compact:border-l compact:border-b-0 compact:order-0">
+    <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 compact:w-48 md:w-80 compact:h-full compact:border-l compact:border-b-0 compact:order-0">
       <div className="hidden compact:flex p-4 flex-none border-b border-base-200 items-center justify-between">
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Star className="w-4 h-4 text-warning" /> 摘要

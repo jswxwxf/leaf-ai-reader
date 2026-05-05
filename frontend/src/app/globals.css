@@ -4,5 +4,5 @@
 @plugin "@tailwindcss/forms";
 
 @theme {
-  --breakpoint-compact: 560px;
+  --breakpoint-compact: 450px;
 }
