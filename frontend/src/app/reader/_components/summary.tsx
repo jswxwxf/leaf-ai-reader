@@ -8,6 +8,7 @@ import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { useSpeech } from "../_hooks/use-speech";
 import { useEffect, useRef, useState } from "react";
 import { request } from "@/lib/request";
+import { SpeechBox } from "./speech-box";
 
 /**
  * 封装摘要重刷逻辑的 Hook
@@ -147,12 +148,13 @@ export function Summary() {
           summaries.map((item, index) => {
             const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
             return (
-              <SummaryItem
-                key={index}
-                item={item}
-                isActive={isActive}
-                onClick={() => jumpToSentence(item.start_sId)}
-              />
+              <SpeechBox key={index}>
+                <SummaryItem
+                  item={item}
+                  isActive={isActive}
+                  onClick={() => jumpToSentence(item.start_sId)}
+                />
+              </SpeechBox>
             );
           })
         ) : (
