@@ -32,6 +32,15 @@ describe('WeChat Sentence Splitting', () => {
         expect(result).toEqual(['K型分化的问题，以前讨论过多次，见《孙立平：一个字母，象征一个时代》。']);
     });
 
+    it('应该在句号加右括号后紧接正文时断句', () => {
+        const text = '辛劳只是一个结果，是“被动勤劳”而不是“主动勤劳”。）即便在2026年前三个月';
+        const result = splitSentences(text);
+        expect(result).toEqual([
+            '辛劳只是一个结果，是“被动勤劳”而不是“主动勤劳”。）',
+            '即便在2026年前三个月'
+        ]);
+    });
+
     it('应该正确处理中文分号断句', () => {
         const text = '第一句；第二句。';
         const result = splitSentences(text);
@@ -210,8 +219,6 @@ describe('WeChat Crawler cleanHtml', () => {
         const { document } = parseHTML(inputHtml);
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
-
-        console.log(cleaned);
 
         expect(cleaned).toBe('<p><span class="sentence" id="s-1"><em><strong>想住，</strong></em><em><strong>得</strong></em><em><strong>再</strong></em><em><strong>补几百几千</strong></em><em><strong>差价</strong></em></span></p>');
     });

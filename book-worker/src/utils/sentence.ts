@@ -33,7 +33,7 @@ export function splitSentences(text: string): string[] {
 
 		// 检查是否遇到结束标点
 		if (terminators.includes(char)) {
-			// 特殊处理：如果处于书名号或各种括号内部，且当前是冒号，则不断句
+			// 特殊处理：如果处于成对包裹符内部，且当前是冒号，则不断句
 			if (depth > 0 && char === '：') {
 				continue;
 			}
@@ -67,19 +67,19 @@ export function splitSentences(text: string): string[] {
 				current = "";
 			} else {
 				// 场景 B/C: 后面紧跟汉字或其他非空字符
-				// 为了避免在书名号（《》）或括号（（））内部被终结符意外切断
-				const nonSplittableClosers = "》）〕〉】〗｝)]}"; 
+				// 为了避免在书名号等标题/引用包裹符内部被终结符意外切断
+				const nonSplittableClosers = "》〕〉】〗｝"; 
 				const lastCloser = swallowedAnyCloser ? text[i] : null;
-				const isInsideTitleOrBrackets = lastCloser && nonSplittableClosers.includes(lastCloser);
+				const isInsideTitleOrQuotedRange = lastCloser && nonSplittableClosers.includes(lastCloser);
 
-				if (!isInsideTitleOrBrackets) {
+				if (!isInsideTitleOrQuotedRange) {
 					// 如果没吞掉闭合符，或者是引号类闭合符，则断句
 					if (current.trim()) {
 						sentences.push(current.trim());
 					}
 					current = "";
 				} else {
-					// 书名号、括号等特殊情况 -> 保持不断句
+					// 书名号等特殊情况 -> 保持不断句
 					continue;
 				}
 			}
@@ -93,4 +93,3 @@ export function splitSentences(text: string): string[] {
 
 	return sentences.filter(Boolean);
 }
-
