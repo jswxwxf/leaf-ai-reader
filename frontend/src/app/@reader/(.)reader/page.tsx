@@ -1,5 +1,6 @@
 import { Reader } from "@/app/reader/_components/reader";
 import { SpeechMode } from "@/app/reader/_store/store";
+import { normalizePathKey } from "@/app/reader/_utils/utils";
 
 type Props = {
 	searchParams: Promise<{
@@ -16,12 +17,13 @@ type Props = {
  */
 export default async function ReaderInterceptPage({ searchParams }: Props) {
 	const { article_id, book_id, path, speechMode } = await searchParams;
+	const key = `${book_id ?? ''}-${article_id ?? ''}-${normalizePathKey(path)}`;
 
 	return (
 		<div className="fixed inset-0 z-40 bg-base-100 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
 			{/* 拦截路由模式下，阅读器作为覆盖层出现 */}
 			<Reader 
-				key={`${book_id}-${article_id}-${path}`} 
+				key={key} 
 				isPopup={true} 
 				article_id={article_id} 
 				book_id={book_id} 

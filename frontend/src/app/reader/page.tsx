@@ -1,5 +1,6 @@
 import { Reader } from "./_components/reader";
 import { SpeechMode } from "./_store/store";
+import { normalizePathKey } from "./_utils/utils";
 
 type Props = {
 	searchParams: Promise<{
@@ -12,10 +13,11 @@ type Props = {
 
 export default async function ReaderPage({ searchParams }: Props) {
 	const { article_id, book_id, path, speechMode } = await searchParams;
+	const key = `${book_id ?? ''}-${article_id ?? ''}-${normalizePathKey(path)}`;
 
 	return (
 		<Reader 
-			key={`${book_id}-${article_id}-${path}`}
+			key={key}
 			isPopup={false} 
 			article_id={article_id} 
 			book_id={book_id} 

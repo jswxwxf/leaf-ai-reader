@@ -8,6 +8,7 @@ import { useReaderImages } from "../_hooks/use-reader-images";
 import { Scroller } from "./scroller";
 import styles from "./content.module.css";
 import { stopSpeech } from "../_hooks/use-speech";
+import { normalizePathKey } from "../_utils/utils";
 
 /**
  * 阅读器正文区域组件
@@ -30,6 +31,7 @@ export function Content() {
   );
   // 直接持有 store 实例（不订阅），用于事件处理器或 Effect 中一次性读取/更新状态
   const rawStore = useReaderStoreRaw();
+  const key = normalizePathKey(path);
 
   // 组件挂载时，将容器引用同步到 Store 中供其它 Hook/组件使用
   useEffect(() => {
@@ -108,7 +110,7 @@ export function Content() {
       ) : (
         <article
           id="leaf-reader-content"
-          key={path || 'initial'}
+          key={key}
           className="max-w-2xl lg:max-w-3xl mx-auto prose prose-neutral lg:prose-lg py-10 pb-[20vh] cursor-pointer"
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: content }}

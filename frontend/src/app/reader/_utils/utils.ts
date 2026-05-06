@@ -35,3 +35,13 @@ export const isSafari =
  * 异步延迟函数
  */
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function normalizePathKey(path?: string | null) {
+  if (!path) return 'initial';
+
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
