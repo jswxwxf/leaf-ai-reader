@@ -23,10 +23,22 @@
   max-width: 100%;
   height: auto;
   border-radius: var(--rounded-btn, 0.5rem);
-  margin: 1.5rem auto;
-  display: block;
   background-color: color-mix(in oklch, var(--fallback-bc,oklch(var(--bc)/1)), transparent 92%);
-  min-height: 200px; 
+}
+
+.reader_content :global(img[data-reader-image="block"]) {
+  display: block;
+  margin: 1.5rem auto;
+}
+
+.reader_content :global(img[data-reader-image="inline"]) {
+  display: inline-block;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.reader_content :global(img[data-reader-image="block"]:not([data-loaded="true"])) {
+  min-height: 200px;
 }
 
 /* OCR 按钮容器与样式 (PRD-015) */

@@ -4,9 +4,6 @@ import { showAlert } from '../../global-modals';
 import { showLoading, hideLoading } from '../../full-screen-loading';
 import styles from '../_components/content.module.css';
 
-/**
- * --- 工具函数 1: 解析图片来源参数 ---
- */
 const parseImageSource = (src: string) => {
   try {
     const url = new URL(src, window.location.origin);
@@ -24,9 +21,6 @@ const parseImageSource = (src: string) => {
   }
 };
 
-/**
- * --- 工具函数 2: 处理 OCR 识别请求 ---
- */
 const handleOCR = async (img: HTMLImageElement) => {
   const src = img.getAttribute('src');
   if (!src) return;
@@ -55,15 +49,12 @@ const handleOCR = async (img: HTMLImageElement) => {
   }
 };
 
-/**
- * --- 工具函数 3: 创建 OCR 悬浮按钮元素 ---
- */
 const createOCRButton = (img: HTMLImageElement) => {
   const btn = document.createElement('button');
   btn.className = styles.ocr_button;
   btn.setAttribute('type', 'button');
   btn.setAttribute('aria-label', '提取图片文字');
-  
+
   btn.innerHTML = `
     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
       <path d="M7 3H4a1 1 0 0 0-1 1v3"></path>
@@ -81,15 +72,51 @@ const createOCRButton = (img: HTMLImageElement) => {
     e.stopPropagation();
     handleOCR(img);
   };
-  
+
   return btn;
 };
 
-/**
- * --- 工具函数 4: 为单个图片元素执行 DOM 装饰逻辑 ---
- */
+const markImageLoadState = (img: HTMLImageElement) => {
+  if (img.dataset.loaded === 'true') return;
+
+  if (img.complete) {
+    img.dataset.loaded = 'true';
+    return;
+  }
+
+  const markLoaded = () => {
+    img.dataset.loaded = 'true';
+  };
+
+  img.addEventListener('load', markLoaded, { once: true });
+  img.addEventListener('error', markLoaded, { once: true });
+};
+
+const isStandaloneImage = (img: HTMLImageElement) => {
+  const parent = img.parentElement;
+  if (!parent) return true;
+
+  return Array.from(parent.childNodes).every((node) => {
+    if (node === img) return true;
+    if (node.nodeType === Node.TEXT_NODE) return !node.textContent?.trim();
+    if (node.nodeType !== Node.ELEMENT_NODE) return true;
+
+    const element = node as HTMLElement;
+    return element.tagName === 'BR' || element.tagName === 'IMG';
+  });
+};
+
 const decorateImage = (img: HTMLImageElement) => {
+  markImageLoadState(img);
+
   if (img.parentElement?.classList.contains(styles.image_wrapper)) return;
+
+  if (!isStandaloneImage(img)) {
+    img.dataset.readerImage = 'inline';
+    return;
+  }
+
+  img.dataset.readerImage = 'block';
 
   const wrapper = document.createElement('div');
   wrapper.className = styles.image_wrapper;
@@ -102,31 +129,25 @@ const decorateImage = (img: HTMLImageElement) => {
   }
 };
 
-/**
- * 自动识别图片并注入 OCR 悬浮按钮的 Hook
- * 采用 MutationObserver 模式，实现对 DOM 变化的实时监听，防止按钮丢失。
- */
-export function useOCR(contentRef: RefObject<HTMLDivElement | null>, options: { articleId?: string; bookId?: string }) {
+export function useReaderImages(
+  contentRef: RefObject<HTMLDivElement | null>,
+  options: { articleId?: string; bookId?: string }
+) {
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
 
-    // 1. 初次执行
-    const images = container.querySelectorAll('img');
-    images.forEach(decorateImage);
+    const decorateImages = () => {
+      const images = container.querySelectorAll('img');
+      images.forEach(decorateImage);
+    };
 
-    // 2. 建立观察者，监听子树变动（如 dangerouslySetInnerHTML 引起的重排）
+    decorateImages();
+
     const observer = new MutationObserver((mutations) => {
-      let needsRescan = false;
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          needsRescan = true;
-          break;
-        }
-      }
+      const needsRescan = mutations.some((mutation) => mutation.type === 'childList');
       if (needsRescan) {
-        const currentImages = container.querySelectorAll('img');
-        currentImages.forEach(decorateImage);
+        decorateImages();
       }
     });
 
@@ -136,5 +157,5 @@ export function useOCR(contentRef: RefObject<HTMLDivElement | null>, options: { 
     });
 
     return () => observer.disconnect();
-  }, [options.articleId, options.bookId]);
+  }, [contentRef, options.articleId, options.bookId]);
 }

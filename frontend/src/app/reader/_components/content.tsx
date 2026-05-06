@@ -4,17 +4,15 @@ import { useEffect, useRef } from "react";
 import { useReaderStore, useReaderStoreRaw } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { useScrollspy } from "../_hooks/use-scrollspy";
-import { useOCR } from "../_hooks/use-ocr";
+import { useReaderImages } from "../_hooks/use-reader-images";
 import { Scroller } from "./scroller";
 import styles from "./content.module.css";
 import { stopSpeech } from "../_hooks/use-speech";
 
-interface Props { }
-
 /**
  * 阅读器正文区域组件
  */
-export function Content({ }: Props) {
+export function Content() {
   // 定义容器引用，用于将 DOM 作用域限制在当前组件内
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -60,8 +58,8 @@ export function Content({ }: Props) {
   // 激活滚动监听
   useScrollspy();
 
-  // 激活图片 OCR 装饰器 (PRD-015)
-  useOCR(sectionRef, { 
+  // 激活阅读器图片增强：加载占位与 OCR 装饰器
+  useReaderImages(sectionRef, {
     articleId: article_id ?? undefined, 
     bookId: book_id ?? undefined 
   });
