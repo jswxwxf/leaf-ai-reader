@@ -24,7 +24,7 @@ export function SpeechBox({ children }: Props) {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
-    utterance.rate = isSafari ? 1.3 : 2;
+    utterance.rate = isSafari ? 1.32 : 2;
     window.speechSynthesis.speak(utterance);
   };
 

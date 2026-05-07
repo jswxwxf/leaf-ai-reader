@@ -1,6 +1,6 @@
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
-import { scrollIntoViewIfNeeded, isSafari, delay } from "../_utils/utils";
+import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
 import { useEffect, useRef } from "react";
 import { useWakeLock } from "./use-wake-lock";
@@ -77,6 +77,7 @@ export function useSpeech() {
 
   const { highlightWord, clearHighlight } = useWordHighlight();
   const { requestWakeLock, releaseWakeLock } = useWakeLock(isPlaying);
+  const speechSessionRef = useRef(0);
 
   // 用 ref 持有最新值，确保 onend 等异步回调中读取不受闭包陈旧值影响
   const speechSentenceIdRef = useRef(speechSentenceId);
@@ -113,10 +114,11 @@ export function useSpeech() {
     // 2. 停止当前正在进行的朗读并清理旧高亮
     window.speechSynthesis.cancel();
     // iOS Safari 的 cancel 是异步的，留出清理时间避免竞争导致随机跳过字符或句子
-    if (isSafari) await delay(50);
+    // if (isSafari) await delay(50);
 
     setIsPlaying(true);
     clearHighlight();
+    const sessionId = (speechSessionRef.current += 1);
 
     // 3. 创建朗读任务
     // 使用 getTextWithMasking 自动完成引文静音、Emoji 过滤及标点归一化
@@ -126,10 +128,11 @@ export function useSpeech() {
     utterance.lang = "zh-CN";
 
     // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
-    utterance.rate = isSafari ? 1.3 : 2;
+    utterance.rate = isSafari ? 1.32 : 2;
 
     // 3.1 词级高亮逻辑 (通过抽取出的 hook 处理)
     utterance.onboundary = (event) => {
+      if (speechSessionRef.current !== sessionId) return;
       if (event.name !== 'word') return;
       // @ts-ignore
       highlightWord(el, event.charIndex, event.charLength);
@@ -137,6 +140,8 @@ export function useSpeech() {
 
     // 4. 当这一句读完时，根据朗读模式决定是否继续播放下一句
     utterance.onend = () => {
+      if (speechSessionRef.current !== sessionId) return;
+
       setIsPlaying(false);
       clearHighlight();
 
@@ -199,6 +204,7 @@ export function useSpeech() {
   };
 
   const stop = () => {
+    speechSessionRef.current += 1;
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     clearHighlight();
