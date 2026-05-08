@@ -53,9 +53,19 @@ function normalizeSummaries(summaries: AISummary[]): AISummary[] {
   if (!summaries || !Array.isArray(summaries)) return [];
 
   return summaries
+    // 0. 规范化 start_sId：AI 有时会返回 "[s-123]"、"第 s-123 句" 等变体。
+    .map((item) => {
+      const idNumber = item.start_sId?.match(/\d+/)?.[0];
+      return {
+        ...item,
+        start_sId: idNumber ? `s-${idNumber}` : ''
+      };
+    })
     // 1. 去重：防止 AI 产生重复的总结项
     .filter((item, index, self) =>
-      item.summary && index === self.findIndex((t) => t.summary === item.summary)
+      item.summary &&
+      item.start_sId &&
+      index === self.findIndex((t) => t.summary === item.summary)
     )
     // 2. 排序：按 start_sId 提取的数字进行升序排列，确保与原文顺序一致
     .sort((a, b) => {

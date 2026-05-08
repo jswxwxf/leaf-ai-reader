@@ -13,8 +13,8 @@ export function useSummaryHighlight(summaries: AISummary[] | undefined) {
         
         if (allSIds.length === 0) return '';
 
-        // 生成针对 ID 的选择器列表
-        const selectors = allSIds.map(id => `#leaf-reader-content #${id}`).join(', ');
+        // 生成针对 ID 的选择器列表。CSS.escape 用于兜住历史摘要里可能存在的脏 ID。
+        const selectors = allSIds.map(id => `#leaf-reader-content #${CSS.escape(id)}`).join(', ');
         
         return `
             ${selectors} {
