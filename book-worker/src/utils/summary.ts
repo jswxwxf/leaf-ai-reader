@@ -43,6 +43,9 @@ export interface AISummaryResponse {
   summaries: AISummary[];
 }
 
+const MAX_SAFE_CHARS = 10000;
+const MAX_SUMMARY_CHUNKS = 8;
+
 /**
  * 对 AI 生成的摘要进行规范化处理：去重 + 排序
  */
@@ -60,6 +63,44 @@ function normalizeSummaries(summaries: AISummary[]): AISummary[] {
       const bId = parseInt(b.start_sId?.replace(/[^\d]/g, '') || '0', 10);
       return aId - bId;
     });
+}
+
+/**
+ * 按 [s-ID] 句子边界切分，避免把一句话拆到两个 AI 请求里。
+ */
+function splitSummaryChunks(content: string, maxChars: number): string[] {
+  const sentencePattern = /(?:^|\s)(?:#\s*)?\[s-\d+\][\s\S]*?(?=\s(?:#\s*)?\[s-\d+\]|$)/g;
+  const sentences = content.match(sentencePattern)?.map((item) => item.trim()).filter(Boolean);
+
+  if (!sentences || sentences.length === 0) {
+    const chunks: string[] = [];
+    for (let i = 0; i < content.length; i += maxChars) {
+      chunks.push(content.slice(i, i + maxChars));
+    }
+    return chunks;
+  }
+
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  for (const sentence of sentences) {
+    if (!currentChunk) {
+      currentChunk = sentence;
+      continue;
+    }
+
+    if (currentChunk.length + sentence.length + 1 > maxChars) {
+      chunks.push(currentChunk);
+      currentChunk = sentence;
+      continue;
+    }
+
+    currentChunk += ` ${sentence}`;
+  }
+
+  if (currentChunk) chunks.push(currentChunk);
+
+  return chunks;
 }
 
 /**
@@ -84,14 +125,71 @@ export async function generateSummary(
 - **数量**：全文仅限输出 3-8 条摘要。
 - **格式**：严格仅返回 JSON 对象，结构为 { "summaries": [ { "summary": "...", "start_sId": "..." } ] }。`;
 
-  const MAX_SAFE_CHARS = 10000;
-  const safeContent = content.length > MAX_SAFE_CHARS
-    ? content.slice(0, MAX_SAFE_CHARS) + "\n\n...(内容过长，已被系统截断)..."
-    : content;
+  const chunkSystemPrompt = `你是一个专业的阅读助手。你的任务是为长文章片段提炼核心脉络。
+
+### 重要指引
+1. **当前输入只是全文片段**：请只总结当前片段中出现的内容，不要猜测前后文。
+2. **忽略 ID 干扰**：输入文本中的 [s-ID] 仅用于定位起始位置。请不要理会 ID 的数量，仅从逻辑和语义上对片段进行分段。
+3. **合并分段**：你必须将多个连续句子归纳为少量逻辑块。
+4. **极简原创总结**：每条项必须控制在 15 字以内且必须标明 start_sId。**严禁摘抄原文或搬运原句**，必须由你用自己的语言进行高度概括。
+5. **均匀分布**：摘要点应分布在当前片段的不同阶段。**每个摘要点必须对应一个 [s-ID] 标记。**
+6. **绝对纯文本**：总结内容必须是纯文本，**严禁包含任何 HTML 标签 (如 <div>, <p> 等)**。
+
+### 约束
+- **数量**：当前片段输出 2-6 条摘要。
+- **格式**：严格仅返回 JSON 对象，结构为 { "summaries": [ { "summary": "...", "start_sId": "..." } ] }。`;
 
   // 整理所有可用的 Gemini Key
   const geminiKeys = [geminiApiKey, ...secondaryGeminiKeys].filter(Boolean) as string[];
 
+  if (content.length > MAX_SAFE_CHARS) {
+    const chunks = splitSummaryChunks(content, MAX_SAFE_CHARS);
+    const selectedChunks = chunks.slice(0, MAX_SUMMARY_CHUNKS);
+    const allSummaries: AISummary[] = [];
+
+    console.log(`[AI] Content too long, splitting summary into ${chunks.length} chunks...`);
+    if (chunks.length > selectedChunks.length) {
+      console.warn(`[AI] Summary chunks limited to ${selectedChunks.length}/${chunks.length} to control AI cost.`);
+    }
+
+    for (let i = 0; i < selectedChunks.length; i++) {
+      console.log(`[AI] Generating summary chunk ${i + 1}/${selectedChunks.length}...`);
+      const chunkResult = await generateSingleSummary(
+        ai,
+        selectedChunks[i],
+        chunkSystemPrompt,
+        geminiKeys,
+        "请提炼当前片段核心脉络（输出 2-6 条极简摘要，禁止摘抄原文，且每条摘要严控在 15 字以内）"
+      );
+
+      if (chunkResult?.summaries?.length) {
+        allSummaries.push(...chunkResult.summaries);
+      } else {
+        console.warn(`[AI] Summary chunk ${i + 1}/${selectedChunks.length} returned no result.`);
+      }
+    }
+
+    return allSummaries.length > 0
+      ? { summaries: normalizeSummaries(allSummaries) }
+      : null;
+  }
+
+  return generateSingleSummary(
+    ai,
+    content,
+    systemPrompt,
+    geminiKeys,
+    "请提炼全文核心脉络（只需 3-8 条极简摘要，禁止摘抄原文，且每条摘要严控在 15 字以内）"
+  );
+}
+
+async function generateSingleSummary(
+  ai: any,
+  content: string,
+  systemPrompt: string,
+  geminiKeys: string[],
+  workersAIUserPrompt: string
+): Promise<AISummaryResponse | null> {
   // 1. 尝试使用 Gemini (支持多 Key 轮询)
   for (let i = 0; i < geminiKeys.length; i++) {
     const currentKey = geminiKeys[i];
@@ -99,7 +197,7 @@ export async function generateSummary(
 
     try {
       console.log(`[AI] Using Gemini (${accountLabel})...`);
-      const geminiResponse = await callGemini(currentKey, systemPrompt, safeContent);
+      const geminiResponse = await callGemini(currentKey, systemPrompt, content);
       if (geminiResponse) {
         return { summaries: normalizeSummaries(geminiResponse.summaries) };
       }
@@ -120,7 +218,7 @@ export async function generateSummary(
     const response: any = await ai.run('@cf/meta/llama-3.1-70b-instruct', {
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `请提炼全文核心脉络（只需 3-8 条极简摘要，禁止摘抄原文，且每条摘要严控在 15 字以内）：\n\n${safeContent}` },
+        { role: 'user', content: `${workersAIUserPrompt}：\n\n${content}` },
       ],
       response_format: {
         type: 'json_schema',
@@ -270,4 +368,3 @@ async function callGemini(
     return null;
   }
 }
-
