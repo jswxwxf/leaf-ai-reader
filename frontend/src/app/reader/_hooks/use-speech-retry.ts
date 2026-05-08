@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { showToast } from "@/app/global-toasts";
 import { delay } from "../_utils/utils";
 
@@ -6,14 +6,12 @@ import { delay } from "../_utils/utils";
  * 伪代码：
  *
  * speakWithRetry(text):
- *   sessionId = 新的朗读会话号
  *   expectedIndex = 找到这句话第一个真正应该朗读的字符
  *
  *   speakAttempt(attempt):
  *     创建一个新的 utterance
  *
  *     onboundary(event):
- *       如果这不是当前会话，忽略
  *       如果这是第一个 boundary，且 event.charIndex 明显晚于 expectedIndex:
  *         cancel 当前 utterance
  *         等一小会
@@ -22,7 +20,6 @@ import { delay } from "../_utils/utils";
  *       交给外层做词级高亮
  *
  *     onend():
- *       如果这不是当前会话，忽略
  *       如果没有收到 boundary，且结束得太快:
  *         认为 Safari 可能跳过了这句
  *         cancel 当前 utterance
@@ -33,8 +30,7 @@ import { delay } from "../_utils/utils";
  *
  *     speechSynthesis.speak(utterance)
  *
- * cancelSpeechRetry():
- *   递增会话号，让旧 utterance 的异步回调全部失效
+ * 注意：当前朗读会话是否有效由 use-speech.ts 负责，这里只负责 retry 判断。
  */
 
 const MAX_RETRY_COUNT = 2;
@@ -43,6 +39,7 @@ const MIN_RETRY_TEXT_LENGTH = 6;
 
 interface SpeakWithRetryOptions {
   text: string;
+  isCurrentSession: () => boolean;
   configure?: (utterance: SpeechSynthesisUtterance) => void;
   onBoundary?: (event: SpeechSynthesisEvent) => void;
   onEnd: () => void;
@@ -94,20 +91,14 @@ function shouldRetryFastEnd(text: string, sawBoundary: boolean, elapsedMs: numbe
  * 这个 hook 只负责检测异常起点并重试当前 utterance, 不处理阅读器状态推进。
  */
 export function useSpeechRetry({ enabled }: UseSpeechRetryOptions) {
-  const sessionRef = useRef(0);
-
-  const cancelSpeechRetry = useCallback(() => {
-    sessionRef.current += 1;
-  }, []);
-
   const speakWithRetry = useCallback(
     ({
       text,
+      isCurrentSession,
       configure,
       onBoundary,
       onEnd,
     }: SpeakWithRetryOptions) => {
-      const sessionId = (sessionRef.current += 1);
       const expectedIndex = findFirstSpeakableIndex(text);
 
       const speakAttempt = (attempt: number) => {
@@ -133,7 +124,7 @@ export function useSpeechRetry({ enabled }: UseSpeechRetryOptions) {
           // 给 Safari 一点时间清理旧 utterance 队列，重试次数越多等待越久。
           await delay(80 * (attempt + 1));
 
-          if (sessionRef.current === sessionId) {
+          if (isCurrentSession()) {
             speakAttempt(attempt + 1);
           }
 
@@ -145,7 +136,7 @@ export function useSpeechRetry({ enabled }: UseSpeechRetryOptions) {
         };
 
         utterance.onboundary = (event) => {
-          if (sessionRef.current !== sessionId || retrying) return;
+          if (!isCurrentSession() || retrying) return;
 
           // 只用第一个 boundary 判断起点；之后的 boundary 继续交给词级高亮。
           if (
@@ -162,7 +153,7 @@ export function useSpeechRetry({ enabled }: UseSpeechRetryOptions) {
         };
 
         utterance.onend = () => {
-          if (sessionRef.current !== sessionId || retrying) return;
+          if (!isCurrentSession() || retrying) return;
 
           const elapsedMs = performance.now() - startTime;
           // 如果疑似跳句，重试当前句，不触发外层 onEnd 推进到下一句。
@@ -182,5 +173,5 @@ export function useSpeechRetry({ enabled }: UseSpeechRetryOptions) {
     [enabled]
   );
 
-  return { speakWithRetry, cancelSpeechRetry };
+  return { speakWithRetry };
 }

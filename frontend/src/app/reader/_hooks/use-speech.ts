@@ -4,6 +4,7 @@ import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
 import { useEffect, useRef } from "react";
 import { useWakeLock } from "./use-wake-lock";
+import { useSpeechRetry } from "./use-speech-retry";
 
 /**
  * 获取元素的文本内容，并将特定标签（如 sup, sub）的内容替换为等长空格
@@ -77,6 +78,7 @@ export function useSpeech() {
 
   const { highlightWord, clearHighlight } = useWordHighlight();
   const { requestWakeLock, releaseWakeLock } = useWakeLock(isPlaying);
+  const { speakWithRetry } = useSpeechRetry({ enabled: isSafari });
   const speechSessionRef = useRef(0);
 
   // 用 ref 持有最新值，确保 onend 等异步回调中读取不受闭包陈旧值影响
@@ -124,23 +126,19 @@ export function useSpeech() {
     // 使用 getTextWithMasking 自动完成引文静音、Emoji 过滤及标点归一化
     // 该函数保证了 1:1 的替换比例，确保 onboundary 的 charIndex 获取到精准的高亮坐标
     const processedText = getTextWithMasking(el);
-    const utterance = new SpeechSynthesisUtterance(processedText);
-    utterance.lang = "zh-CN";
-
-    // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
-    utterance.rate = isSafari ? 1.32 : 2;
+    const isCurrentSession = () => speechSessionRef.current === sessionId;
 
     // 3.1 词级高亮逻辑 (通过抽取出的 hook 处理)
-    utterance.onboundary = (event) => {
-      if (speechSessionRef.current !== sessionId) return;
+    const handleBoundary = (event: SpeechSynthesisEvent) => {
+      if (!isCurrentSession()) return;
       if (event.name !== 'word') return;
       // @ts-ignore
       highlightWord(el, event.charIndex, event.charLength);
     };
 
     // 4. 当这一句读完时，根据朗读模式决定是否继续播放下一句
-    utterance.onend = () => {
-      if (speechSessionRef.current !== sessionId) return;
+    const handleEnd = () => {
+      if (!isCurrentSession()) return;
 
       setIsPlaying(false);
       clearHighlight();
@@ -193,7 +191,17 @@ export function useSpeech() {
     };
 
     // 5. 执行播放、确保当前高亮
-    window.speechSynthesis.speak(utterance);
+    speakWithRetry({
+      text: processedText,
+      isCurrentSession,
+      configure: (utterance) => {
+        utterance.lang = "zh-CN";
+        // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
+        utterance.rate = isSafari ? 1.32 : 2;
+      },
+      onBoundary: handleBoundary,
+      onEnd: handleEnd,
+    });
 
     // --- 核心优化：按需强制滚动 ---
     scrollIntoViewIfNeeded(el);
