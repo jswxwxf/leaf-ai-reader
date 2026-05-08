@@ -67,6 +67,48 @@ describe('WeChat Sentence Splitting', () => {
 });
 
 describe('WeChat Crawler cleanHtml', () => {
+    it('应该清洗嵌套 span 和 b 标签中的电影介绍片段，并打印结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><span><span><span>准新郎</span></span></span><b><span><span>查理</span></span><span><span>（罗伯特·帕丁森 饰）</span></span></b><span><span><span>，正在逐字打磨婚礼誓词。</span></span></span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">准新郎<b>查理（罗伯特·帕丁森 饰）</b>，正在逐字打磨婚礼誓词。</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
+    it('应该清洗设置路径加粗片段，并打印结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><span><span>在</span></span><strong><span><span>「设置 &gt; 辅助功能 &gt; 键盘与键入」</span></span></strong><span><span>中，找到以下三个选项：</span></span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">在<strong>「设置 > 辅助功能 > 键盘与键入」</strong>中，找到以下三个选项：</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
+    it('应该缝合闭合引号后继续叙述的同一句', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><span>他说：</span><strong><span>「我不去了」</span></strong><span>然后离开。</span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">他说：</span><span class="sentence" id="s-2"><strong>「我不去了」</strong>然后离开。</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
     it('应该正确清洗包含多个 span 和 leaf 属性的复杂微信 HTML (用户请求测试)', () => {
         const inputHtml = `
             <div id="js_content">

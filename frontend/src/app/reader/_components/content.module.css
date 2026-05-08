@@ -21,14 +21,17 @@
 /* 图片加载占位符 (静态 Skeleton) */
 .reader_content :global(img) {
   max-width: 100%;
+  max-height: 70vh;
   height: auto;
+  object-fit: contain;
   border-radius: var(--rounded-btn, 0.5rem);
   background-color: color-mix(in oklch, var(--fallback-bc,oklch(var(--bc)/1)), transparent 92%);
 }
 
 .reader_content :global(img[data-reader-image="block"]) {
   display: block;
-  margin: 1.5rem auto;
+  max-width: min(72%, 520px);
+  margin: 1.25rem auto;
 }
 
 .reader_content :global(img[data-reader-image="inline"]) {
@@ -46,10 +49,12 @@
   position: relative;
   display: block;
   width: fit-content;
-  margin: 1.5rem auto;
+  max-width: min(72%, 520px);
+  margin: 1.25rem auto;
 }
 
 .image_wrapper img {
+  max-width: 100% !important;
   margin: 0 !important; /* 覆盖全局 img margin，由 wrapper 控制 */
 }
 
@@ -84,6 +89,11 @@
 }
 
 @media (max-width: 768px) {
+  .reader_content :global(img[data-reader-image="block"]),
+  .image_wrapper {
+    max-width: 100%;
+  }
+
   .ocr_button {
     opacity: 0.8; /* 移动端常驻半透明显示 */
   }

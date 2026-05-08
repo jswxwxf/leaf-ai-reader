@@ -87,16 +87,22 @@ function refineHtml(html: string): string {
     // 2. 句子缝合 (Sentence Healing)
     // transformNode 是按 text node 分句的；微信正文又常把同一句拆进多个行内标签。
     // 所以这里把“前一个 sentence span 还没到句末”的相邻 span 合并回去。
+    // 如果后一个 sentence 以逗号、顿号等续接标点开头，也说明它应继续归入前一句。
     //
     // 注意：不要只看 `</span>` 前一个字符。
     // 例如 `<span>...。</b></span><span>下一句</span>` 中，`</span>` 前是 `>`，
     // 但真正的文本结尾是 `。`。因此正则只定位相邻 span，是否合并交给可见文本判断。
+    //
+    // 另一个边界：闭合引号/括号本身不代表句末。
+    // 例如 `在「设置」中`、`他说：「我不去了」然后离开` 都应继续缝合；
+    // 只有闭合符前已经是 `。！？` 等真正句末标点时，才把它视作完整句。
     .replace(/<\/span>(\s*(?:<br\s*\/?>|<sup>.*?<\/sup>|<sub>.*?<\/sub>|\s)*)<span class="sentence" id="s-\d+">/gi, (match, separator, offset, fullHtml) => {
       const htmlBeforeBoundary = fullHtml.slice(0, offset);
       const previousSpanStart = htmlBeforeBoundary.lastIndexOf('<span class="sentence"');
       const previousSentenceHtml = previousSpanStart >= 0 ? htmlBeforeBoundary.slice(previousSpanStart) : htmlBeforeBoundary;
+      const nextSentenceHtml = fullHtml.slice(offset + match.length);
 
-      return shouldHealSentence(previousSentenceHtml) ? separator : match;
+      return shouldHealSentence(previousSentenceHtml, nextSentenceHtml) ? separator : match;
     })
 
     // 3. 清理空段落
@@ -118,14 +124,31 @@ function refineHtml(html: string): string {
   return balanceSentenceInlineTags(polished);
 }
 
-function shouldHealSentence(sentenceHtml: string): boolean {
+function shouldHealSentence(sentenceHtml: string, nextSentenceHtml: string = ''): boolean {
+  const nextTextContent = nextSentenceHtml.replace(/<[^>]*>/g, '').trim();
+  const firstNextChar = Array.from(nextTextContent)[0];
+  const leadingContinuationChars = '，、；：,;:';
+  if (firstNextChar && leadingContinuationChars.includes(firstNextChar)) return true;
+
   // 只看可见文本最后一个字符，避免被 </b>、</strong> 这类标签结尾误导。
   const textContent = sentenceHtml.replace(/<[^>]*>/g, '').trim();
   if (!textContent) return false;
 
-  const lastChar = Array.from(textContent).pop();
-  const sentenceBoundaryChars = '。！？；：!?….;”’』」》）〉】〗｝"\')]}:';
-  return !lastChar || !sentenceBoundaryChars.includes(lastChar);
+  const meaningfulEndChar = getMeaningfulSentenceEndChar(textContent);
+  const sentenceBoundaryChars = '。！？；：!?….;:';
+  return !meaningfulEndChar || !sentenceBoundaryChars.includes(meaningfulEndChar);
+}
+
+function getMeaningfulSentenceEndChar(textContent: string): string | undefined {
+  const chars = Array.from(textContent);
+  const closingChars = '”’』」》）〉】〗｝"\')]}';
+
+  while (chars.length > 0) {
+    const char = chars.pop();
+    if (char && !closingChars.includes(char)) return char;
+  }
+
+  return undefined;
 }
 
 function balanceSentenceInlineTags(html: string): string {
