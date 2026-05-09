@@ -297,7 +297,10 @@ function transformNode(
   if (node.nodeType === 1) {
     const tagName = node.tagName.toLowerCase();
     if (tagName === 'img') {
-      let src = node.getAttribute('data-src') || node.getAttribute('src') || "";
+      const isBookResource = !!(options?.bookId && options?.path);
+      let src = isBookResource
+        ? node.getAttribute('src') || node.getAttribute('data-src') || ""
+        : node.getAttribute('data-src') || node.getAttribute('src') || "";
       if (src && options?.bookId && options?.path) {
         const absPath = resolvePath(options.path, src);
         src = `/api/books/${options.bookId}/resource?path=${encodeURIComponent(absPath)}`;

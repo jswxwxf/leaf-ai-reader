@@ -1,8 +1,10 @@
 import { useEffect, type RefObject } from 'react';
 import { request } from '../../../lib/request';
 import { showAlert } from '../../global-modals';
-import { showLoading, hideLoading } from '../../full-screen-loading';
 import styles from '../_components/content.module.css';
+
+const OCR_IMAGE_MIN_WIDTH = 180;
+const OCR_IMAGE_MIN_HEIGHT = 100;
 
 const parseImageSource = (src: string) => {
   try {
@@ -21,20 +23,32 @@ const parseImageSource = (src: string) => {
   }
 };
 
-const handleOCR = async (img: HTMLImageElement) => {
+const setOCRButtonPending = (btn: HTMLButtonElement, pending: boolean) => {
+  btn.disabled = pending;
+  btn.dataset.pending = String(pending);
+  const label = btn.querySelector('span');
+  if (label) label.textContent = pending ? '识别中' : '识别文字';
+};
+
+const handleOCR = async (
+  img: HTMLImageElement,
+  btn: HTMLButtonElement
+) => {
   const src = img.getAttribute('src');
   if (!src) return;
 
   console.log('[OCR] 正在启动识别程序...');
   const payload = parseImageSource(src);
 
-  showLoading();
+  setOCRButtonPending(btn, true);
   try {
     const data = await request<{ text: string }>('/api/reader/ocr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+
+    if (!btn.isConnected) return;
 
     showAlert({
       title: '图片识别结果',
@@ -45,7 +59,9 @@ const handleOCR = async (img: HTMLImageElement) => {
   } catch (err) {
     console.error('[OCR] 识别过程出错:', err);
   } finally {
-    hideLoading();
+    if (btn.isConnected) {
+      setOCRButtonPending(btn, false);
+    }
   }
 };
 
@@ -70,7 +86,7 @@ const createOCRButton = (img: HTMLImageElement) => {
   btn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    handleOCR(img);
+    handleOCR(img, btn);
   };
 
   return btn;
@@ -92,18 +108,22 @@ const markImageLoadState = (img: HTMLImageElement) => {
   img.addEventListener('error', markLoaded, { once: true });
 };
 
-const isStandaloneImage = (img: HTMLImageElement) => {
-  const parent = img.parentElement;
-  if (!parent) return true;
+const isLargeReadableImage = (img: HTMLImageElement) =>
+  img.naturalWidth >= OCR_IMAGE_MIN_WIDTH && img.naturalHeight >= OCR_IMAGE_MIN_HEIGHT;
 
-  return Array.from(parent.childNodes).every((node) => {
-    if (node === img) return true;
-    if (node.nodeType === Node.TEXT_NODE) return !node.textContent?.trim();
-    if (node.nodeType !== Node.ELEMENT_NODE) return true;
+const decorateAfterLoad = (img: HTMLImageElement) => {
+  if (img.dataset.ocrPending === 'true') return;
+  img.dataset.ocrPending = 'true';
 
-    const element = node as HTMLElement;
-    return element.tagName === 'BR' || element.tagName === 'IMG';
-  });
+  const retryDecorate = () => {
+    delete img.dataset.ocrPending;
+    decorateImage(img);
+  };
+
+  img.addEventListener('load', retryDecorate, { once: true });
+  img.addEventListener('error', () => {
+    delete img.dataset.ocrPending;
+  }, { once: true });
 };
 
 const decorateImage = (img: HTMLImageElement) => {
@@ -111,7 +131,13 @@ const decorateImage = (img: HTMLImageElement) => {
 
   if (img.parentElement?.classList.contains(styles.image_wrapper)) return;
 
-  if (!isStandaloneImage(img)) {
+  if (!img.complete) {
+    img.dataset.readerImage = 'inline';
+    decorateAfterLoad(img);
+    return;
+  }
+
+  if (!isLargeReadableImage(img)) {
     img.dataset.readerImage = 'inline';
     return;
   }

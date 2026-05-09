@@ -97,7 +97,7 @@ export function Speecher() {
             href={prevChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(prevChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}
-            onClick={() => prevChapter && showLoading(false)}
+            onClick={() => prevChapter && showLoading(false, { autoHideAfterMs: 2000 })}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${prevChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >
@@ -163,7 +163,7 @@ export function Speecher() {
             href={nextChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(nextChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}
-            onClick={() => nextChapter && showLoading(false)}
+            onClick={() => nextChapter && showLoading(false, { autoHideAfterMs: 2000 })}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${nextChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >

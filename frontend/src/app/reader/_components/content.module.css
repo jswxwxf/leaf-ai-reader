@@ -88,6 +88,21 @@
   opacity: 1;
 }
 
+.ocr_button:disabled {
+  cursor: wait;
+  opacity: 0.8;
+}
+
+.ocr_button[data-pending="true"] svg {
+  animation: ocr-spin 1s linear infinite;
+}
+
+@keyframes ocr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 768px) {
   .reader_content :global(img[data-reader-image="block"]),
   .image_wrapper {

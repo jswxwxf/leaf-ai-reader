@@ -15,18 +15,40 @@ let setGlobalState: (visible: boolean, showIndicator: boolean) => void = () => {
     }
 };
 
+let autoHideTimer: number | null = null;
+
+interface ShowLoadingOptions {
+    autoHideAfterMs?: number;
+}
+
+function clearAutoHideTimer() {
+    if (!autoHideTimer) return;
+    window.clearTimeout(autoHideTimer);
+    autoHideTimer = null;
+}
+
 /**
  * 显示全屏加载
  * @param showIndicator 是否显示旋转图标，默认为 true
+ * @param options.autoHideAfterMs 指定毫秒数后自动隐藏
  */
-export const showLoading = (showIndicator = true) => {
+export const showLoading = (showIndicator = true, options: ShowLoadingOptions = {}) => {
+    clearAutoHideTimer();
     setGlobalState(true, showIndicator);
+
+    if (options.autoHideAfterMs && options.autoHideAfterMs > 0) {
+        autoHideTimer = window.setTimeout(() => {
+            setGlobalState(false, true);
+            autoHideTimer = null;
+        }, options.autoHideAfterMs);
+    }
 };
 
 /**
  * 隐藏全屏加载
  */
 export const hideLoading = () => {
+    clearAutoHideTimer();
     setGlobalState(false, true);
 };
 
