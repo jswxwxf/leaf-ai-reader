@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, Play, Square, ChevronRight } from "lucide-react";
 import { showLoading } from "@/app/full-screen-loading";
@@ -13,6 +14,10 @@ import type { Chapter, BookData } from "@/lib/book";
  */
 export function Speecher() {
   const { play, step, stop, isPlaying } = useSpeech();
+  const isPlayingRef = useRef(isPlaying);
+  // 系统 MediaSession 的 play 事件不一定来自用户主动点击，手机亮屏/解锁时也可能补发。
+  // 只有本轮由 UI 播放按钮激活过媒体焦点，才允许系统 play 恢复朗读。
+  const acceptsSystemPlayRef = useRef(false);
   const { isContentLoading, data, path } = useReaderStore(
     useShallow((state) => ({
       isContentLoading: state.isContentLoading,
@@ -36,26 +41,48 @@ export function Speecher() {
     }
   }
 
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   // 使用正式集成的 MediaSession 控制
   const { activateMedia, deactivateMedia } = useMediaSession({
-    onPlayPause: () => {
-      if (isPlaying) {
+    onPlay: () => {
+      if (isPlayingRef.current || !acceptsSystemPlayRef.current) return;
+      play();
+      activateMedia();
+    },
+    onPause: () => {
+      acceptsSystemPlayRef.current = false;
+      if (isPlayingRef.current) {
         stop();
-        deactivateMedia();
-      } else {
-        play();
-        activateMedia();
       }
+      deactivateMedia();
     },
     onNext: () => step(1),
     onPrev: () => step(-1),
   });
 
+  useEffect(() => {
+    if (isPlaying) return;
+
+    const timer = window.setTimeout(() => {
+      // 逐句/逐段自然停住时同步释放静音保活音频，避免系统仍把页面视为播放中。
+      // 稍作延迟可以避开全文连读时两句之间的短暂 false 状态。
+      acceptsSystemPlayRef.current = false;
+      deactivateMedia();
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [isPlaying, deactivateMedia]);
+
   const handleToggle = () => {
     if (isPlaying) {
+      acceptsSystemPlayRef.current = false;
       stop();
       deactivateMedia();
     } else {
+      acceptsSystemPlayRef.current = true;
       play();
       activateMedia();
     }

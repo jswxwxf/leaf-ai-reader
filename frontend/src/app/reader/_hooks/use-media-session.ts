@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface MediaHandlers {
-  onPlayPause: () => void;
+  onPlay: () => void;
+  onPause: () => void;
   onNext: () => void;
   onPrev: () => void;
 }
@@ -12,14 +13,14 @@ interface MediaHandlers {
  * 集成系统级媒体控制方案 (MediaSession)
  * 通过一段隐形循环音频霸占系统音频焦点，从而实现蓝牙/硬件按键对 Web TTS 的控制。
  */
-export function useMediaSession({ onPlayPause, onNext, onPrev }: MediaHandlers) {
+export function useMediaSession({ onPlay, onPause, onNext, onPrev }: MediaHandlers) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // 使用 Ref 保证回调永远是最新的
-  const handlers = useRef({ onPlayPause, onNext, onPrev });
+  const handlers = useRef({ onPlay, onPause, onNext, onPrev });
   useEffect(() => {
-    handlers.current = { onPlayPause, onNext, onPrev };
-  }, [onPlayPause, onNext, onPrev]);
+    handlers.current = { onPlay, onPause, onNext, onPrev };
+  }, [onPlay, onPause, onNext, onPrev]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
@@ -29,12 +30,16 @@ export function useMediaSession({ onPlayPause, onNext, onPrev }: MediaHandlers) 
       artist: "蓝牙/系统控制模式已激活",
     });
 
-    // 1. 播放/暂停 逻辑映射
-    const handleToggle = () => {
-      handlers.current.onPlayPause();
-    };
-    navigator.mediaSession.setActionHandler("play", handleToggle);
-    navigator.mediaSession.setActionHandler("pause", handleToggle);
+    // 1. 播放/暂停逻辑保持单向映射，避免系统补发 pause/play 时误触发 toggle。
+    navigator.mediaSession.setActionHandler("play", () => {
+      handlers.current.onPlay();
+    });
+    navigator.mediaSession.setActionHandler("pause", () => {
+      handlers.current.onPause();
+    });
+    navigator.mediaSession.setActionHandler("stop", () => {
+      handlers.current.onPause();
+    });
 
     // 2. 上一跳/下一跳 逻辑映射
     navigator.mediaSession.setActionHandler("nexttrack", () => {
@@ -48,6 +53,7 @@ export function useMediaSession({ onPlayPause, onNext, onPrev }: MediaHandlers) 
       audioRef.current?.pause();
       navigator.mediaSession.setActionHandler("play", null);
       navigator.mediaSession.setActionHandler("pause", null);
+      navigator.mediaSession.setActionHandler("stop", null);
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("previoustrack", null);
     };
@@ -57,7 +63,7 @@ export function useMediaSession({ onPlayPause, onNext, onPrev }: MediaHandlers) 
    * 激活媒体焦点
    * 必须在用户交互（如点击播放按钮）的同一个同步事件流中调用
    */
-  const activateMedia = () => {
+  const activateMedia = useCallback(() => {
     if (typeof window === "undefined") return;
     if (!audioRef.current) {
       // 使用 31 秒的实体 m4a 文件，以满足 iOS 的严格音频流检测
@@ -70,17 +76,17 @@ export function useMediaSession({ onPlayPause, onNext, onPrev }: MediaHandlers) 
         navigator.mediaSession.playbackState = "playing";
       })
       .catch(e => console.error("[MediaSession] 激活焦点失败:", e));
-  };
+  }, []);
 
   /**
    * 释放媒体焦点
    */
-  const deactivateMedia = () => {
+  const deactivateMedia = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       navigator.mediaSession.playbackState = "paused";
     }
-  };
+  }, []);
 
   return { activateMedia, deactivateMedia };
 }
