@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+// 手动切换系统媒体控制。设为 false 后，不注册 MediaSession，也不播放 silent_31s.m4a。
+export const ENABLE_READER_MEDIA_SESSION = false;
+
 interface MediaHandlers {
   onPlay: () => void;
   onPause: () => void;
@@ -23,7 +26,7 @@ export function useMediaSession({ onPlay, onPause, onNext, onPrev }: MediaHandle
   }, [onPlay, onPause, onNext, onPrev]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+    if (!ENABLE_READER_MEDIA_SESSION || typeof window === "undefined" || !("mediaSession" in navigator)) return;
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: "Leaf AI Reader",
@@ -64,6 +67,7 @@ export function useMediaSession({ onPlay, onPause, onNext, onPrev }: MediaHandle
    * 必须在用户交互（如点击播放按钮）的同一个同步事件流中调用
    */
   const activateMedia = useCallback(() => {
+    if (!ENABLE_READER_MEDIA_SESSION) return;
     if (typeof window === "undefined") return;
     if (!audioRef.current) {
       // 使用 31 秒的实体 m4a 文件，以满足 iOS 的严格音频流检测
@@ -82,6 +86,7 @@ export function useMediaSession({ onPlay, onPause, onNext, onPrev }: MediaHandle
    * 释放媒体焦点
    */
   const deactivateMedia = useCallback(() => {
+    if (!ENABLE_READER_MEDIA_SESSION) return;
     if (audioRef.current) {
       audioRef.current.pause();
       navigator.mediaSession.playbackState = "paused";

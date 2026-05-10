@@ -26,6 +26,7 @@
 - WebView 渲染本地章节文件。
 - 使用系统 TTS 逐句朗读。
 - 朗读句子高亮同步。
+- 蓝牙耳机/锁屏媒体控制朗读。
 - 本地阅读进度、高亮、笔记持久化。
 
 ### 2.3 暂缓功能
@@ -223,6 +224,8 @@ Android -> TextToSpeech
 - Bare RN：`react-native-tts`
 - 高级朗读控制：自定义 Native Module
 
+首版 demo 可以先用 RN TTS 库验证体验，但产品级版本应预留少量原生开发。原因是后台朗读、蓝牙遥控、锁屏控制、系统音频焦点、背景音乐混音和句级回调都属于平台媒体能力，纯 JS 层难以稳定覆盖。
+
 ### 8.1 朗读数据结构
 
 章节处理时同时生成：
@@ -239,7 +242,70 @@ Android -> TextToSpeech
 ]
 ```
 
-不要依赖 WebView DOM 临时反查所有句子文本。RN 负责朗读调度，WebView 负责展示与高亮。
+不要依赖 WebView DOM 临时反查所有句子文本。RN / 原生层应持有权威句子队列和当前句子状态，WebView 负责展示与高亮。
+
+建议扩展字段：
+
+```json
+[
+  {
+    "id": "s-1",
+    "text": "第一句话。",
+    "chapterPath": "chapter-0001.html",
+    "paragraphId": "p-1",
+    "index": 0
+  }
+]
+```
+
+### 8.2 原生媒体控制
+
+移动端不应复刻 Web 版的 `navigator.mediaSession` + `silent_31s.m4a` 静音保活方案。该方案是浏览器环境下为了维持系统媒体焦点和蓝牙遥控事件的权宜做法，原生移动端应走系统媒体控制 API。
+
+推荐平台方案：
+
+```text
+iOS     -> MPRemoteCommandCenter + MPNowPlayingInfoCenter + AVAudioSession
+Android -> MediaSession / Media3 + foreground service + audio focus
+```
+
+控制映射：
+
+- `play`：从当前句继续朗读。
+- `pause` / `stop`：暂停或停止朗读，按产品语义决定是否保留当前句。
+- `nextTrack`：下一句或下一段。
+- `previousTrack`：上一句或上一段。
+
+可用 `react-native-track-player` 等库验证锁屏控制和蓝牙遥控事件，但 Leaf 的朗读不是普通音乐队列。若现成库无法精确表达逐句 TTS、背景混音和当前句状态，应实现轻量 Native Module：
+
+```text
+SpeechPlaybackController
+  iOS: AVSpeechSynthesizer + AVAudioSession + MPRemoteCommandCenter
+  Android: TextToSpeech + MediaSession + AudioManager + ForegroundService
+```
+
+### 8.3 背景音乐与音频焦点
+
+目标体验：
+
+- Leaf 保持蓝牙遥控和锁屏控制权。
+- QQ 音乐、Apple Music、Spotify 等 App 可继续作为背景音乐播放。
+- Leaf TTS 在背景音乐之上朗读，必要时短暂降低背景音乐音量。
+
+iOS 方向：
+
+- 使用 `AVAudioSessionCategoryPlayback`。
+- 配置 `mixWithOthers`，允许 Leaf 音频与其他 App 混音。
+- 可按需短暂使用 `duckOthers`，但不应长时间持续压低其他 App 音量。
+- 通过 `MPRemoteCommandCenter` 接收系统和蓝牙遥控事件。
+
+Android 方向：
+
+- 使用 `MediaSession` / Media3 暴露当前朗读会话和控制按钮。
+- 使用 audio focus 策略，优先评估 transient may duck / mix 类行为。
+- 后台朗读需要 foreground service 和通知控制。
+
+注意：原生方案可以显著优于 Web，但不能保证所有系统、厂商 ROM、蓝牙设备和第三方音乐 App 都完全一致。系统媒体按钮通常只会有一个主要控制目标；目标是让 Leaf 成为控制目标，同时允许其他 App 音频继续混音。
 
 ## 9. WebView 通信协议
 
@@ -251,6 +317,9 @@ RN 负责：
 
 - TTS 播放状态。
 - 当前句子 ID。
+- 权威句子队列。
+- 蓝牙/锁屏媒体命令分发。
+- 音频焦点与背景音乐混音策略。
 - 章节切换。
 - 阅读进度保存。
 - 高亮/笔记数据。
@@ -263,6 +332,8 @@ WebView 负责：
 - 滚动定位。
 - 选择文本。
 - 当前可见位置检测。
+
+WebView 不是朗读状态源。它可以上报点击和滚动位置，但不能作为后台朗读、锁屏控制或当前句文本的唯一来源。
 
 ### 9.2 RN -> WebView
 
@@ -322,6 +393,8 @@ type FromWeb =
 - [ ] 实现逐句朗读。
 - [ ] WebView 高亮当前句。
 - [ ] 支持句子点击后从该句开始朗读。
+- [ ] 接入蓝牙/锁屏媒体控制。
+- [ ] 验证背景音乐混音和音频焦点策略。
 - [ ] 保存朗读与阅读进度。
 
 ### Phase 4: 阅读器体验补齐
@@ -344,5 +417,5 @@ type FromWeb =
 
 - **状态**：归档 / Future Exploration
 - **是否进入当前项目活跃列表**：否
-- **最近更新**：2026-05-09
-- **来源**：围绕 Leaf AI Reader 移动端化、App Store 合规、React Native 本地存储、WebView 渲染和原生 TTS 的方案讨论
+- **最近更新**：2026-05-10
+- **来源**：围绕 Leaf AI Reader 移动端化、App Store 合规、React Native 本地存储、WebView 渲染、原生 TTS、蓝牙遥控、背景音乐混音和原生媒体控制的方案讨论

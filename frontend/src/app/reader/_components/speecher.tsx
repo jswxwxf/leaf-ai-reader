@@ -53,28 +53,24 @@ export function Speecher() {
       activateMedia();
     },
     onPause: () => {
-      acceptsSystemPlayRef.current = false;
       if (isPlayingRef.current) {
+        acceptsSystemPlayRef.current = false;
         stop();
+        deactivateMedia();
+        return;
       }
+
+      if (acceptsSystemPlayRef.current) {
+        play();
+        activateMedia();
+        return;
+      }
+
       deactivateMedia();
     },
     onNext: () => step(1),
     onPrev: () => step(-1),
   });
-
-  useEffect(() => {
-    if (isPlaying) return;
-
-    const timer = window.setTimeout(() => {
-      // 逐句/逐段自然停住时同步释放静音保活音频，避免系统仍把页面视为播放中。
-      // 稍作延迟可以避开全文连读时两句之间的短暂 false 状态。
-      acceptsSystemPlayRef.current = false;
-      deactivateMedia();
-    }, 500);
-
-    return () => window.clearTimeout(timer);
-  }, [isPlaying, deactivateMedia]);
 
   const handleToggle = () => {
     if (isPlaying) {
