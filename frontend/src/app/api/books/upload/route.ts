@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createHandler, HandlerContext } from '../../_handler';
+import { checkBookUploadAccess } from '@/lib/access';
 
 /**
  * 此时使用 Route Handler 代替 Server Action
  * 以绕过 Next.js 默认的 1MB Body 限制并支持大文件上传
  */
-export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, request: Request) => {
+export const POST = createHandler(async ({ env, ctx, user, access }: HandlerContext, request: Request) => {
 	const userId = user.sub;
+
+	const uploadAccessError = await checkBookUploadAccess({ access, env, userId });
+	if (uploadAccessError) {
+		const { status, ...body } = uploadAccessError;
+		return NextResponse.json(body, { status });
+	}
 
 	// 1. 解析并校验表单
 	const formData = await request.formData();

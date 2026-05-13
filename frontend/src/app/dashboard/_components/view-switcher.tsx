@@ -8,16 +8,21 @@ import { useDashboardStore } from '../_store/store';
  * 职责：处理“图书”和“文章”视图的切换，并在客户端维护 URL 同步。
  */
 export function ViewSwitcher() {
-	const { view, setView } = useDashboardStore(
+	const { view, setView, canUseArticles } = useDashboardStore(
 		useShallow((s) => ({
 			view: s.view,
 			setView: s.setView,
+			canUseArticles: s.access.canUseArticles,
 		}))
 	);
 
 	const handleViewChange = (newView: 'books' | 'articles') => {
 		setView(newView);
 	};
+
+	if (!canUseArticles) {
+		return null;
+	}
 
 	return (
 		<div className="flex items-center gap-1 bg-base-200 p-1 rounded-lg">

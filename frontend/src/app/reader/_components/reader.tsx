@@ -9,6 +9,8 @@ import { Helper } from "./helper";
 import { ReaderStoreProvider, type SpeechMode } from "../_store/store";
 import { getArticle, getArticleData, type ArticleData } from "@/lib/article";
 import { getBookData, getBookChapters, getFlattenChapters, type BookData } from "@/lib/book";
+import { getCurrentUser } from "@/lib/auth";
+import { getUserAccess } from "@/lib/access";
 
 interface Props {
 	isPopup?: boolean;
@@ -23,6 +25,9 @@ interface Props {
  * 作为一个服务器组件，它负责承载 StoreProvider 并将初始参数下发给客户端状态机
  */
 export async function Reader({ isPopup = true, article_id, book_id, path, speechMode }: Props) {
+	const user = await getCurrentUser();
+	const access = getUserAccess(user);
+	
 	let data: ArticleData | BookData | null = null;
 	if (article_id) {
 		data = await getArticleData(article_id);
@@ -76,6 +81,7 @@ export async function Reader({ isPopup = true, article_id, book_id, path, speech
 				data,
 				content,
 				speechMode,
+				access,
 			}}
 		>
 			<Helper />
@@ -85,7 +91,7 @@ export async function Reader({ isPopup = true, article_id, book_id, path, speech
 				{/* 中间主要区域：小屏上下排，compact 起正文和摘要两栏，lg 起增加章节栏 */}
 				<main className="flex flex-col compact:flex-row flex-1 overflow-hidden">
 					{/* 摘要区域：小屏在顶部横向滚动，compact 起固定为右侧栏 */}
-					<Summary />
+					{access.canUseSummary && <Summary />}
 
 					{/* 章节+正文容器：compact 起排在摘要左侧；章节目录只在 lg 起作为常驻侧栏显示 */}
 					<div className="flex flex-1 flex-row overflow-hidden compact:order-first">

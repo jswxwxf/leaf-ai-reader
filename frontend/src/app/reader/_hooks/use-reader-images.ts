@@ -157,11 +157,12 @@ const decorateImage = (img: HTMLImageElement) => {
 
 export function useReaderImages(
   contentRef: RefObject<HTMLDivElement | null>,
-  options: { articleId?: string; bookId?: string }
+  options: { articleId?: string; bookId?: string; canUseOcr?: boolean }
 ) {
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
+    if (options.canUseOcr === false) return;
 
     const decorateImages = () => {
       const images = container.querySelectorAll('img');
@@ -183,5 +184,5 @@ export function useReaderImages(
     });
 
     return () => observer.disconnect();
-  }, [contentRef, options.articleId, options.bookId]);
+  }, [contentRef, options.articleId, options.bookId, options.canUseOcr]);
 }

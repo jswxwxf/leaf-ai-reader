@@ -1,13 +1,25 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createHandler, HandlerContext } from '../../_handler';
+import { DEMO_ACCESS_MESSAGE } from '@/lib/access';
 
 
 /**
  * 接收来自阅读按钮的点击请求
  * 使用统一的 createHandler 进行包装，自动处理鉴权和 Cloudflare 上下文
  */
-export const POST = createHandler(async ({ env, ctx, user }: HandlerContext, request: Request) => {
+export const POST = createHandler(async ({ env, ctx, user, access }: HandlerContext, request: Request) => {
+	if (!access.canUseArticles) {
+		return NextResponse.json(
+			{
+				success: false,
+				code: 'DEMO_FEATURE_DISABLED',
+				error: DEMO_ACCESS_MESSAGE,
+			},
+			{ status: 403 }
+		);
+	}
+
 	// 获取请求体中的内容
 	const { url } = (await request.json()) as { url: string };
 	const articleId = crypto.randomUUID();

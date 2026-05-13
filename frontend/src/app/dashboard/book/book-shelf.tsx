@@ -9,19 +9,24 @@ import { usePolling } from '../_hooks/use-polling';
 import { Loading } from '../_components/loading';
 import { BookData } from '@/lib/book';
 
+interface Props {
+	booksPromise: Promise<BookData[]>;
+}
+
 /**
  * BookShelf (书架) 是一个客户端容器 (Client Component)
  */
-export function BookShelf({ booksPromise }: { booksPromise: Promise<BookData[]> }) {
+export function BookShelf({ booksPromise }: Props) {
 	// 使用 use() 解析从服务器传下来的 Promise
 	const initialBooks = use(booksPromise);
 
-	const { books, isBookLoading, fetchBooks, setBooks } = useDashboardStore(
+	const { books, isBookLoading, fetchBooks, setBooks, maxBooks } = useDashboardStore(
 		useShallow((s) => ({
 			books: s.books,
 			isBookLoading: s.isBookLoading,
 			fetchBooks: s.fetchBooks,
 			setBooks: s.setBooks,
+			maxBooks: s.access.maxBooks,
 		}))
 	);
 
@@ -35,6 +40,7 @@ export function BookShelf({ booksPromise }: { booksPromise: Promise<BookData[]> 
 
 	// 监听书籍状态并自动刷新轮询
 	usePolling(books, fetchBooks);
+	const isBookLimitReached = maxBooks !== null && books.length >= maxBooks;
 
 	return (
 		<main className="p-4 md:p-6 w-full flex-1 flex flex-col">
@@ -50,7 +56,7 @@ export function BookShelf({ booksPromise }: { booksPromise: Promise<BookData[]> 
 				/* 列表状态：Grid 布局 */
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
 					{/* 第一项：上传新图书小卡片 */}
-					<UploadBook variant="compact" />
+					<UploadBook variant="compact" disabled={isBookLimitReached} disabledMessage="Demo 账号当前仅支持一本书" />
 
 					{/* 现有图书列表 */}
 					{books.map((book) => (

@@ -7,6 +7,8 @@ import { useDashboardStore } from '../_store/store';
 
 interface Props {
 	variant?: 'hero' | 'compact';
+	disabled?: boolean;
+	disabledMessage?: string;
 }
 
 interface UploadResponse {
@@ -19,14 +21,14 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 /**
  * 上传图书卡片组件
  */
-export function UploadBook({ variant = 'compact' }: Props) {
+export function UploadBook({ variant = 'compact', disabled = false, disabledMessage }: Props) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isUploading, setIsUploading] = useState(false);
 	const fetchBooks = useDashboardStore((s) => s.fetchBooks);
 
 
 	const handleClick = () => {
-		if (isUploading) return;
+		if (isUploading || disabled) return;
 		fileInputRef.current?.click();
 	};
 
@@ -73,20 +75,21 @@ export function UploadBook({ variant = 'compact' }: Props) {
 		return (
 			<div
 				onClick={handleClick}
-				className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
+				className={`flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-300 rounded-xl transition-all group ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500 hover:bg-blue-50 cursor-pointer'}`}
 			>
 				<input
 					type="file"
 					ref={fileInputRef}
 					onChange={handleFileChange}
 					accept=".epub"
+					disabled={disabled}
 					className="hidden"
 				/>
 				<div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
 					<Plus className="w-8 h-8 text-blue-600" />
 				</div>
 				<h3 className="text-xl font-semibold mb-2">上传你的第一本书</h3>
-				<p className="text-gray-500">支持 EPUB 格式，最大 50MB</p>
+				<p className="text-gray-500">{disabledMessage || '支持 EPUB 格式，最大 50MB'}</p>
 				{isUploading && <p className="mt-4 text-blue-500 animate-pulse">正在处理上传中...</p>}
 			</div>
 		);
@@ -95,13 +98,14 @@ export function UploadBook({ variant = 'compact' }: Props) {
 	return (
 		<div
 			onClick={handleClick}
-			className="p-6 bg-base-100 rounded-xl shadow-sm border border-base-200 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center gap-4 group text-center h-[180px]"
+			className={`p-6 bg-base-100 rounded-xl shadow-sm border border-base-200 transition-all flex flex-col items-center justify-center gap-4 group text-center h-[180px] ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
 		>
 			<input
 				type="file"
 				ref={fileInputRef}
 				onChange={handleFileChange}
 				accept=".epub"
+				disabled={disabled}
 				className="hidden"
 			/>
 			<div className="w-12 h-12 bg-base-200 rounded-full flex items-center justify-center group-hover:bg-primary/10 transition-colors">
@@ -110,7 +114,7 @@ export function UploadBook({ variant = 'compact' }: Props) {
 			<div>
 				<h3 className="font-medium">添加图书</h3>
 				<p className="text-[11px] opacity-60 mt-1">
-					{isUploading ? '正在上传中...' : '点击上传 EPUB 文件'}
+					{disabled ? disabledMessage : (isUploading ? '正在上传中...' : '点击上传 EPUB 文件')}
 				</p>
 			</div>
 		</div>

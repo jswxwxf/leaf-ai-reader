@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { getCurrentUser, LogtoUser } from '@/lib/auth';
+import { getUserAccess, type UserAccess } from '@/lib/access';
 
 /**
  * 业务逻辑处理函数的上下文定义
@@ -9,6 +10,7 @@ export interface HandlerContext {
 	env: CloudflareEnv;
 	ctx: ExecutionContext;
 	user: LogtoUser;
+	access: UserAccess;
 }
 
 /**
@@ -32,6 +34,7 @@ export function createHandler<T>(logic: HandlerLogic<T>) {
 			if (!user?.sub) {
 				return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 			}
+			const access = getUserAccess(user);
 
 			// 2. 获取 Cloudflare 运行环境信息
 			const cloudflare = getCloudflareContext();
@@ -40,6 +43,7 @@ export function createHandler<T>(logic: HandlerLogic<T>) {
 			// 第一个参数是我们封装的 Context，后面透传 Next.js 原始的所有参数 (...args)
 			const result = await logic({
 				user,
+				access,
 				env: cloudflare.env as CloudflareEnv,
 				ctx: cloudflare.ctx,
 			}, ...args);

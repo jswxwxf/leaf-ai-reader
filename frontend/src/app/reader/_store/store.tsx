@@ -8,7 +8,18 @@ import { request } from '@/lib/request';
 
 import { type ArticleData } from '@/lib/article';
 import { type BookData } from '@/lib/book';
+import { type UserAccess } from '@/lib/access';
 import { parseSummaries } from './helpers';
+
+const DEFAULT_ACCESS: UserAccess = {
+	isDemoUser: false,
+	maxBooks: null,
+	canUploadBook: true,
+	canDeleteBook: true,
+	canUseArticles: true,
+	canUseSummary: true,
+	canUseOcr: true,
+};
 
 export type ReaderMode = 'article' | 'book';
 export type SpeechMode = 'sentence' | 'paragraph' | 'article';
@@ -29,6 +40,7 @@ export type InitialState = {
 	speechMode?: SpeechMode;
 	data?: ArticleData | BookData | null;
 	content?: string;
+	access?: UserAccess;
 };
 
 /**
@@ -51,6 +63,7 @@ export interface ReaderState {
 	speechMode: SpeechMode;
 	isChaptersOpen: boolean;
 	contentRef: React.RefObject<HTMLDivElement | null> | null;
+	access: UserAccess;
 }
 
 /**
@@ -90,7 +103,8 @@ const createReaderStore = (initialState: InitialState = {}) => {
 		path = null,
 		data = null,
 		content = "",
-		speechMode = 'sentence'
+		speechMode = 'sentence',
+		access = DEFAULT_ACCESS,
 	} = initialState;
 
 	return createStore<ReaderStoreState>()(
@@ -113,6 +127,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					speechMode,
 					isChaptersOpen: false,
 					contentRef: null,
+					access,
 				},
 				(set, get) => ({
 					setMode: (mode) => set({ mode }),
@@ -212,5 +227,4 @@ export function useReaderStoreRaw(): ReaderStore {
 	}
 	return context;
 }
-
 

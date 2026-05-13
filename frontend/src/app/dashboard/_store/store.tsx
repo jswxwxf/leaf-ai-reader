@@ -7,11 +7,23 @@ import { BookData } from '@/lib/book';
 import { ArticleData } from '@/lib/article';
 import { request } from '@/lib/request';
 import { createUrlSearchStorage } from '@/lib/zustand-helpers';
+import { type UserAccess } from '@/lib/access';
+
+const DEFAULT_ACCESS: UserAccess = {
+	isDemoUser: false,
+	maxBooks: null,
+	canUploadBook: true,
+	canDeleteBook: true,
+	canUseArticles: true,
+	canUseSummary: true,
+	canUseOcr: true,
+};
 
 export type InitialState = {
 	books?: BookData[];
 	articles?: ArticleData[];
 	view?: 'books' | 'articles';
+	access?: UserAccess;
 };
 
 /**
@@ -23,6 +35,7 @@ export interface DashboardState {
 	books: BookData[];
 	isArticleLoading: boolean;
 	articles: ArticleData[];
+	access: UserAccess;
 }
 
 /**
@@ -43,7 +56,7 @@ export interface DashboardActions {
 export type DashboardStoreState = DashboardState & DashboardActions;
 
 const createDashboardStore = (initialState: InitialState = {}) => {
-	const { books = [], articles = [], view = 'books' } = initialState;
+	const { books = [], articles = [], view = 'books', access = DEFAULT_ACCESS } = initialState;
 
 	return createStore<DashboardStoreState>()(
 		persist(
@@ -55,6 +68,7 @@ const createDashboardStore = (initialState: InitialState = {}) => {
 					books,
 					isArticleLoading: false,
 					articles,
+					access,
 				},
 				(set) => ({
 					// 动作实现 - 必须符合 DashboardActions 接口

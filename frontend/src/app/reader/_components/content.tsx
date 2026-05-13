@@ -18,7 +18,7 @@ export function Content() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // 使用 useShallow 合并订阅，减少重渲染次数
-  const { content, path, isContentLoading, setSpeechSentenceId, setIsPlaying, article_id, book_id } = useReaderStore(
+  const { content, path, isContentLoading, setSpeechSentenceId, setIsPlaying, article_id, book_id, canUseOcr } = useReaderStore(
     useShallow((state) => ({
       content: state.content,
       path: state.path,
@@ -27,6 +27,7 @@ export function Content() {
       setIsPlaying: state.setIsPlaying,
       article_id: state.article_id,
       book_id: state.book_id,
+      canUseOcr: state.access.canUseOcr,
     }))
   );
   // 直接持有 store 实例（不订阅），用于事件处理器或 Effect 中一次性读取/更新状态
@@ -63,7 +64,8 @@ export function Content() {
   // 激活阅读器图片增强：加载占位与 OCR 装饰器
   useReaderImages(sectionRef, {
     articleId: article_id ?? undefined, 
-    bookId: book_id ?? undefined 
+    bookId: book_id ?? undefined,
+    canUseOcr,
   });
 
   /**

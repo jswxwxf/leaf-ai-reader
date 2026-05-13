@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createHandler } from '../../_handler';
+import { DEMO_ACCESS_MESSAGE } from '@/lib/access';
 
 /**
  * 手动触发 AI 摘要重新生成
  * POST /api/reader/summarize
  * Payload: { type: 'article' | 'book', id: string, path?: string }
  */
-export const POST = createHandler(async ({ env, user }, request) => {
+export const POST = createHandler(async ({ env, user, access }, request) => {
+  if (!access.canUseSummary) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: 'DEMO_FEATURE_DISABLED',
+        error: DEMO_ACCESS_MESSAGE,
+      },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json();
   const { type, id, path } = body;
 

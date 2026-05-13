@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createHandler, type HandlerContext } from '../../_handler';
+import { DEMO_ACCESS_MESSAGE } from '@/lib/access';
 
 /**
  * 图片 OCR 文字识别 API 接口
  * POST /api/reader/ocr
  * Body: { bookId: string, path: string }
  */
-export const POST = createHandler(async ({ env, user }: HandlerContext, request) => {
+export const POST = createHandler(async ({ env, user, access }: HandlerContext, request) => {
+  if (!access.canUseOcr) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: 'DEMO_FEATURE_DISABLED',
+        error: DEMO_ACCESS_MESSAGE,
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const { bookId, path, url } = await request.json();
 

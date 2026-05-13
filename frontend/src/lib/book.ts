@@ -3,6 +3,7 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from './auth';
+import { DEMO_ACCESS_MESSAGE, getUserAccess } from './access';
 /**
  * 章节结构定义
  */
@@ -151,6 +152,11 @@ export async function deleteBook(
 	const userId = user?.sub;
 	if (!userId) {
 		throw new Error('Unauthorized');
+	}
+
+	const access = getUserAccess(user);
+	if (!access.canDeleteBook) {
+		throw new Error(DEMO_ACCESS_MESSAGE);
 	}
 
 	// 2. 获取 Cloudflare 上下文：优先使用传入参数
