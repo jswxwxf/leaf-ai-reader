@@ -5,6 +5,7 @@ import { showLoading } from "@/app/full-screen-loading";
 import { useShallow } from "zustand/react/shallow";
 import { useSpeech } from "../_hooks/use-speech";
 import { useMediaSession } from "../_hooks/use-media-session";
+import { useDoubleClick } from "../_hooks/use-double-click";
 import { useReaderStore } from "../_store/store";
 import { SpeecherSettings } from "./speecher-settings";
 import type { Chapter, BookData } from "@/lib/book";
@@ -84,6 +85,12 @@ export function Speecher() {
     }
   };
 
+  const handleClick = useDoubleClick({
+    disabled: isContentLoading,
+    onSingleClick: handleToggle,
+    onDoubleClick: () => step(1),
+  });
+
   return (
     <div className={`flex items-center justify-between w-full max-w-md md:max-w-xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}>
       {/* 1. 左侧：上一章 */}
@@ -126,7 +133,7 @@ export function Speecher() {
           <button
             className="btn btn-ghost h-[52px] join-item rounded-l-2xl px-5 border-none hover:bg-primary/10 active:scale-95 transition-all text-primary"
             title={isPlaying ? "停止朗读" : "开始朗读"}
-            onClick={handleToggle}
+            onClickCapture={handleClick}
             disabled={isContentLoading}
           >
             {isPlaying ? (

@@ -6,6 +6,7 @@ import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { useSpeech } from "../_hooks/use-speech";
+import { useDoubleClick } from "../_hooks/use-double-click";
 import { useEffect, useRef, useState } from "react";
 import { request } from "@/lib/request";
 import { SpeechBox } from "./speech-box";
@@ -115,7 +116,7 @@ export function Summary() {
   );
   const { isSummarizing, handleSummarize } = useSummarize();
   const { jumpToSentence } = useReader();
-  const { play, stop, isPlaying } = useSpeech();
+  const { play, step, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
 
   const handleToggle = () => {
@@ -125,6 +126,12 @@ export function Summary() {
       play();
     }
   };
+
+  const handleClick = useDoubleClick({
+    disabled: isContentLoading,
+    onSingleClick: handleToggle,
+    onDoubleClick: () => step(1),
+  });
 
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 compact:w-48 md:w-80 compact:h-full compact:border-l compact:border-b-0 compact:order-0">
@@ -178,7 +185,7 @@ export function Summary() {
         {/* 底部留白区域，点击可触发播放/暂停，仅在 compact 以上垂直布局时有效 */}
         <div
           className="flex-1 hidden compact:block cursor-pointer"
-          onClick={handleToggle}
+          onClickCapture={handleClick}
           title={isPlaying ? "点击停止" : "点击播放"}
         />
       </div>
