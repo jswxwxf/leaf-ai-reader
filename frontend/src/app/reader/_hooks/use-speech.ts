@@ -20,6 +20,7 @@ function getTextWithMasking(node: Node): string {
       .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
       .replace(/([0-9])\uFE0F?\u20E3/g, (m, digit: string) => digit + " ".repeat(m.length - digit.length))
       .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
+      .replace(/""/g, "， ")
       .replace(/["']/g, " ")
       .replaceAll("——", "， ")
       .replace(/”“|」「|》《/g, "”，");
@@ -87,6 +88,12 @@ export function useSpeech() {
     speechSentenceIdRef.current = speechSentenceId;
   }, [speechSentenceId]);
 
+  // 朗读模式会在设置面板中途切换；onend/setTimeout 这类异步回调必须读取最新模式。
+  const speechModeRef = useRef(speechMode);
+  useEffect(() => {
+    speechModeRef.current = speechMode;
+  }, [speechMode]);
+
   const play = async () => {
     // 朗读开始时，申请保持屏幕唤醒
     requestWakeLock();
@@ -107,7 +114,8 @@ export function useSpeech() {
     // 如果全是标点符号、符号或 emoji 则跳过，递归调用 play 直到读到实质内容或触及边界
     if (!/[^\p{P}\p{S}\s\p{Extended_Pictographic}]/u.test(el.textContent)) {
       setSpeechSentenceId(`s-${parseInt(targetId.replace("s-", "")) + 1}`);
-      if (speechMode !== "paragraph" || !isLastSentenceInParagraph(el as HTMLElement)) {
+      const currentSpeechMode = speechModeRef.current;
+      if (currentSpeechMode !== "paragraph" || !isLastSentenceInParagraph(el as HTMLElement)) {
         setTimeout(play, 0);
       }
       return;
@@ -158,23 +166,24 @@ export function useSpeech() {
       }
 
       const nextId = nextEl.id;
+      // 这里读取 ref，确保用户在当前句朗读过程中切换模式后，本次结束决策立即生效。
+      const currentSpeechMode = speechModeRef.current;
 
       // 无论哪种模式，都将焦点移至下一句
       setSpeechSentenceId(nextId);
 
-      if (speechMode === 'sentence') {
+      if (currentSpeechMode === 'sentence') {
         // 逐句模式：如果当前句太短（小于等于5个字）且不在段落末尾，则自动连读下一句
-        // const isShort = (el.textContent?.trim().length || 0) <= 5;
-        // const isLastInPara = isLastSentenceInParagraph(el as HTMLElement);
+        const isShort = (el.textContent?.trim().length || 0) <= 5;
+        const isLastInPara = isLastSentenceInParagraph(el as HTMLElement);
 
-        // if (isShort && !isLastInPara) {
-        //   setTimeout(play, 0);
-        //   return;
-        // }
+        if (isShort && !isLastInPara) {
+          setTimeout(play, 0);
+        }
         return;
       }
 
-      if (speechMode === 'paragraph') {
+      if (currentSpeechMode === 'paragraph') {
         // 逐段模式：判断是否为段落末尾
         if (isLastSentenceInParagraph(el as HTMLElement)) {
           return;
@@ -184,7 +193,7 @@ export function useSpeech() {
         return;
       }
 
-      if (speechMode === 'article') {
+      if (currentSpeechMode === 'article') {
         // 全文模式：接力播放
         setTimeout(play, 0);
       }

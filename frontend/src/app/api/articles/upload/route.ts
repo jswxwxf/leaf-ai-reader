@@ -82,6 +82,7 @@ export const POST = createHandler(async ({ env, ctx, user, access }: HandlerCont
 
 	// 3. 告知 Next.js 刷新仪表盘页面的缓存数据
 	revalidatePath('/dashboard');
+	revalidatePath('/reader');
 
 	return {
 		success: true,

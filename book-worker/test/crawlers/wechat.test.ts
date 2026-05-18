@@ -14,8 +14,7 @@ describe('WeChat Sentence Splitting', () => {
     it('应该正确处理带有引号的对话', () => {
         const text = '他问：“你好吗？”我回答：“挺好的。”';
         const result = splitSentences(text);
-        // 更新：现在冒号也会断句
-        expect(result).toEqual(['他问：', '“你好吗？”', '我回答：', '“挺好的。”']);
+        expect(result).toEqual(['他问：“你好吗？”', '我回答：“挺好的。”']);
     });
 
     it('应该处理包含双重书名号和问号的长难句', () => {
@@ -105,7 +104,7 @@ describe('WeChat Crawler cleanHtml', () => {
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
 
-        const expected = '<p><span class="sentence" id="s-1">他说：</span><span class="sentence" id="s-2"><strong>「我不去了」</strong>然后离开。</span></p>';
+        const expected = '<p><span class="sentence" id="s-1">他说：<strong>「我不去了」</strong>然后离开。</span></p>';
         expect(cleaned).toBe(expected);
     });
 
@@ -121,6 +120,48 @@ describe('WeChat Crawler cleanHtml', () => {
 
         const expected = '<p><span class="sentence" id="s-1">为啥我说这些人观念朴素呢？</span><span class="sentence" id="s-2">一个关键问题，线下店到底是怎么丢掉自己的优势的？</span><span class="sentence" id="s-3">如果去过中关村之前的那几个电脑城，或者你在线下店买到的东西出了问题，你才能意识到线上店的优势有多大，那些被迫关闭的线下商场，没一个是冤枉的。</span></p>';
 
+        expect(cleaned).toBe(expected);
+    });
+
+    it('应该清洗带 style 和 leaf 属性的财富存量 HTML 并打印结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p style="visibility: visible;"><span leaf="" style="visibility: visible;">目前我国没有官方实时发布的“财富存量总额”方面的数据，但可以根据中国社会科学院国家资产负债表研究中心（CNBS）2023年末发布的估算数据，看出2022年我国财富总量与分布的大体图景：</span><span leaf="" style="visibility: visible;"><br style="visibility: visible;"></span><span leaf="" style="visibility: visible;"><br style="visibility: visible;"></span><span leaf="" style="visibility: visible;">2022年中国社会净财富总额约 790万亿 人民币。这个数字是总资产减去总负债后的净值，可以理解为当时国家、企业、居民真正拥有的财富总和。</span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">目前我国没有官方实时发布的“财富存量总额”方面的数据，但可以根据中国社会科学院国家资产负债表研究中心（CNBS）2023年末发布的估算数据，看出2022年我国财富总量与分布的大体图景：</span><br /><br /><span class="sentence" id="s-2">2022年中国社会净财富总额约 790万亿 人民币。</span><span class="sentence" id="s-3">这个数字是总资产减去总负债后的净值，可以理解为当时国家、企业、居民真正拥有的财富总和。</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
+    it('应该清洗已移除属性的 highWaterMark HTML 并打印结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><span>大多数开发者在文档中看到&nbsp;</span><code><span>highWaterMark</span></code><span>&nbsp;时，会形成一个合理的假设：这是内存上限。当缓冲区达到这个数值时，Node.js 停止接受数据。也许会抛异常，也许会暂停。总之，运行时会保护你。</span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1">大多数开发者在文档中看到<code>highWaterMark</code>时，会形成一个合理的假设：这是内存上限。</span><span class="sentence" id="s-3">当缓冲区达到这个数值时，Node.js 停止接受数据。</span><span class="sentence" id="s-4">也许会抛异常，也许会暂停。</span><span class="sentence" id="s-5">总之，运行时会保护你。</span></p>';
+        expect(cleaned).toBe(expected);
+    });
+
+    it('应该清洗以 code 开头的 highWaterMark HTML 并打印结果', () => {
+        const inputHtml = `
+            <div id="js_content">
+                <p><code><span>highWaterMark</span></code><span>&nbsp;是一个建议性阈值。当内部缓冲区达到这个值时，</span><code><span>.write()</span></code><span>&nbsp;返回&nbsp;</span><code><span>false</span></code><span>。仅此而已。你刚写入的那个块把缓冲区推过了阈值，于是流告诉你：停下来，等它排空。没有异常，没有自动暂停，没有熔断器。如果你无视那个&nbsp;</span><code><span>false</span></code><span>&nbsp;继续调用&nbsp;</span><code><span>.write()</span></code><span>，Node.js 就继续缓冲。你推入的每一个块都会被添加到一个没有上限的内部队列中，直到 V8 堆耗尽空间、进程死亡。</span></p>
+            </div>
+        `;
+        const { document } = parseHTML(inputHtml);
+        const jsContent = document.getElementById('js_content');
+        const cleaned = cleanHtml(jsContent);
+
+        const expected = '<p><span class="sentence" id="s-1"><code>highWaterMark</code>是一个建议性阈值。</span><span class="sentence" id="s-2">当内部缓冲区达到这个值时，<code>.write()</code>返回<code>false</code>。</span><span class="sentence" id="s-5">仅此而已。</span><span class="sentence" id="s-6">你刚写入的那个块把缓冲区推过了阈值，于是流告诉你：停下来，等它排空。</span><span class="sentence" id="s-7">没有异常，没有自动暂停，没有熔断器。</span><span class="sentence" id="s-8">如果你无视那个<code>false</code>继续调用<code>.write()</code>，Node.js 就继续缓冲。</span><span class="sentence" id="s-11">你推入的每一个块都会被添加到一个没有上限的内部队列中，直到 V8 堆耗尽空间、进程死亡。</span></p>';
         expect(cleaned).toBe(expected);
     });
 
@@ -173,11 +214,11 @@ describe('WeChat Crawler cleanHtml', () => {
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
 
-        const expected = `<p><span class="sentence" id="s-1">我能想象他们的心情，这帮人读我文章时，一定是非常高傲的，他们一定不断默念着：</span><span class="sentence" id="s-2">“作者就是个傻叉，我比他懂《指环王》多了，我就是要跟他抬杠一下，证明这一点！”</span></p>
-<p><span class="sentence" id="s-3">好吧，可能我不如您懂指环王。</span><span class="sentence" id="s-4">但我要说：</span><span class="sentence" id="s-5"><strong>一个人若以这种高傲的心态去读书览文，看的再多也只是在浪费时间。</strong></span></p>
-<p><span class="sentence" id="s-6">因为骄傲会封闭你的大脑和内心，让你无法获得新启发和新知识。</span></p>
-<p><span class="sentence" id="s-7">抛开成见，请思考一下，《指环王》之中有没有历史的影子呢？</span></p>
-<p><span class="sentence" id="s-8">当然是有的。</span></p>`;
+        const expected = `<p><span class="sentence" id="s-1">我能想象他们的心情，这帮人读我文章时，一定是非常高傲的，他们一定不断默念着：“作者就是个傻叉，我比他懂《指环王》多了，我就是要跟他抬杠一下，证明这一点！”</span></p>
+<p><span class="sentence" id="s-2">好吧，可能我不如您懂指环王。</span><span class="sentence" id="s-3">但我要说：<strong>一个人若以这种高傲的心态去读书览文，看的再多也只是在浪费时间。</strong></span></p>
+<p><span class="sentence" id="s-5">因为骄傲会封闭你的大脑和内心，让你无法获得新启发和新知识。</span></p>
+<p><span class="sentence" id="s-6">抛开成见，请思考一下，《指环王》之中有没有历史的影子呢？</span></p>
+<p><span class="sentence" id="s-7">当然是有的。</span></p>`;
 
         expect(cleaned).toBe(expected);
 
@@ -193,7 +234,7 @@ describe('WeChat Crawler cleanHtml', () => {
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
 
-        const expected = '<p><span class="sentence" id="s-1">海外媒体是这么评价 Light Phone 三代的：</span><span class="sentence" id="s-2">「极简主义被拉伸到令人沮丧的程度」，「一台越来越像智能机的傻瓜手机」。</span><span class="sentence" id="s-3">也不能怪他们：</span><span class="sentence" id="s-4">AMOLED 屏幕、摄像头、NFC 支付、指纹解锁……</span><span class="sentence" id="s-5">只看参数表的话，你很容易以为这就是一台智能机。</span></p>';
+        const expected = '<p><span class="sentence" id="s-1">海外媒体是这么评价 Light Phone 三代的：「极简主义被拉伸到令人沮丧的程度」，「一台越来越像智能机的傻瓜手机」。</span><span class="sentence" id="s-2">也不能怪他们：AMOLED 屏幕、摄像头、NFC 支付、指纹解锁……</span><span class="sentence" id="s-3">只看参数表的话，你很容易以为这就是一台智能机。</span></p>';
 
         expect(cleaned).toBe(expected);
     });
@@ -208,7 +249,7 @@ describe('WeChat Crawler cleanHtml', () => {
         const jsContent = document.getElementById('js_content');
         const cleaned = cleanHtml(jsContent);
 
-        const expected = '<p><span class="sentence" id="s-1">第一行<br />第二行</span></p>';
+        const expected = '<p><span class="sentence" id="s-1">第一行</span><br /><span class="sentence" id="s-2">第二行</span></p>';
         expect(cleaned).toBe(expected);
     });
 

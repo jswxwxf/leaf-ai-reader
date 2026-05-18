@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, Menu } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { ReadingProgress } from "./progress";
@@ -14,7 +13,6 @@ interface Props {
  * 阅读器顶部状态栏组件
  */
 export function Header({ isPopup = true }: Props) {
-	const router = useRouter();
 	const { data, mode, setChaptersOpen } = useReaderStore(
 		useShallow((state) => ({
 			data: state.data,
@@ -27,13 +25,8 @@ export function Header({ isPopup = true }: Props) {
 
 	const handleBack = () => {
 		window.speechSynthesis.cancel();
-
 		const backUrl = isBookMode ? '/dashboard?view=books' : '/dashboard?view=articles';
-		if (window.history.length > 1) {
-			router.back();
-		} else {
-			router.replace(backUrl);
-		}
+		window.location.href = backUrl;
 	};
 
 	return (

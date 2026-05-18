@@ -1,6 +1,6 @@
 'use client';
 
-import { type MouseEvent, type ReactNode, useRef } from 'react';
+import { forwardRef, type MouseEvent, type ReactNode, useImperativeHandle, useRef } from 'react';
 import { Volume2 } from 'lucide-react';
 import { isSafari } from '../_utils/utils';
 
@@ -8,15 +8,17 @@ interface Props {
   children: ReactNode;
 }
 
-export function SpeechBox({ children }: Props) {
+export type SpeechBoxHandle = {
+  speak: () => Promise<void>;
+};
+
+export const SpeechBox = forwardRef<SpeechBoxHandle, Props>(function SpeechBox({ children }, ref) {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const handleSpeak = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const speak = () => new Promise<void>((resolve) => {
     const text = rootRef.current?.innerText.trim();
     if (!text || typeof window === 'undefined' || !window.speechSynthesis) {
+      resolve();
       return;
     }
 
@@ -25,7 +27,17 @@ export function SpeechBox({ children }: Props) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
     utterance.rate = isSafari ? 1.32 : 2;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
     window.speechSynthesis.speak(utterance);
+  });
+
+  useImperativeHandle(ref, () => ({ speak }));
+
+  const handleSpeak = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    speak();
   };
 
   return (
@@ -43,4 +55,4 @@ export function SpeechBox({ children }: Props) {
       </button>
     </div>
   );
-}
+});

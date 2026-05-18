@@ -35,10 +35,11 @@
 - OCR。
 - 云同步。
 - 账号系统。
-- 广告变现。
 - 跨端内容分发。
 
 以上功能会显著增加合规、隐私、服务端和审核复杂度，应在移动端 MVP 验证后再评估。
+
+广告变现可以作为免费版商业模式预留，但首版实现应保持克制，优先使用固定 banner 等低复杂度广告位，不应为了广告插入破坏阅读器核心架构。
 
 ## 3. 合规与上架原则
 
@@ -69,6 +70,14 @@
 
 移动端不建议直接复刻 Cloudflare Worker，而应抽取纯 TypeScript 核心逻辑，并用 React Native 的本地存储与原生能力替换云端服务。
 
+最新方向是将移动端版本定位为纯客户端、本地优先应用：
+
+- 不需要登录。
+- 不需要服务器端。
+- 不需要 Cloudflare Worker / R2 / D1 / OpenNext。
+- 用户自有 EPUB 和解析结果保存在本机。
+- AI 能力作为可选增强，不影响本地阅读器主流程。
+
 ```text
 book-core
   EPUB parser
@@ -88,10 +97,24 @@ mobile app
 ```text
 Cloudflare R2  -> RN FileSystem
 Cloudflare D1  -> RN SQLite
-Workers AI     -> 后端 API，不放客户端
-Gemini API Key -> 后端 API，不放客户端
+Workers AI     -> 可选 AI Provider，不进入本地核心链路
+Gemini API Key -> 不内置客户端
 Worker RPC     -> 本地 service/controller 函数
+Logto/Auth     -> 首版移除
 ```
+
+本地 App 的推荐调用链：
+
+```text
+Reader UI
+  -> ReaderService
+    -> BookRepository
+      -> StorageBackend
+      -> MetadataStore
+      -> SpeechController
+```
+
+不要让 UI 直接读写真实文件路径。业务层只使用 `bookId`、`chapterPath`、`resourcePath` 等稳定标识，真实路径由 storage backend 解析。这样未来接入 iCloud、Google Drive、WebDAV 或其他同步方案时，不需要重写阅读器 UI。
 
 ### 4.2 是否需要本地 Node.js 服务
 
@@ -146,7 +169,25 @@ Web 端传 API URL resolver，RN 端传本地相对路径或 `file://` URI resol
 
 ## 6. 本地存储设计
 
-### 6.1 文件目录
+### 6.1 存储原则
+
+移动端应延续当前 Web / Worker 版的对象存储思路：
+
+- EPUB 原文件、封面、章节 HTML、图片、CSS、字体等大块内容放文件系统。
+- SQLite 只存索引、状态和查询友好的结构化数据。
+- 解析产物应可从 `original.epub` 重建。
+- 所有持久化路径使用相对路径，不保存沙盒绝对路径。
+- 内容和状态拆开保存，方便未来同步和冲突处理。
+
+对应关系：
+
+```text
+R2 object    -> local file
+D1 row       -> SQLite row
+user id      -> local single-user namespace
+```
+
+### 6.2 文件目录
 
 建议将 EPUB 原文件、处理后的章节、图片、CSS、字体都保存到 App 沙盒目录。
 
@@ -154,8 +195,11 @@ Web 端传 API URL resolver，RN 端传本地相对路径或 `file://` URI resol
 books/
   {bookId}/
     original.epub
+    book-manifest.json
     meta.json
     toc.json
+    flatten-chapters.json
+    cover.jpg
     chapters/
       chapter-0001.html
       chapter-0002.html
@@ -164,9 +208,30 @@ books/
         Images/
         Styles/
         Fonts/
+state/
+  {bookId}/
+    reading-state.json
+    highlights.json
+    notes.json
 ```
 
-### 6.2 SQLite 表
+示例 `book-manifest.json`：
+
+```json
+{
+  "schemaVersion": 1,
+  "bookId": "book-123",
+  "originalPath": "original.epub",
+  "tocPath": "toc.json",
+  "flattenTocPath": "flatten-chapters.json",
+  "coverPath": "cover.jpg",
+  "contentDir": "chapters",
+  "resourceDir": "resources",
+  "processedAt": "2026-05-27T00:00:00.000Z"
+}
+```
+
+### 6.3 SQLite 表
 
 建议使用 `expo-sqlite`、`react-native-quick-sqlite` 或其他 RN SQLite 方案。
 
@@ -180,6 +245,44 @@ highlights
 notes
 speech_state
 ```
+
+SQLite 中保存的是索引和状态，例如：
+
+- `bookId`
+- `title`
+- `author`
+- `coverPath`
+- `tocPath`
+- `lastChapterPath`
+- `lastSentenceId`
+- `updatedAt`
+
+不要把每章 HTML 全量塞进 SQLite。章节 HTML 更适合作为本地文件保存，SQLite 只记录章节路径和状态。
+
+### 6.4 面向未来同步的抽象
+
+首版不做 iCloud，但代码应从一开始面向可替换 storage backend：
+
+```text
+LocalFileStorage + SQLiteMetadataStore
+```
+
+未来 Apple 平台可以替换或扩展为：
+
+```text
+ICloudFileStorage + LocalSQLiteIndex
+```
+
+Android 或跨平台同步可以扩展为：
+
+```text
+GoogleDriveSyncBackend
+WebDAVSyncBackend
+DropboxSyncBackend
+SyncthingFolderBackend
+```
+
+Android 没有与 iCloud Documents 完全等价的系统级 App 私有文档同步。Android Auto Backup 更适合换机或重装恢复，不适合阅读进度的多设备连续同步。若要做 Android 跨设备同步，通常需要接 Google Drive、WebDAV、Dropbox、OneDrive、Syncthing 或自建同步层。
 
 ## 7. HTML 渲染方案
 
@@ -225,6 +328,14 @@ Android -> TextToSpeech
 - 高级朗读控制：自定义 Native Module
 
 首版 demo 可以先用 RN TTS 库验证体验，但产品级版本应预留少量原生开发。原因是后台朗读、蓝牙遥控、锁屏控制、系统音频焦点、背景音乐混音和句级回调都属于平台媒体能力，纯 JS 层难以稳定覆盖。
+
+最新判断：
+
+- iOS 系统 TTS 能提供边界回调，但免费声音质量一般。
+- Siri Voice 通常不开放给第三方 App 调用。
+- Android 系统 TTS 与 WebView TTS 都需要真机验证，碎片化风险明显。
+- 词级高亮是产品核心体验，不应为了更好听的声音牺牲同步高亮。
+- 高级云 TTS 只有在能提供 word timestamp / speech marks 时才值得作为高级朗读方案。
 
 ### 8.1 朗读数据结构
 
@@ -335,6 +446,14 @@ WebView 负责：
 
 WebView 不是朗读状态源。它可以上报点击和滚动位置，但不能作为后台朗读、锁屏控制或当前句文本的唯一来源。
 
+如果第一版为了最大复用现有 Web 阅读器能力，可以做一次 WebView TTS spike：
+
+- WebView 内使用 `window.speechSynthesis`。
+- WebView 内维护 `onboundary` 高亮。
+- RN 通过 bridge 控制 play / stop / next / prev / speechMode。
+
+但该方案只能作为验证或兜底，不建议作为长期 Android 主方案。Android WebView、系统 TTS 引擎、厂商 ROM、中文语音包和 boundary 事件粒度都可能影响体验。
+
 ### 9.2 RN -> WebView
 
 通过 `injectJavaScript` 调用 WebView 内部 runtime：
@@ -368,7 +487,78 @@ type FromWeb =
 - EPUB 解析、章节处理和资源提取应分批、按需、可取消。
 - 长期可评估 JSI worker、原生模块或后台任务来承载重 CPU 操作。
 
-## 11. 推荐 MVP 里程碑
+## 11. AI 方案补充
+
+移动端本地阅读器可以不依赖 AI。AI 应作为可选 provider 接入，而不是主流程依赖。
+
+Puter.js 值得作为 AI 摘要、解释、翻译、问答的候选方案，因为其模式是 no backend / no API key / user-pays，用户使用自己的额度或自行承担超额成本，App 不需要替用户维护 AI 账单。
+
+推荐抽象：
+
+```ts
+interface AiProvider {
+  summarize(input: string): Promise<string>;
+  translate(input: string): Promise<string>;
+  explain(input: string): Promise<string>;
+}
+```
+
+候选 provider：
+
+```text
+NoAiProvider
+PuterProvider
+LocalModelProvider
+OpenAIProvider
+```
+
+注意：Puter.js TTS 只有在暴露 word timestamp / speech marks 时，才适合作为高级朗读方案。若只返回音频而没有词级时间轴，则不应替代系统 TTS。
+
+## 12. 广告与商业化补充
+
+移动端免费版可以加入广告，目标是覆盖上架和维护成本。广告应作为可替换 provider 设计：
+
+```ts
+interface AdProvider {
+  showBanner(placement: AdPlacement): React.ReactNode;
+  showInterstitial(placement: AdPlacement): Promise<void>;
+  showAppOpen(): Promise<void>;
+}
+```
+
+建议广告位：
+
+```text
+bookshelf_banner
+reader_banner
+ai_result_native
+settings_banner
+app_open
+import_done_interstitial
+chapter_switch_interstitial
+```
+
+首版推荐：
+
+- 书架页 banner。
+- 阅读页固定 banner。
+- AI / 摘要页广告。
+- 开屏广告低频展示。
+- 插屏广告后续再评估。
+- Pro / 付费版隐藏广告。
+
+阅读页第一版建议使用固定 banner，不建议为了让广告跟随正文滚动而重构 WebView 高度自适应。固定 banner 的工程复杂度最低、曝光稳定，也方便后续去广告。
+
+不推荐：
+
+- 正文中间频繁插广告。
+- 每翻页或每滚动几屏插广告。
+- 广告遮挡正文、朗读控制栏或选择操作。
+- 朗读过程中弹出插屏。
+
+章节末尾 native ad 体验较好，但若用户没有读到章节末尾，广告通常不会形成有效曝光。它可以作为后续补充，不应作为首版唯一阅读页广告位。
+
+## 13. 推荐 MVP 里程碑
 
 ### Phase 1: 本地图书导入与解析
 
@@ -405,17 +595,27 @@ type FromWeb =
 - [ ] 横竖屏和移动端安全区适配。
 - [ ] 大文件性能测试。
 
-## 12. 非目标
+### Phase 5: 商业化与可选增强
+
+- [ ] 接入广告 provider 抽象。
+- [ ] 免费版阅读页固定 banner。
+- [ ] Pro 去广告开关。
+- [ ] Puter.js AI provider spike。
+- [ ] iCloud-ready storage backend 边界检查。
+
+## 14. 非目标
 
 - 不在当前 `frontend/` 或 `book-worker/` 项目中实现。
 - 不把当前 Cloudflare Worker 原样移植到 RN。
 - 不在客户端保存 Gemini / OpenAI / Workers AI API key。
 - 不在首版提供内容平台、书城、新闻采集、公开分享或推荐流。
 - 不在首版实现中国区 AI 摘要/OCR 合规闭环。
+- 不为首版实现 iCloud / Google Drive / WebDAV 同步，但代码结构应预留 storage backend 和 sync backend。
+- 不把高级云 TTS 作为主朗读方案，除非 provider 能提供稳定词级时间轴。
 
-## 13. 状态
+## 15. 状态
 
 - **状态**：归档 / Future Exploration
 - **是否进入当前项目活跃列表**：否
-- **最近更新**：2026-05-10
-- **来源**：围绕 Leaf AI Reader 移动端化、App Store 合规、React Native 本地存储、WebView 渲染、原生 TTS、蓝牙遥控、背景音乐混音和原生媒体控制的方案讨论
+- **最近更新**：2026-05-27
+- **来源**：围绕 Leaf AI Reader 移动端化、纯客户端本地应用、React Native 本地存储、WebView 渲染、原生 TTS、词级高亮、Puter.js AI、iCloud-ready 架构、Android 同步边界、广告变现和原生媒体控制的方案讨论

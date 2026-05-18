@@ -1,6 +1,5 @@
 import { Reader } from "@/app/reader/_components/reader";
 import { SpeechMode } from "@/app/reader/_store/store";
-import { normalizePathKey } from "@/app/reader/_utils/utils";
 
 type Props = {
 	searchParams: Promise<{
@@ -17,7 +16,7 @@ type Props = {
  */
 export default async function ReaderInterceptPage({ searchParams }: Props) {
 	const { article_id, book_id, path, speechMode } = await searchParams;
-	const key = `${book_id ?? ''}-${article_id ?? ''}-${normalizePathKey(path)}`;
+	const key = `${book_id ?? ''}-${article_id ?? ''}`;
 
 	return (
 		<div className="fixed inset-0 z-40 bg-base-100 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">

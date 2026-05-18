@@ -7,7 +7,7 @@ export function splitSentences(text: string): string[] {
 	if (!text.trim()) return [];
 
 	const sentences: string[] = [];
-	const terminators = "。！？；：!?……";
+	const terminators = "。！？；!?……";
 	const closers = "”’』」》）〉】〗｝\"')]}";
 
 	let current = "";
@@ -33,11 +33,6 @@ export function splitSentences(text: string): string[] {
 
 		// 检查是否遇到结束标点
 		if (terminators.includes(char)) {
-			// 特殊处理：如果处于成对包裹符内部，且当前是冒号，则不断句
-			if (depth > 0 && char === '：') {
-				continue;
-			}
-
 			// 1. 尽可能多地吞掉连续的终结符 (如 …… 或 !!!)
 			while (i + 1 < text.length && terminators.includes(text[i + 1])) {
 				const nextChar = text[++i];

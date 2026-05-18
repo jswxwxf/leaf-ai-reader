@@ -96,7 +96,9 @@ function refineHtml(html: string): string {
     // 另一个边界：闭合引号/括号本身不代表句末。
     // 例如 `在「设置」中`、`他说：「我不去了」然后离开` 都应继续缝合；
     // 只有闭合符前已经是 `。！？` 等真正句末标点时，才把它视作完整句。
-    .replace(/<\/span>(\s*(?:<br\s*\/?>|<sup>.*?<\/sup>|<sub>.*?<\/sub>|\s)*)<span class="sentence" id="s-\d+">/gi, (match, separator, offset, fullHtml) => {
+    .replace(/<\/span>(\s*(?:<br\s*\/?>|<sup>.*?<\/sup>|<sub>.*?<\/sub>|<code>.*?<\/code>|\s)*)<span class="sentence" id="s-\d+">/gi, (match, separator, offset, fullHtml) => {
+      if (/<br\s*\/?>/i.test(separator)) return match;
+
       const htmlBeforeBoundary = fullHtml.slice(0, offset);
       const previousSpanStart = htmlBeforeBoundary.lastIndexOf('<span class="sentence"');
       const previousSentenceHtml = previousSpanStart >= 0 ? htmlBeforeBoundary.slice(previousSpanStart) : htmlBeforeBoundary;
@@ -105,19 +107,28 @@ function refineHtml(html: string): string {
       return shouldHealSentence(previousSentenceHtml, nextSentenceHtml) ? separator : match;
     })
 
-    // 3. 清理空段落
+    // 3. 如果句子以行内 code 开头，transformNode 会先输出 code，再输出 sentence span。
+    // 将这种句首 code 收进后一个 sentence，避免出现不属于任何 sentence 的裸露文本。
+    .replace(/(<(?:p|h[1-6]|li|blockquote|td|th)>)(\s*(?:<code>[\s\S]*?<\/code>\s*)+)<span class="sentence" id="s-(\d+)">/gi, (_match, blockStart, leadingCode, id) => {
+      return `${blockStart}<span class="sentence" id="s-${id}">${leadingCode.trim()}`;
+    })
+    .replace(/<\/span>(\s*(?:<code>[\s\S]*?<\/code>\s*)+)<span class="sentence" id="s-(\d+)">/gi, (_match, leadingCode, id) => {
+      return `</span><span class="sentence" id="s-${id}">${leadingCode.trim()}`;
+    })
+
+    // 4. 清理空段落
     .replace(/<p>\s*(?:&nbsp;|&#160;|&#8203;|\u200B)*\s*<\/p>/gi, '')
 
-    // 4. 清理无意义的 br 包装段落 (常见于微信公众号)
+    // 5. 清理无意义的 br 包装段落 (常见于微信公众号)
     .replace(/<p>\s*<br\s*\/?>\s*<\/p>/gi, '')
 
-    // 5. 清理可能产生的双重 p 包装（容错）
+    // 6. 清理可能产生的双重 p 包装（容错）
     .replace(/<p>\s*(<p>.*?<\/p>)\s*<\/p>/gis, '$1')
 
-    // 6. 将连续的 3 个或以上 <br /> 压缩为 2 个
+    // 7. 将连续的 3 个或以上 <br /> 压缩为 2 个
     .replace(/(?:<br\s*\/?>\s*){3,}/gi, '<br /><br />')
 
-    // 7. 将连续的 2 个或以上纯换行/空格压缩
+    // 8. 将连续的 2 个或以上纯换行/空格压缩
     .replace(/\n{2,}/g, '\n')
     .trim();
 
@@ -127,7 +138,7 @@ function refineHtml(html: string): string {
 function shouldHealSentence(sentenceHtml: string, nextSentenceHtml: string = ''): boolean {
   const nextTextContent = nextSentenceHtml.replace(/<[^>]*>/g, '').trim();
   const firstNextChar = Array.from(nextTextContent)[0];
-  const leadingContinuationChars = '，、；：,;:';
+  const leadingContinuationChars = '，、；,;';
   if (firstNextChar && leadingContinuationChars.includes(firstNextChar)) return true;
 
   // 只看可见文本最后一个字符，避免被 </b>、</strong> 这类标签结尾误导。
@@ -135,7 +146,7 @@ function shouldHealSentence(sentenceHtml: string, nextSentenceHtml: string = '')
   if (!textContent) return false;
 
   const meaningfulEndChar = getMeaningfulSentenceEndChar(textContent);
-  const sentenceBoundaryChars = '。！？；：!?….;:';
+  const sentenceBoundaryChars = '。！？；!?….;';
   return !meaningfulEndChar || !sentenceBoundaryChars.includes(meaningfulEndChar);
 }
 
@@ -309,10 +320,10 @@ function transformNode(
     }
     if (tagName === 'br') return "<br />";
 
-    const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre', 'code'];
-    const INLINE_TAGS = ['strong', 'b', 'em', 'i', 'sub', 'sup', 'del'];
+    const BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'table', 'tr', 'td', 'th', 'hr', 'pre'];
+    const INLINE_TAGS = ['strong', 'b', 'em', 'i', 'sub', 'sup', 'del', 'code'];
     // 豁免名单：在这些标签内的文本不触发分句逻辑（通常仅限不含实质内容、仅为标记的标签）
-    const NON_SPLITTABLE_TAGS = ['sub', 'sup'];
+    const NON_SPLITTABLE_TAGS = ['sub', 'sup', 'code'];
 
     let innerContent = "";
     // 如果当前标签在豁免名单内，或者父级已经开启了豁免标志，则下级也豁免

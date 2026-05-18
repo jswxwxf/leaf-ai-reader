@@ -27,7 +27,7 @@ export function UploadArticle() {
 
 		// 成功后清空输入框
 		formRef.current?.reset();
-		fetchArticles();
+		await fetchArticles();
 		return { success: true };
 	}, null);
 

@@ -80,9 +80,10 @@ const Chapters = ({
  */
 export function ChaptersWrapper() {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const { data, isContentLoading, fetchBookChapter } = useReaderStore(
+  const { data, content, isContentLoading, fetchBookChapter } = useReaderStore(
     useShallow((state) => ({
       data: state.data,
+      content: state.content,
       isContentLoading: state.isContentLoading,
       fetchBookChapter: state.fetchBookChapter,
     }))
@@ -114,7 +115,8 @@ export function ChaptersWrapper() {
   }, []);
 
   // 1. 挂载轮询逻辑
-  const pollItems = [{ status: isContentLoading ? 'processing' : 'ready' }];
+  const shouldPollContent = isContentLoading && !content;
+  const pollItems = [{ status: shouldPollContent ? 'processing' : 'ready' }];
 
   usePolling(
     pollItems,
