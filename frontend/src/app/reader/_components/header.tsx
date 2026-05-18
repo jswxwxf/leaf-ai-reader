@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, Menu } from "lucide-react";
-import { showLoading } from "@/app/full-screen-loading";
+import { useRouter } from "next/navigation";
 import { useReaderStore } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { ReadingProgress } from "./progress";
@@ -14,6 +14,7 @@ interface Props {
  * 阅读器顶部状态栏组件
  */
 export function Header({ isPopup = true }: Props) {
+	const router = useRouter();
 	const { data, mode, setChaptersOpen } = useReaderStore(
 		useShallow((state) => ({
 			data: state.data,
@@ -24,6 +25,17 @@ export function Header({ isPopup = true }: Props) {
 
 	const isBookMode = mode === 'book';
 
+	const handleBack = () => {
+		window.speechSynthesis.cancel();
+
+		const backUrl = isBookMode ? '/dashboard?view=books' : '/dashboard?view=articles';
+		if (window.history.length > 1) {
+			router.back();
+		} else {
+			router.replace(backUrl);
+		}
+	};
+
 	return (
 		<header className="navbar bg-base-200 border-b border-base-300 px-4 h-14 flex-none gap-2 relative">
 			<div className="flex-none flex items-center gap-1">
@@ -32,13 +44,7 @@ export function Header({ isPopup = true }: Props) {
 				<button
 					className="btn btn-ghost btn-circle active:scale-90 transition-all font-bold"
 					title="返回"
-					onClick={() => {
-						// 显示加载动画并停止朗读
-						showLoading();
-						window.speechSynthesis.cancel();
-						const backUrl = isBookMode ? '/dashboard?view=books' : '/dashboard?view=articles';
-						window.location.href = backUrl;
-					}}
+					onClick={handleBack}
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</button>

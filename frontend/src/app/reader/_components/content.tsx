@@ -99,7 +99,7 @@ export function Content() {
   return (
     <section 
       ref={sectionRef}
-      className={`flex-1 overflow-y-auto bg-base-200/50 px-4 md:px-8 scroll-smooth relative scroll-pt-20 custom-scrollbar ${styles.reader_content}`}
+      className={`flex-1 overflow-y-auto overflow-x-hidden bg-base-200/50 px-4 md:px-8 scroll-smooth relative scroll-pt-20 custom-scrollbar ${styles.reader_content}`}
     >
       {/* 挂载独立的滚动协调器（无渲染） */}
       <Scroller />
@@ -113,7 +113,7 @@ export function Content() {
         <article
           id="leaf-reader-content"
           key={key}
-          className="max-w-2xl lg:max-w-3xl mx-auto prose prose-neutral lg:prose-lg py-10 pb-[20vh] cursor-pointer"
+          className="max-w-2xl lg:max-w-3xl mx-auto prose prose-neutral lg:prose-lg py-10 pb-[20vh] cursor-pointer break-words"
           onClick={handleContentClick}
           dangerouslySetInnerHTML={{ __html: content }}
         />

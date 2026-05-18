@@ -150,7 +150,7 @@ export function Summary() {
           </button>
         )}
       </div>
-      <div className="flex-1 flex flex-row compact:flex-col overflow-x-auto compact:overflow-y-auto p-3 space-x-3 compact:space-x-0 space-y-0 compact:space-y-3 custom-scrollbar snap-x snap-mandatory">
+      <div className="flex-1 flex flex-row compact:flex-col overflow-x-auto compact:overflow-x-hidden compact:overflow-y-auto p-3 space-x-3 compact:space-x-0 space-y-0 compact:space-y-3 custom-scrollbar snap-x snap-mandatory">
         {summaries.length > 0 ? (
           summaries.map((item, index) => {
             const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
