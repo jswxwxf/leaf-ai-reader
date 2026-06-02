@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, Play, Square, ChevronRight } from "lucide-react";
-import { showLoading } from "@/app/full-screen-loading";
 import { useShallow } from "zustand/react/shallow";
 import { useSpeech } from "../_hooks/use-speech";
 import { useMediaSession } from "../_hooks/use-media-session";
@@ -92,7 +91,14 @@ export function Speecher() {
   });
 
   return (
-    <div className={`flex items-center justify-between w-full max-w-md md:max-w-xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}>
+    <div
+      className={`flex items-center justify-between w-full max-w-md md:max-w-xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}
+      onClickCapture={(event) => {
+        // 补充处理播放器外层 padding 区域的点击：单击切换朗读，双击跳到下一句。
+        if (event.target !== event.currentTarget) return;
+        handleClick(event);
+      }}
+    >
       {/* 1. 左侧：上一章 */}
       {isBookMode ? (
         <div className="flex-1 basis-0 flex justify-start">
@@ -100,7 +106,6 @@ export function Speecher() {
             href={prevChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(prevChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}
-            onClick={() => prevChapter && showLoading(false, { autoHideAfterMs: 2000 })}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${prevChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >
@@ -166,7 +171,6 @@ export function Speecher() {
             href={nextChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(nextChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}
-            onClick={() => nextChapter && showLoading(false, { autoHideAfterMs: 2000 })}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${nextChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >

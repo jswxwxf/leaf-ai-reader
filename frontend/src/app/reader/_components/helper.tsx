@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { type AISummary, useReaderStore } from '../_store/store';
 import { useShallow } from 'zustand/react/shallow';
-import { type BookData, updateBookProgress } from '@/lib/book';
+import { type BookData } from '@/lib/book';
 import { request } from '@/lib/request';
 
 interface ChapterResponse {
@@ -13,11 +13,33 @@ interface ChapterResponse {
   summary?: AISummary[] | null;
 }
 
-let preloadedChapter: {
-  key: string;
+interface CachedChapter {
   content: string;
   summary: AISummary[];
-} | null = null;
+}
+
+const MAX_CACHED_CHAPTERS = 5;
+const chapterCache = new Map<string, CachedChapter>();
+
+const getCachedChapter = (key: string) => {
+  const cachedChapter = chapterCache.get(key);
+  if (!cachedChapter) return null;
+
+  chapterCache.delete(key);
+  chapterCache.set(key, cachedChapter);
+  return cachedChapter;
+};
+
+const rememberChapter = (key: string, chapter: CachedChapter) => {
+  chapterCache.delete(key);
+  chapterCache.set(key, chapter);
+
+  while (chapterCache.size > MAX_CACHED_CHAPTERS) {
+    const oldestKey = chapterCache.keys().next().value;
+    if (!oldestKey) break;
+    chapterCache.delete(oldestKey);
+  }
+};
 
 const normalizePath = (path: string) => {
   try {
@@ -51,8 +73,7 @@ function useFetchChapter({
     if (!bookId || !path) return;
 
     const currentCacheKey = getChapterCacheKey(bookId, path);
-    const cachedChapter =
-      preloadedChapter?.key === currentCacheKey ? preloadedChapter : null;
+    const cachedChapter = getCachedChapter(currentCacheKey);
 
     setPath(path);
     if (cachedChapter) {
@@ -85,10 +106,49 @@ function useBookProgress({
     if (index === -1) return;
 
     const progress = Math.floor(((index + 1) / flattenChapters.length) * 100);
-    updateBookProgress(bookId, path, progress).catch((err) => {
+    request(
+      `/api/books/${bookId}/progress`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookmark: path, progress }),
+      },
+      { silent: true },
+    ).catch((err) => {
       console.error('[Helper] Failed to update book progress:', err);
     });
   }, [bookId, path, flattenChapters]);
+}
+
+function useCacheChapter({
+  bookId,
+  path,
+  content,
+  summaries,
+}: {
+  bookId: string | null;
+  path: string | null;
+  content: string;
+  summaries: AISummary[];
+}) {
+  const lastPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!bookId || !path) return;
+
+    const normalizedPath = normalizePath(path);
+    if (lastPathRef.current !== normalizedPath) {
+      lastPathRef.current = normalizedPath;
+      return;
+    }
+
+    if (!content) return;
+
+    rememberChapter(getChapterCacheKey(bookId, path), {
+      content,
+      summary: summaries,
+    });
+  }, [bookId, path, content, summaries]);
 }
 
 function usePrefetchChapter({
@@ -114,7 +174,7 @@ function usePrefetchChapter({
         if (!nextChapter) return;
 
         const nextCacheKey = getChapterCacheKey(bookId, nextChapter.path);
-        if (preloadedChapter?.key === nextCacheKey) return;
+        if (getCachedChapter(nextCacheKey)) return;
 
         const res = await request<ChapterResponse>(
           `/api/books/${bookId}/chapters/${encodeURIComponent(nextChapter.path)}`,
@@ -123,11 +183,10 @@ function usePrefetchChapter({
         );
 
         if (res.content) {
-          preloadedChapter = {
-            key: nextCacheKey,
+          rememberChapter(nextCacheKey, {
             content: res.content,
             summary: res.summary || [],
-          };
+          });
         }
       } catch (err) {
         console.debug('[Helper] Failed to prefetch next chapter content:', err);
@@ -150,16 +209,25 @@ export function Helper() {
   const bookIdFromUrl = searchParams.get('book_id');
   const pathFromUrl = searchParams.get('path');
 
-  const { data, setPath, setContent, setSummaries, setIsContentLoading } =
-    useReaderStore(
-      useShallow((state) => ({
-        data: state.data,
-        setPath: state.setPath,
-        setContent: state.setContent,
-        setSummaries: state.setSummaries,
-        setIsContentLoading: state.setIsContentLoading,
-      })),
-    );
+  const {
+    data,
+    content,
+    summaries,
+    setPath,
+    setContent,
+    setSummaries,
+    setIsContentLoading,
+  } = useReaderStore(
+    useShallow((state) => ({
+      data: state.data,
+      content: state.content,
+      summaries: state.summaries,
+      setPath: state.setPath,
+      setContent: state.setContent,
+      setSummaries: state.setSummaries,
+      setIsContentLoading: state.setIsContentLoading,
+    })),
+  );
 
   const bookData = data as BookData;
   const flattenChapters = bookData?.flattenChapters || [];
@@ -172,12 +240,18 @@ export function Helper() {
     setSummaries,
     setIsContentLoading,
   });
-  useBookProgress({
+  useCacheChapter({
+    bookId: bookIdFromUrl,
+    path: pathFromUrl,
+    content,
+    summaries,
+  });
+  usePrefetchChapter({
     bookId: bookIdFromUrl,
     path: pathFromUrl,
     flattenChapters,
   });
-  usePrefetchChapter({
+  useBookProgress({
     bookId: bookIdFromUrl,
     path: pathFromUrl,
     flattenChapters,
