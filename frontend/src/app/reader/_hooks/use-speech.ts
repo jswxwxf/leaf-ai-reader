@@ -20,6 +20,7 @@ function getTextWithMasking(node: Node): string {
       .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
       .replace(/([0-9])\uFE0F?\u20E3/g, (m, digit: string) => digit + " ".repeat(m.length - digit.length))
       .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
+      .replace(/<([^<>]{1,120})>/g, (_m, inner: string) => ` ${inner} `)
       .replace(/""/g, "， ")
       .replace(/["']/g, " ")
       .replaceAll("——", "， ")

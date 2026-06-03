@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, Play, Square, ChevronRight } from "lucide-react";
+import { showLoading } from "@/app/full-screen-loading";
 import { useShallow } from "zustand/react/shallow";
 import { useSpeech } from "../_hooks/use-speech";
 import { useMediaSession } from "../_hooks/use-media-session";
@@ -106,6 +107,7 @@ export function Speecher() {
             href={prevChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(prevChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}
+            onClick={() => prevChapter && showLoading(false, { autoHideAfterMs: 2000 })}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${prevChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >
@@ -171,6 +173,7 @@ export function Speecher() {
             href={nextChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(nextChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}
+            onClick={() => nextChapter && showLoading(false, { autoHideAfterMs: 2000 })}
             className={`text-xs font-semibold whitespace-nowrap relative inline-flex items-center ${nextChapter ? "opacity-90" : "opacity-20 pointer-events-none"
               }`}
           >
