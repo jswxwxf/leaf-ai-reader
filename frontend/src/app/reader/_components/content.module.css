@@ -97,6 +97,22 @@
   animation: ocr-spin 1s linear infinite;
 }
 
+.ocr_result {
+  margin: -0.5rem auto 1.25rem;
+  max-width: min(72%, 520px);
+  padding: 0.875rem 1rem;
+  border-radius: var(--rounded-btn, 0.5rem);
+  border: 1px solid oklch(0.56 0.21 253 / 0.18);
+  background: oklch(0.56 0.21 253 / 0.08);
+  font-size: 0.9em;
+  line-height: 1.75;
+}
+
+.ocr_result :global(.sentence) {
+  display: block;
+  margin: 0.2rem 0;
+}
+
 @keyframes ocr-spin {
   to {
     transform: rotate(360deg);
@@ -105,7 +121,8 @@
 
 @media (max-width: 768px) {
   .reader_content :global(img[data-reader-image="block"]),
-  .image_wrapper {
+  .image_wrapper,
+  .ocr_result {
     max-width: 100%;
   }
 

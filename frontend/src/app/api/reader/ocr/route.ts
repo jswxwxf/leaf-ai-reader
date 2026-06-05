@@ -27,16 +27,16 @@ export const POST = createHandler(async ({ env, user, access }: HandlerContext, 
     }
 
     // 调用 Worker RPC 接口进行实时 OCR 识别
-    // @ts-ignore - processOCR 签名已更新，但类型定义可能未同步
     const result = await env.BOOK_WORKER.processOCR(user.sub, { bookId, path, url });
+    const sentences = Array.isArray(result?.sentences) ? result.sentences : [];
 
     if (!result || !result.description) {
       // 兼容模型返回结构
-      const text = result.response || result.description || 'No text detected';
-      return { text };
+      const text = result?.response || result?.description || 'No text detected';
+      return { text, sentences };
     }
 
-    return { text: result.description };
+    return { text: result.description, sentences };
 
   } catch (e: any) {
     console.error(`[API] OCR Bridge failed:`, e);

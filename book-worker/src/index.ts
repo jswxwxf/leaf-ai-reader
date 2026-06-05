@@ -19,6 +19,7 @@ import * as fflate from 'fflate';
 import { normalizeChapters, flattenChapters } from './utils/chapter';
 import { cleanHtml } from './utils/html';
 import { toCompactText, generateSummary } from "./utils/summary";
+import { splitSentences } from './utils/sentence';
 
 export default class BookWorker extends WorkerEntrypoint<Env> {
 	/**
@@ -455,8 +456,12 @@ export default class BookWorker extends WorkerEntrypoint<Env> {
 					const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
 					if (text) {
+						const description = text.trim();
 						console.log(`[Worker] OCR success with Key #${i + 1}`);
-						return { description: text.trim() }; // 对齐之前的返回结构
+						return {
+							description, // 对齐之前的返回结构
+							sentences: splitSentences(description)
+						};
 					}
 				} catch (e: any) {
 					console.warn(`[Worker] Gemini Key #${i + 1} failed: ${e.message}`);
