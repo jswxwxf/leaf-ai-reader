@@ -56,6 +56,16 @@ function getTextWithMasking(node: Node): string {
   return text.toLowerCase();
 }
 
+function getNextSentence(
+  container: HTMLElement,
+  currentId: string,
+  delta: number = 1
+): HTMLElement | undefined {
+  const sentences = Array.from(container.querySelectorAll('.sentence'));
+  const currentIndex = sentences.findIndex(el => el.id === currentId);
+  return sentences[currentIndex + delta] as HTMLElement | undefined;
+}
+
 /**
  * 语音朗读核心逻辑 Hook
  */
@@ -102,9 +112,13 @@ export function useSpeech() {
     // 1. 确定当前要读的句子（始终从 ref 读取最新值）
     const targetId = speechSentenceIdRef.current ?? "s-1";
     const container = contentRef?.current;
+    if (!container) {
+      releaseWakeLock();
+      return;
+    }
 
     // 从当前阅读器容器内进行局部查找，避免 ID 冲突
-    const el = container?.querySelector(`[id="${targetId}"]`) as HTMLElement;
+    const el = container.querySelector(`[id="${targetId}"]`) as HTMLElement;
 
     if (!el || !el.textContent) {
       console.warn(`未找到目标句子 (${targetId})`);
@@ -114,7 +128,14 @@ export function useSpeech() {
 
     // 如果全是标点符号、符号或 emoji 则跳过，递归调用 play 直到读到实质内容或触及边界
     if (!/[^\p{P}\p{S}\s\p{Extended_Pictographic}]/u.test(el.textContent)) {
-      setSpeechSentenceId(`s-${parseInt(targetId.replace("s-", "")) + 1}`);
+      const nextEl = getNextSentence(container, targetId);
+
+      if (!nextEl) {
+        releaseWakeLock();
+        return;
+      }
+
+      setSpeechSentenceId(nextEl.id);
       const currentSpeechMode = speechModeRef.current;
       if (currentSpeechMode !== "paragraph" || !isLastSentenceInParagraph(el as HTMLElement)) {
         setTimeout(play, 0);
@@ -156,9 +177,7 @@ export function useSpeech() {
       if (!container) return;
 
       // 寻找下一个句子的 ID (不再依赖 ID+1，而是基于 DOM 顺序)
-      const sentences = Array.from(container.querySelectorAll('.sentence'));
-      const currentIndex = sentences.findIndex(el => el.id === targetId);
-      const nextEl = sentences[currentIndex + 1] as HTMLElement;
+      const nextEl = getNextSentence(container, targetId);
 
       // 已到文章末尾，停止播放并释放锁
       if (!nextEl) {
@@ -234,9 +253,7 @@ export function useSpeech() {
     const container = contentRef?.current;
     if (!container || !speechSentenceId) return;
 
-    const sentences = Array.from(container.querySelectorAll('.sentence'));
-    const currentIndex = sentences.findIndex(el => el.id === speechSentenceId);
-    const nextEl = sentences[currentIndex + delta] as HTMLElement;
+    const nextEl = getNextSentence(container, speechSentenceId, delta);
 
     if (nextEl) {
       setSpeechSentenceId(nextEl.id);
