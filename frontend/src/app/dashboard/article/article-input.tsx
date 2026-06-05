@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import type { ClipboardEvent } from 'react';
 
 interface Props {
 	name: string;
@@ -8,6 +9,71 @@ interface Props {
 	disabled?: boolean;
 	className?: string;
 }
+
+const BLOCK_TAGS = new Set([
+	'P',
+	'DIV',
+	'SECTION',
+	'ARTICLE',
+	'BLOCKQUOTE',
+	'LI',
+	'UL',
+	'OL',
+	'H1',
+	'H2',
+	'H3',
+	'H4',
+	'H5',
+	'H6',
+]);
+
+const escapeAttribute = (value: string) => value.replace(/"/g, '&quot;');
+
+const getArticleResourceUrl = (src: string) => {
+	if (!/^https?:\/\//i.test(src)) return src;
+	return `/api/articles/resource?url=${encodeURIComponent(src)}`;
+};
+
+/**
+ * 把粘贴进来的 HTML 转成 textarea 里可读、可提交的字符串。
+ *
+ * 这是一个递归函数：
+ * - 文本节点：直接返回文字。
+ * - img 节点：保留为简化版 `<img src="...">`。
+ * - br 节点：转成真实换行符 `\n`。
+ * - 块级节点：递归处理子节点，并在前后补 `\n` 保留段落结构。
+ * - 其它标签：不保留标签本身，只递归提取内部文本。
+ */
+const toPlainTextWithImages = (node: Node): string => {
+	if (node.nodeType === Node.TEXT_NODE) {
+		return node.textContent ?? '';
+	}
+
+	if (!(node instanceof HTMLElement)) return '';
+
+	if (node.tagName === 'IMG') {
+		const src = node.getAttribute('src');
+		return src ? ` <img src="${escapeAttribute(getArticleResourceUrl(src))}"> ` : '';
+	}
+
+	if (node.tagName === 'BR') {
+		return '\n';
+	}
+
+	const content = Array.from(node.childNodes).map(toPlainTextWithImages).join('');
+	return BLOCK_TAGS.has(node.tagName) ? `\n${content.trim()}\n` : content;
+};
+
+const normalizePastedContent = (content: string) =>
+	content
+		// 删除换行前的空格或 tab，避免出现“句尾空格 + 换行”。
+		.replace(/[ \t]+\n/g, '\n')
+		// 删除换行后的空格或 tab，让每一行都从真实内容开始。
+		.replace(/\n[ \t]+/g, '\n')
+		// 连续 3 个以上换行压缩成 2 个，保留段落空行但避免空白过多。
+		.replace(/\n{3,}/g, '\n\n')
+		// 去掉整段内容开头和结尾的空白。
+		.trim();
 
 /**
  * ArticleInput: 支持自动高度调整的文本输入框
@@ -40,6 +106,33 @@ export function ArticleInput({ name, placeholder, disabled, className }: Props) 
 		}
 	};
 
+	const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+		// 读取剪贴板中的 HTML 内容；普通纯文本粘贴不会走这条分支。
+		const html = event.clipboardData.getData('text/html');
+		if (!html || !html.includes('<img')) {
+			return;
+		}
+
+		// 解析 HTML，确认里面确实包含带 src 的图片。
+		const doc = new DOMParser().parseFromString(html, 'text/html');
+		const hasImages = doc.querySelectorAll('img[src]').length > 0;
+		if (!hasImages) return;
+
+		// 将 HTML 归一化为“纯文本 + 简化 img 标签 + 段落换行”。
+		const pastedContent = normalizePastedContent(toPlainTextWithImages(doc.body));
+		if (!pastedContent) return;
+
+		// 接管这次粘贴，把带 img tag 的 HTML 字符串插入到当前光标位置。
+		event.preventDefault();
+		event.currentTarget.setRangeText(
+			pastedContent,
+			event.currentTarget.selectionStart,
+			event.currentTarget.selectionEnd,
+			'end'
+		);
+		adjustHeight();
+	};
+
 	// 初次挂载或禁用状态改变时触发一次校准
 	useEffect(() => {
 		adjustHeight();
@@ -51,6 +144,7 @@ export function ArticleInput({ name, placeholder, disabled, className }: Props) 
 			name={name}
 			rows={1}
 			onInput={adjustHeight}
+			onPaste={handlePaste}
 			placeholder={placeholder}
 			disabled={disabled}
 			className={`
