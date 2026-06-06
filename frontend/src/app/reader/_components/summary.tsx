@@ -5,11 +5,11 @@ import { useShallow } from "zustand/react/shallow";
 import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
-import { useSpeech } from "../_hooks/use-speech";
+import { configureSpeech, sanitizeSpeechText, useSpeech } from "../_hooks/use-speech";
 import { useDoubleClick } from "../_hooks/use-double-click";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { request } from "@/lib/request";
-import { SpeechBox, type SpeechBoxHandle } from "./speech-box";
+import { SummaryItem } from "./summary-item";
 
 /**
  * 封装摘要重刷逻辑的 Hook
@@ -54,48 +54,19 @@ function useSummarize() {
   return { isSummarizing, handleSummarize };
 }
 
-/**
- * 单个摘要项组件，负责处理自身的自动滚动逻辑
- */
-function SummaryItem({
-  item,
-  isActive,
-  onClick
-}: {
-  item: AISummary,
-  isActive: boolean,
-  onClick: () => void
-}) {
-  const ref = useRef<HTMLDivElement>(null);
+const speakSummaries = (text: string) => new Promise<void>((resolve) => {
+  const trimmedText = sanitizeSpeechText(text).trim();
+  if (!trimmedText || typeof window === 'undefined' || !window.speechSynthesis) {
+    resolve();
+    return;
+  }
 
-  useEffect(() => {
-    if (isActive && ref.current) {
-      ref.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
-      });
-    }
-  }, [isActive]);
-
-  return (
-    <div
-      ref={ref}
-      onClick={onClick}
-      className={`card w-full snap-center cursor-pointer transition-all duration-300 border ${isActive
-        ? "bg-primary/10 border-primary shadow-md translate-x-1"
-        : "bg-base-200 border-base-300/50 hover:border-base-300 hover:bg-base-200/80"
-        }`}
-    >
-      <div className="p-3">
-        <p className={`text-sm leading-relaxed transition-colors ${isActive ? "text-primary font-medium" : "opacity-80 font-normal"
-          }`}>
-          {item.summary}
-        </p>
-      </div>
-    </div>
-  );
-}
+  const utterance = new SpeechSynthesisUtterance(trimmedText);
+  configureSpeech(utterance);
+  utterance.onend = () => resolve();
+  utterance.onerror = () => resolve();
+  window.speechSynthesis.speak(utterance);
+});
 
 /**
  * 重点列表组件 (AI 核心摘要)
@@ -118,7 +89,6 @@ export function Summary() {
   const { jumpToSentence } = useReader();
   const { play, step, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
-  const speechBoxRefs = useRef<Array<SpeechBoxHandle | null>>([]);
 
   const handleToggle = () => {
     if (isPlaying) {
@@ -135,8 +105,12 @@ export function Summary() {
   });
 
   const handleReadSummaries = async () => {
-    for (const speechBoxRef of speechBoxRefs.current) {
-      await speechBoxRef?.speak();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    for (const summary of summaries) {
+      await speakSummaries(summary.summary);
     }
   };
 
@@ -150,7 +124,7 @@ export function Summary() {
           <div className="flex items-center gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); void handleReadSummaries(); }}
-              disabled={isSummarizing}
+              disabled={isSummarizing || summaries.length === 0}
               className="btn btn-ghost btn-xs btn-circle"
               title="朗读摘要"
             >
@@ -181,13 +155,12 @@ export function Summary() {
               const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
               return (
                 <div key={index} className="flex-none w-[25vw] h-full compact:w-full compact:h-auto [&>div]:h-full compact:[&>div]:h-auto [&>div>div]:h-full compact:[&>div>div]:h-auto">
-                  <SpeechBox ref={(node) => { speechBoxRefs.current[index] = node; }}>
-                    <SummaryItem
-                      item={item}
-                      isActive={isActive}
-                      onClick={() => jumpToSentence(item.start_sId)}
-                    />
-                  </SpeechBox>
+                  <SummaryItem
+                    item={item}
+                    isActive={isActive}
+                    onClick={() => jumpToSentence(item.start_sId)}
+                    onDelete={() => {}}
+                  />
                 </div>
               );
             })

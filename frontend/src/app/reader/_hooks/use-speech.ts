@@ -7,32 +7,41 @@ import { useWakeLock } from "./use-wake-lock";
 import { useSpeechRetry } from "./use-speech-retry";
 
 /**
- * 获取元素的文本内容，并将特定标签（如 sup, sub）的内容替换为等长空格
+ * 清洗 TTS 输入文本，过滤引文序号、emoji 和不适合直接朗读的符号。
+ */
+export function sanitizeSpeechText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/https?:\/\//g, (m) => " ".repeat(m.length))
+    .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
+    .replace(/([0-9])\uFE0F?\u20E3/g, (m, digit: string) => digit + " ".repeat(m.length - digit.length))
+    .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
+    .replace(/<([^<>]{1,120})>/g, (_m, inner: string) => ` ${inner} `)
+    .replace(/""/g, "， ")
+    .replace(/["']/g, " ")
+    .replaceAll("——", "， ")
+    .replace(/”“|」「|》《/g, "”，");
+}
+
+export function configureSpeech(utterance: SpeechSynthesisUtterance) {
+  utterance.lang = "zh-CN";
+  // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
+  utterance.rate = isSafari ? 1.32 : 2;
+}
+
+/**
+ * 获取元素的文本内容，并将特定标签（如 sup, sub）的内容替换为等长空格。
  * 目的是在 TTS 朗读时静音跳过这些引文，同时保持字符偏移量不变，确保高亮精准。
  */
 function getTextWithMasking(node: Node): string {
-  // 定义统一的清洗函数，消除重复的正则逻辑并保持字符长度一致
-  const sanitize = (str: string) =>
-    str
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .replace(/https?:\/\//g, (m) => " ".repeat(m.length))
-      .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
-      .replace(/([0-9])\uFE0F?\u20E3/g, (m, digit: string) => digit + " ".repeat(m.length - digit.length))
-      .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
-      .replace(/<([^<>]{1,120})>/g, (_m, inner: string) => ` ${inner} `)
-      .replace(/""/g, "， ")
-      .replace(/["']/g, " ")
-      .replaceAll("——", "， ")
-      .replace(/”“|」「|》《/g, "”，");
-
   let text = "";
 
   // 通过 for...of 配合 continue 扁平化处理逻辑，消除嵌套深坑
   for (const child of Array.from(node.childNodes)) {
     // 1. 处理纯文本节点
     if (child.nodeType === Node.TEXT_NODE) {
-      text += sanitize(child.textContent || "");
+      text += sanitizeSpeechText(child.textContent || "");
       continue;
     }
 
@@ -45,7 +54,7 @@ function getTextWithMasking(node: Node): string {
       const content = child.textContent || "";
       // 智能阈值：文字够长则清洗后朗读，较短（通常为序号）则静音填充
       text +=
-        content.length > 8 ? sanitize(content) : " ".repeat(content.length);
+        content.length > 8 ? sanitizeSpeechText(content) : " ".repeat(content.length);
       continue;
     }
 
@@ -162,7 +171,6 @@ export function useSpeech() {
     const handleBoundary = (event: SpeechSynthesisEvent) => {
       if (!isCurrentSession()) return;
       if (event.name !== 'word') return;
-      // @ts-ignore
       highlightWord(el, event.charIndex, event.charLength);
     };
 
@@ -193,8 +201,8 @@ export function useSpeech() {
       setSpeechSentenceId(nextId);
 
       if (currentSpeechMode === 'sentence') {
-        // 逐句模式：如果当前句太短（小于等于5个字）且不在段落末尾，则自动连读下一句
-        const isShort = (el.textContent?.trim().length || 0) <= 5;
+        // 逐句模式：如果当前句太短（小于等于3个字）且不在段落末尾，则自动连读下一句
+        const isShort = (el.textContent?.trim().length || 0) <= 3;
         const isLastInPara = isLastSentenceInParagraph(el as HTMLElement);
 
         if (isShort && !isLastInPara) {
@@ -224,9 +232,7 @@ export function useSpeech() {
       text: processedText,
       isCurrentSession,
       configure: (utterance) => {
-        utterance.lang = "zh-CN";
-        // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
-        utterance.rate = isSafari ? 1.32 : 2;
+        configureSpeech(utterance);
       },
       onBoundary: handleBoundary,
       onEnd: handleEnd,

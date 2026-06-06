@@ -1,6 +1,15 @@
 import { useMemo } from 'react';
 import { type AISummary } from '../_store/store';
 
+function escapeCssString(value: string) {
+    return value
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\a ')
+        .replace(/\r/g, '\\d ')
+        .replace(/\f/g, '\\c ');
+}
+
 /**
  * 为 AI 摘要中包含的句子生成背景高亮样式的 Hook
  */
@@ -13,8 +22,8 @@ export function useSummaryHighlight(summaries: AISummary[] | undefined) {
         
         if (allSIds.length === 0) return '';
 
-        // 生成针对 ID 的选择器列表。CSS.escape 用于兜住历史摘要里可能存在的脏 ID。
-        const selectors = allSIds.map(id => `#leaf-reader-content #${CSS.escape(id)}`).join(', ');
+        // 生成针对 ID 的选择器列表。使用属性选择器避免服务端渲染时依赖浏览器 CSS.escape。
+        const selectors = allSIds.map(id => `#leaf-reader-content [id="${escapeCssString(id)}"]`).join(', ');
         
         return `
             ${selectors} {
