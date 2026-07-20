@@ -5,6 +5,8 @@ type WakeLockSentinelLike = {
   addEventListener: (type: "release", listener: () => void) => void;
 };
 
+const IDLE_RELEASE_DELAY_MS = 5 * 60 * 1000;
+
 let wakeLock: WakeLockSentinelLike | null = null;
 let wakeLockRequest: Promise<void> | null = null;
 let wakeLockVersion = 0;
@@ -58,6 +60,19 @@ export function useWakeLock(enabled: boolean) {
     wakeLock = null;
     await currentWakeLock.release();
   }, []);
+
+  // 朗读暂停后保留一段时间，超时仍未恢复则允许屏幕休眠。
+  useEffect(() => {
+    if (enabled) return;
+
+    const timer = window.setTimeout(() => {
+      void releaseWakeLock();
+    }, IDLE_RELEASE_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [enabled, releaseWakeLock]);
 
   // 处理页面可见性变化，确保切回页面后恢复锁
   useEffect(() => {
