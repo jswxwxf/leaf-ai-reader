@@ -2,6 +2,58 @@ import { parseHTML } from 'linkedom';
 import { crawlArticle } from "../article";
 import { cleanHtml } from "../utils/html";
 
+const RAW_AI_PREFIX = /^raw[:：]\s*/i;
+const RAW_AI_SOURCE = "AI 整理文本";
+
+interface OrganizedRawText {
+  content: string;
+}
+
+async function organizeRawTextWithWorkersAI(env: Env, rawText: string): Promise<OrganizedRawText> {
+  const systemPrompt = `你是一个专业中文编辑，正在把语音转写稿整理成适合阅读器阅读的文章。
+
+请严格遵守：
+1. 只整理表达，不新增事实、不补充背景、不改变原文立场。
+2. 删除明显重复的口癖、语气词和转写噪音，让句子更通顺。
+3. 保留人名、地名、数字、专有名词、观点顺序和重要细节。
+4. 必须按语义自然分段，避免输出成一整段；段落之间用一个空行分隔。
+5. 不要总结、不要评论、不要输出 Markdown、不要输出 JSON、不要输出标题前缀。
+6. 只输出整理后的正文文本。`;
+
+  console.log(`[Worker] Organizing raw text with Workers AI...`);
+  const response: any = await env.AI.run('@cf/qwen/qwen3-30b-a3b-fp8', {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `<raw_transcript>\n${rawText}\n</raw_transcript>` },
+    ],
+    max_tokens: 4096,
+  }, {
+    gateway: {
+      id: 'leaf-ai-reader-gateway',
+      skipCache: true,
+    }
+  });
+
+  const content = extractWorkersAIText(response)
+    .replace(/^```(?:\w+)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  if (!content) {
+    throw new Error("Workers AI returned empty raw text organization result");
+  }
+
+  return { content };
+}
+
+function extractWorkersAIText(response: any): string {
+  if (typeof response === 'string') return response;
+  if (typeof response?.response === 'string') return response.response;
+  if (typeof response?.result?.response === 'string') return response.result.response;
+  if (typeof response?.choices?.[0]?.message?.content === 'string') return response.choices[0].message.content;
+  return '';
+}
+
 /**
  * 处理文章：支持 URL 抓取和 raw.txt 纯文本数字化。
  */
@@ -28,9 +80,23 @@ export async function processArticle(env: Env, userId: string, articleId: string
       const rawKey = `articles/${userId}/${articleId}/raw.txt`;
       const rawObject = await env.LEAF_BOOK_BUCKET.get(rawKey);
       if (!rawObject) throw new Error(`Raw text object not found in R2: ${rawKey}`);
-      const rawText = await rawObject.text();
+      let rawText = await rawObject.text();
 
       console.log(`[Worker] Raw text loaded, length: ${rawText.length}`);
+
+      let title = (article as any).title;
+      let source = '文本';
+      const shouldOrganizeRawText = RAW_AI_PREFIX.test(rawText);
+
+      if (shouldOrganizeRawText) {
+        rawText = rawText.replace(RAW_AI_PREFIX, '').trim();
+        const fallbackTitle = rawText.split('\n')[0]?.trim().slice(0, 50);
+        const organized = await organizeRawTextWithWorkersAI(env, rawText);
+        rawText = organized.content;
+        title = fallbackTitle || title;
+        source = RAW_AI_SOURCE;
+        console.log(`[Worker] Raw text organized by Workers AI, length: ${rawText.length}`);
+      }
 
       // 2.2 数字化转换：模拟 HTML 结构并利用 cleanHtml 工具类处理
       const simulatedBody = rawText.split('\n')
@@ -45,9 +111,9 @@ export async function processArticle(env: Env, userId: string, articleId: string
       console.log(`[Worker] Digitization complete, final HTML length: ${digitalHtml.length}`);
 
       parsedArticle = {
-        title: (article as any).title,
+        title,
         content: digitalHtml,
-        source: '文本'
+        source
       };
     } else {
       console.log(`[Worker] Starting crawl for: ${article.source_url}`);
