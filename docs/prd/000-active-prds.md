@@ -19,8 +19,9 @@
 - [x] **PRD-015: 图片文本 OCR 提取** ([015-image-ocr-extraction.md](./015-image-ocr-extraction.md)) — 已完成
 - [x] **PRD-016: 粘贴文本创建文章支持** ([016-article-text-upload.md](./016-article-text-upload.md)) — 已完成
 - [x] **PRD-017: 通用 SpeechBox 组件** ([017-generic-speech-box.md](./017-generic-speech-box.md)) — 已完成首版
-- [ ] **PRD-018: 粘贴图片创建文章 MVP** ([018-article-image-ocr-upload.md](./018-article-image-ocr-upload.md)) — 待实现
-- [ ] **PRD-019: 自定义总结管理** ([019-custom-summary-management.md](./019-custom-summary-management.md)) — 待规划
-- [ ] **PRD-020: Demo 用户资源限制与功能隔离** ([020-demo-user-resource-guard.md](./020-demo-user-resource-guard.md)) — 待实现
+- [ ] **PRD-018: Markdown 前缀文章导入** ([018-markdown-article-import.md](./018-markdown-article-import.md)) — 待实现
+- [ ] **PRD-019: 粘贴图片创建文章 MVP** ([019-article-image-ocr-upload.md](./019-article-image-ocr-upload.md)) — 待实现
+- [ ] **PRD-020: 自定义总结管理** ([020-custom-summary-management.md](./020-custom-summary-management.md)) — 待规划
+- [ ] **PRD-021: Demo 用户资源限制与功能隔离** ([021-demo-user-resource-guard.md](./021-demo-user-resource-guard.md)) — 待实现
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*

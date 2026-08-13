@@ -189,14 +189,14 @@ export function Summary() {
             </div>
           )}
           <div
-            className="hidden compact:block compact:flex-1 compact:cursor-pointer"
+            className="hidden select-none compact:block compact:flex-1 compact:cursor-pointer"
             onClickCapture={handleClick}
             title={isPlaying ? "点击停止" : "点击播放"}
           />
         </div>
         {/* 底部留白区域，点击可触发播放/暂停，仅在触屏设备的 compact 以上垂直布局时有效 */}
         <div
-          className="hidden h-32 shrink-0 cursor-pointer pointer-coarse:compact:block"
+          className="hidden h-76 shrink-0 cursor-pointer select-none pointer-coarse:compact:block"
           onClickCapture={handleClick}
           title={isPlaying ? "点击停止" : "点击播放"}
         />
