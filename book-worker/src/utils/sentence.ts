@@ -88,3 +88,19 @@ export function splitSentences(text: string): string[] {
 
 	return sentences.filter(Boolean);
 }
+
+/**
+ * 创建连续编号的 sentence span 注入器。
+ *
+ * 普通 HTML 清洗与后续 Markdown 后处理都通过同一个注入器复用既有分句规则，
+ * 从而保证单篇文章内的 `s-N` 标识连续且唯一。
+ */
+export function createSentenceWrapper(initialSentenceId: number = 0) {
+	let sentenceId = initialSentenceId;
+
+	return (text: string): string => {
+		return splitSentences(text)
+			.map(sentence => `<span class="sentence" id="s-${++sentenceId}">${sentence}</span>`)
+			.join('');
+	};
+}

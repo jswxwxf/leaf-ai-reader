@@ -1,6 +1,6 @@
 import { parseHTML } from 'linkedom';
 import createDOMPurify from 'dompurify';
-import { splitSentences } from './sentence';
+import { createSentenceWrapper } from './sentence';
 
 // 初始化 DOMPurify 实例
 const { window } = parseHTML('<!DOCTYPE html><html><body></body></html>');
@@ -11,8 +11,7 @@ const DOMPurify = createDOMPurify(window as any);
  * 使用 id="s-N" 和 class="sentence" 以保持与现有流程兼容
  */
 export function cleanHtml(container: any, options?: { bookId?: string, path?: string }): string {
-  let sentenceId = 0;
-  const getNextId = () => ++sentenceId;
+  const sentenceWrapper = createSentenceWrapper();
 
   // 1. Pre-pass (DOM 级规范化)
   normalizeStructure(container);
@@ -32,7 +31,7 @@ export function cleanHtml(container: any, options?: { bookId?: string, path?: st
   };
 
   children.forEach((node: any) => {
-    const html = transformNode(node, getNextId, options);
+    const html = transformNode(node, sentenceWrapper, options);
     if (!html) return;
 
     const isBlock = /^\s*<(p|h1|h2|h3|h4|h5|h6|ul|ol|li|blockquote|table|hr|pre|br)/i.test(html);
@@ -285,7 +284,7 @@ function resolvePath(basePath: string, relativePath: string): string {
 
 function transformNode(
   node: any,
-  getNextId: () => number,
+  sentenceWrapper: (text: string) => string,
   options?: { bookId?: string, path?: string },
   skipSplitting: boolean = false
 ): string {
@@ -299,10 +298,7 @@ function transformNode(
       return text;
     }
 
-    // 使用原有的 id="s-N" 和 class="sentence"
-    return splitSentences(text)
-      .map(s => `<span class="sentence" id="s-${getNextId()}">${s}</span>`)
-      .join('');
+    return sentenceWrapper(text);
   }
 
   if (node.nodeType === 1) {
@@ -330,7 +326,7 @@ function transformNode(
     const currentSkipSplitting = skipSplitting || NON_SPLITTABLE_TAGS.includes(tagName);
 
     Array.from(node.childNodes).forEach((child: any) => {
-      innerContent += transformNode(child, getNextId, options, currentSkipSplitting);
+      innerContent += transformNode(child, sentenceWrapper, options, currentSkipSplitting);
     });
 
     if (!innerContent.trim() && tagName !== 'hr') return "";
