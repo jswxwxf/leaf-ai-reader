@@ -77,6 +77,19 @@ export function Content() {
     if (!container) return;
 
     const target = e.target as HTMLElement;
+    const codeBlock = target.closest('pre');
+    if (codeBlock && container.contains(codeBlock)) {
+      const code = codeBlock.querySelector('code');
+      if (code) {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+      return;
+    }
+
     // 仅在当前容器内寻找最近的句子元素
     const sentenceEl = target.closest('[id^="s-"]');
 

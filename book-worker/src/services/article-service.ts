@@ -1,12 +1,21 @@
 import { parseHTML } from 'linkedom';
 import { crawlArticle } from "../article";
 import { cleanHtml } from "../utils/html";
+import { processMarkdownArticle } from '../utils/markdown';
 
 const RAW_AI_PREFIX = /^raw[:：]\s*/i;
 const RAW_AI_SOURCE = "AI 整理文本";
+const MARKDOWN_PREFIX = /^md[:：]\s*/i;
+const MARKDOWN_SOURCE = 'Markdown';
 
 interface OrganizedRawText {
   content: string;
+}
+
+interface ParsedArticle {
+  title: string;
+  content: string;
+  source: string;
 }
 
 async function organizeRawTextWithWorkersAI(env: Env, rawText: string): Promise<OrganizedRawText> {
@@ -54,6 +63,38 @@ function extractWorkersAIText(response: any): string {
   return '';
 }
 
+async function processPlainTextArticle(
+  env: Env,
+  rawText: string,
+  initialTitle: string
+): Promise<ParsedArticle> {
+  let title = initialTitle;
+  let source = '文本';
+
+  if (RAW_AI_PREFIX.test(rawText)) {
+    rawText = rawText.replace(RAW_AI_PREFIX, '').trim();
+    const fallbackTitle = rawText.split('\n')[0]?.trim().slice(0, 50);
+    const organized = await organizeRawTextWithWorkersAI(env, rawText);
+    rawText = organized.content;
+    title = fallbackTitle || title;
+    source = RAW_AI_SOURCE;
+    console.log(`[Worker] Raw text organized by Workers AI, length: ${rawText.length}`);
+  }
+
+  const simulatedBody = rawText.split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(p => `<p>${p}</p>`)
+    .join('\n');
+
+  const { document } = parseHTML(`<!DOCTYPE html><html><body>${simulatedBody}</body></html>`);
+  const content = cleanHtml(document.body);
+
+  console.log(`[Worker] Digitization complete, final HTML length: ${content.length}`);
+
+  return { title, content, source };
+}
+
 /**
  * 处理文章：支持 URL 抓取和 raw.txt 纯文本数字化。
  */
@@ -70,7 +111,7 @@ export async function processArticle(env: Env, userId: string, articleId: string
   }
 
   try {
-    let parsedArticle: { title: string; content: string; source: string };
+    let parsedArticle: ParsedArticle | undefined;
 
     // 2. 识别内容来源：URL 抓取 vs 纯文本分词
     if ((article as any).source_url === "raw.txt") {
@@ -84,41 +125,18 @@ export async function processArticle(env: Env, userId: string, articleId: string
 
       console.log(`[Worker] Raw text loaded, length: ${rawText.length}`);
 
-      let title = (article as any).title;
-      let source = '文本';
-      const shouldOrganizeRawText = RAW_AI_PREFIX.test(rawText);
-
-      if (shouldOrganizeRawText) {
-        rawText = rawText.replace(RAW_AI_PREFIX, '').trim();
-        const fallbackTitle = rawText.split('\n')[0]?.trim().slice(0, 50);
-        const organized = await organizeRawTextWithWorkersAI(env, rawText);
-        rawText = organized.content;
-        title = fallbackTitle || title;
-        source = RAW_AI_SOURCE;
-        console.log(`[Worker] Raw text organized by Workers AI, length: ${rawText.length}`);
-      }
-
-      // 2.2 数字化转换：模拟 HTML 结构并利用 cleanHtml 工具类处理
-      const simulatedBody = rawText.split('\n')
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(p => `<p>${p}</p>`)
-        .join('\n');
-
-      const { document } = parseHTML(`<!DOCTYPE html><html><body>${simulatedBody}</body></html>`);
-      const digitalHtml = cleanHtml(document.body);
-
-      console.log(`[Worker] Digitization complete, final HTML length: ${digitalHtml.length}`);
-
-      parsedArticle = {
-        title,
-        content: digitalHtml,
-        source
-      };
+      const isMarkdown = MARKDOWN_PREFIX.test(rawText);
+      parsedArticle = isMarkdown
+        ? { ...processMarkdownArticle(rawText, (article as any).title), source: MARKDOWN_SOURCE }
+        : await processPlainTextArticle(env, rawText, (article as any).title);
     } else {
       console.log(`[Worker] Starting crawl for: ${article.source_url}`);
       // 3. 调用爬虫工具函数提取网页内容
       parsedArticle = await crawlArticle(article.source_url as string);
+    }
+
+    if (!parsedArticle) {
+      throw new Error(`[Worker] Article ${articleId} processing produced no content`);
     }
 
     if ((env as any).NODE_ENV === 'development') {
