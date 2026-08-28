@@ -6,7 +6,7 @@ import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { configureSpeech, sanitizeSpeechText, useSpeech } from "../_hooks/use-speech";
-import { useDoubleClick } from "../_hooks/use-double-click";
+import { useSwipe } from "../_hooks/use-swipe";
 import { useState } from "react";
 import { request } from "@/lib/request";
 import { SummaryItem } from "./summary-item";
@@ -98,10 +98,11 @@ export function Summary() {
     }
   };
 
-  const handleClick = useDoubleClick({
+  const swipeHandlers = useSwipe({
     disabled: isContentLoading,
-    onSingleClick: handleToggle,
-    onDoubleClick: () => step(1),
+    onTap: handleToggle,
+    onSwipeLeft: () => step(-1),
+    onSwipeRight: () => step(1),
   });
 
   const handleReadSummaries = async () => {
@@ -130,14 +131,14 @@ export function Summary() {
             >
               {!isSummarizing && <Volume2 className="w-4 h-4 opacity-60" />}
             </button>
-            <button
+            {/* <button
               onClick={(e) => { e.stopPropagation(); handleSummarize(); }}
               disabled={isSummarizing}
               className={`btn btn-ghost btn-xs btn-circle ${isSummarizing ? 'loading' : ''}`}
               title="生成摘要"
             >
               {!isSummarizing && <RefreshCw className="w-3 h-3 opacity-60" />}
-            </button>
+            </button> */}
           </div>
         )}
       </div>
@@ -147,7 +148,7 @@ export function Summary() {
           onClickCapture={(event) => {
             // 补充 padding / 间隔区域的点击。
             if (event.target !== event.currentTarget) return;
-            handleClick(event);
+            swipeHandlers.onClickCapture(event);
           }}
         >
           {summaries.length > 0 ? (
@@ -169,7 +170,7 @@ export function Summary() {
               className="py-10 text-center w-full space-y-4 px-6"
               onClickCapture={(event) => {
                 if (event.target !== event.currentTarget) return;
-                handleClick(event);
+                swipeHandlers.onClickCapture(event);
               }}
             >
               <p className="opacity-40 text-sm hidden sm:block">
@@ -189,15 +190,15 @@ export function Summary() {
             </div>
           )}
           <div
-            className="hidden select-none compact:block compact:flex-1 compact:cursor-pointer"
-            onClickCapture={handleClick}
+            {...swipeHandlers}
+            className="hidden select-none touch-pan-y compact:block compact:flex-1 compact:cursor-pointer"
             title={isPlaying ? "点击停止" : "点击播放"}
           />
         </div>
         {/* 底部留白区域，点击可触发播放/暂停，仅在触屏设备的 compact 以上垂直布局时有效 */}
         <div
-          className="hidden h-76 shrink-0 cursor-pointer select-none pointer-coarse:compact:block"
-          onClickCapture={handleClick}
+          {...swipeHandlers}
+          className="hidden h-76 shrink-0 cursor-pointer select-none touch-pan-y pointer-coarse:compact:block"
           title={isPlaying ? "点击停止" : "点击播放"}
         />
       </div>
