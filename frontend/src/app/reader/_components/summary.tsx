@@ -101,6 +101,7 @@ export function Summary() {
   const swipeHandlers = useSwipe({
     disabled: isContentLoading,
     onTap: handleToggle,
+    onDoubleClick: () => step(1),
     onSwipeLeft: () => step(-1),
     onSwipeRight: () => step(1),
   });

@@ -2,7 +2,7 @@
 
 import { Speecher } from "./speecher";
 import { useSpeech } from "../_hooks/use-speech";
-import { useDoubleClick } from "../_hooks/use-double-click";
+import { useSwipe } from "../_hooks/use-swipe";
 
 /**
  * 阅读器底部控制栏组件
@@ -18,15 +18,32 @@ export function Footer() {
     }
   };
 
-  const handleClick = useDoubleClick({
-    onSingleClick: handleToggle,
+  const swipeHandlers = useSwipe({
+    onTap: handleToggle,
     onDoubleClick: () => step(1),
+    onSwipeLeft: () => step(-1),
+    onSwipeRight: () => step(1),
   });
 
   return (
     <footer
-      onClick={handleClick}
-      className="h-20 bg-base-200 border-t border-base-300 flex flex-none items-center justify-center cursor-pointer hover:bg-base-300/30 active:bg-base-300/60 transition-all"
+      onPointerDownCapture={(event) => {
+        if (event.target !== event.currentTarget) return;
+        swipeHandlers.onPointerDownCapture(event);
+      }}
+      onPointerUpCapture={(event) => {
+        if (event.target !== event.currentTarget) return;
+        swipeHandlers.onPointerUpCapture(event);
+      }}
+      onPointerCancelCapture={(event) => {
+        if (event.target !== event.currentTarget) return;
+        swipeHandlers.onPointerCancelCapture(event);
+      }}
+      onClickCapture={(event) => {
+        if (event.target !== event.currentTarget) return;
+        swipeHandlers.onClickCapture(event);
+      }}
+      className="h-20 bg-base-200 border-t border-base-300 flex flex-none items-center justify-center cursor-pointer touch-pan-y hover:bg-base-300/30 active:bg-base-300/60 transition-all"
       title={isPlaying ? "点击停止" : "点击播放"}
     >
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md md:max-w-xl">

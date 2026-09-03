@@ -5,7 +5,7 @@ import { showLoading } from "@/app/full-screen-loading";
 import { useShallow } from "zustand/react/shallow";
 import { useSpeech } from "../_hooks/use-speech";
 import { useMediaSession } from "../_hooks/use-media-session";
-import { useDoubleClick } from "../_hooks/use-double-click";
+import { useSwipe } from "../_hooks/use-swipe";
 import { useReaderStore } from "../_store/store";
 import { SpeecherSettings } from "./speecher-settings";
 import type { Chapter, BookData } from "@/lib/book";
@@ -85,19 +85,21 @@ export function Speecher() {
     }
   };
 
-  const handleClick = useDoubleClick({
+  const swipeHandlers = useSwipe({
     disabled: isContentLoading,
-    onSingleClick: handleToggle,
+    onTap: handleToggle,
     onDoubleClick: () => step(1),
+    onSwipeLeft: () => step(-1),
+    onSwipeRight: () => step(1),
   });
 
   return (
     <div
       className={`flex items-center justify-between w-full max-w-md md:max-w-xl mx-auto px-4 ${isContentLoading ? "opacity-30 pointer-events-none" : ""}`}
       onClickCapture={(event) => {
-        // 补充处理播放器外层 padding 区域的点击：单击切换朗读，双击跳到下一句。
+        // 补充处理播放器外层 padding 区域的点击。
         if (event.target !== event.currentTarget) return;
-        handleClick(event);
+        swipeHandlers.onClickCapture(event);
       }}
     >
       {/* 1. 左侧：上一章 */}
@@ -138,9 +140,9 @@ export function Speecher() {
 
         <div className="join bg-primary/10 p-1 rounded-2xl items-center border border-primary/5 flex-none">
           <button
-            className="btn btn-ghost h-[52px] join-item rounded-l-2xl px-5 border-none hover:bg-primary/10 active:scale-95 transition-all text-primary"
+            {...swipeHandlers}
+            className="btn btn-ghost h-[52px] join-item rounded-l-2xl px-5 border-none touch-pan-y hover:bg-primary/10 active:scale-95 transition-all text-primary"
             title={isPlaying ? "停止朗读" : "开始朗读"}
-            onClickCapture={handleClick}
             disabled={isContentLoading}
           >
             {isPlaying ? (
