@@ -5,7 +5,7 @@ import { showLoading } from "@/app/full-screen-loading";
 import { useShallow } from "zustand/react/shallow";
 import { useSpeech } from "../_hooks/use-speech";
 import { useMediaSession } from "../_hooks/use-media-session";
-import { useSwipe } from "../_hooks/use-swipe";
+import { useStepGesture } from "../_hooks/use-step-gesture";
 import { useReaderStore } from "../_store/store";
 import { SpeecherSettings } from "./speecher-settings";
 import type { Chapter, BookData } from "@/lib/book";
@@ -85,7 +85,7 @@ export function Speecher() {
     }
   };
 
-  const swipeHandlers = useSwipe({
+  const gestureHandlers = useStepGesture({
     disabled: isContentLoading,
     onTap: handleToggle,
     onDoubleClick: () => step(1),
@@ -99,7 +99,7 @@ export function Speecher() {
       onClickCapture={(event) => {
         // 补充处理播放器外层 padding 区域的点击。
         if (event.target !== event.currentTarget) return;
-        swipeHandlers.onClickCapture(event);
+        gestureHandlers.onClickCapture(event);
       }}
     >
       {/* 1. 左侧：上一章 */}
@@ -140,7 +140,7 @@ export function Speecher() {
 
         <div className="join bg-primary/10 p-1 rounded-2xl items-center border border-primary/5 flex-none">
           <button
-            {...swipeHandlers}
+            {...gestureHandlers}
             className="btn btn-ghost h-[52px] join-item rounded-l-2xl px-5 border-none touch-pan-y hover:bg-primary/10 active:scale-95 transition-all text-primary"
             title={isPlaying ? "停止朗读" : "开始朗读"}
             disabled={isContentLoading}

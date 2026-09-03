@@ -9,7 +9,7 @@ import { useReaderStore } from "../_store/store";
 import type { Chapter, BookData } from "@/lib/book";
 import { usePolling } from "../../dashboard/_hooks/use-polling";
 import { useSpeech } from "../_hooks/use-speech";
-import { useSwipe } from "../_hooks/use-swipe";
+import { useStepGesture } from "../_hooks/use-step-gesture";
 
 /**
  * 递归检查某个章节及其所有子章节中是否有选中的项
@@ -137,7 +137,7 @@ export function ChaptersWrapper() {
     }
   };
 
-  const swipeHandlers = useSwipe({
+  const gestureHandlers = useStepGesture({
     disabled: isContentLoading,
     onTap: handleToggle,
     onDoubleClick: () => step(1),
@@ -160,7 +160,7 @@ export function ChaptersWrapper() {
         </ul>
         {/* 底部留白区域，点击可触发播放/暂停 */}
         <div
-          {...swipeHandlers}
+          {...gestureHandlers}
           className="flex-1 cursor-pointer touch-pan-y"
           title={isPlaying ? "点击停止" : "点击播放"}
         />

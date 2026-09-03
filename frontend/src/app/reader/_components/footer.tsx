@@ -2,7 +2,7 @@
 
 import { Speecher } from "./speecher";
 import { useSpeech } from "../_hooks/use-speech";
-import { useSwipe } from "../_hooks/use-swipe";
+import { useStepGesture } from "../_hooks/use-step-gesture";
 
 /**
  * 阅读器底部控制栏组件
@@ -18,7 +18,7 @@ export function Footer() {
     }
   };
 
-  const swipeHandlers = useSwipe({
+  const gestureHandlers = useStepGesture({
     onTap: handleToggle,
     onDoubleClick: () => step(1),
     onSwipeLeft: () => step(-1),
@@ -29,19 +29,19 @@ export function Footer() {
     <footer
       onPointerDownCapture={(event) => {
         if (event.target !== event.currentTarget) return;
-        swipeHandlers.onPointerDownCapture(event);
+        gestureHandlers.onPointerDownCapture(event);
       }}
       onPointerUpCapture={(event) => {
         if (event.target !== event.currentTarget) return;
-        swipeHandlers.onPointerUpCapture(event);
+        gestureHandlers.onPointerUpCapture(event);
       }}
       onPointerCancelCapture={(event) => {
         if (event.target !== event.currentTarget) return;
-        swipeHandlers.onPointerCancelCapture(event);
+        gestureHandlers.onPointerCancelCapture(event);
       }}
       onClickCapture={(event) => {
         if (event.target !== event.currentTarget) return;
-        swipeHandlers.onClickCapture(event);
+        gestureHandlers.onClickCapture(event);
       }}
       className="h-20 bg-base-200 border-t border-base-300 flex flex-none items-center justify-center cursor-pointer touch-pan-y hover:bg-base-300/30 active:bg-base-300/60 transition-all"
       title={isPlaying ? "点击停止" : "点击播放"}

@@ -31,9 +31,9 @@ interface Options {
  * 该状态，并在紧随其后的 click 阶段将其吞掉，避免滑动和 `onTap` 同时触发。
  * 若传入 `onDoubleClick`，普通点击会等待 `doubleClickDelay` 后才触发，以便在
  * 第二次点击到达时取消单击并执行双击回调。
- * 调用方可将返回值直接展开到目标元素：`<div {...swipeHandlers} />`。
+ * 调用方可将返回值直接展开到目标元素：`<div {...gestureHandlers} />`。
  */
-export function useSwipe({
+export function useStepGesture({
   disabled = false,
   onSwipeLeft,
   onSwipeRight,

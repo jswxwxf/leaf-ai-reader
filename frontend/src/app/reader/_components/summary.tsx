@@ -6,7 +6,7 @@ import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { configureSpeech, sanitizeSpeechText, useSpeech } from "../_hooks/use-speech";
-import { useSwipe } from "../_hooks/use-swipe";
+import { useStepGesture } from "../_hooks/use-step-gesture";
 import { useState } from "react";
 import { request } from "@/lib/request";
 import { SummaryItem } from "./summary-item";
@@ -98,7 +98,7 @@ export function Summary() {
     }
   };
 
-  const swipeHandlers = useSwipe({
+  const gestureHandlers = useStepGesture({
     disabled: isContentLoading,
     onTap: handleToggle,
     onDoubleClick: () => step(1),
@@ -149,7 +149,7 @@ export function Summary() {
           onClickCapture={(event) => {
             // 补充 padding / 间隔区域的点击。
             if (event.target !== event.currentTarget) return;
-            swipeHandlers.onClickCapture(event);
+            gestureHandlers.onClickCapture(event);
           }}
         >
           {summaries.length > 0 ? (
@@ -171,7 +171,7 @@ export function Summary() {
               className="py-10 text-center w-full space-y-4 px-6"
               onClickCapture={(event) => {
                 if (event.target !== event.currentTarget) return;
-                swipeHandlers.onClickCapture(event);
+                gestureHandlers.onClickCapture(event);
               }}
             >
               <p className="opacity-40 text-sm hidden sm:block">
@@ -191,14 +191,14 @@ export function Summary() {
             </div>
           )}
           <div
-            {...swipeHandlers}
+            {...gestureHandlers}
             className="hidden select-none touch-pan-y compact:block compact:flex-1 compact:cursor-pointer"
             title={isPlaying ? "点击停止" : "点击播放"}
           />
         </div>
         {/* 底部留白区域，点击可触发播放/暂停，仅在触屏设备的 compact 以上垂直布局时有效 */}
         <div
-          {...swipeHandlers}
+          {...gestureHandlers}
           className="hidden h-76 shrink-0 cursor-pointer select-none touch-pan-y pointer-coarse:compact:block"
           title={isPlaying ? "点击停止" : "点击播放"}
         />
