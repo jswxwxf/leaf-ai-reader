@@ -29,8 +29,9 @@ interface Options {
  *
  * 浏览器会在触摸滑动结束后额外派发一次 `click`。hook 会在识别到滑动时记录
  * 该状态，并在紧随其后的 click 阶段将其吞掉，避免滑动和 `onTap` 同时触发。
- * 若传入 `onDoubleClick`，普通点击会等待 `doubleClickDelay` 后才触发，以便在
- * 第二次点击到达时取消单击并执行双击回调。
+ * 若传入 `onDoubleClick`，具备精细指针和悬停能力的桌面环境会等待
+ * `doubleClickDelay` 后再触发普通点击，以便在第二次点击到达时执行双击回调；
+ * 触屏设备的普通点击会立即触发。
  * 调用方可将返回值直接展开到目标元素：`<div {...gestureHandlers} />`。
  */
 export function useStepGesture({
@@ -119,7 +120,16 @@ export function useStepGesture({
       return;
     }
 
-    if (!onDoubleClickRef.current) {
+    // 双击仅在具备精细主指针与悬停能力的桌面环境启用；触屏设备单击立即响应。
+    const supportsDoubleClick =
+      typeof window !== "undefined" &&
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+    if (!onDoubleClickRef.current || !supportsDoubleClick) {
+      if (tapTimerRef.current) {
+        clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
       onTapRef.current?.();
       return;
     }
