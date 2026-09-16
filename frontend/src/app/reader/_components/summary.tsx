@@ -96,11 +96,10 @@ function useReadSummaries({ summaries, path, disabled }: UseReadSummariesOptions
     readingPathRef.current = path;
     if (!isReadingRef.current) return;
 
-    // 章节切换时同时停止浏览器语音和摘要的异步循环。
+    // 正文区域会统一取消浏览器语音；这里仅作废摘要的异步循环。
     sessionRef.current += 1;
     isReadingRef.current = false;
     setIsReading(false);
-    window.speechSynthesis?.cancel();
   }, [path]);
 
   const readSummaries = async () => {
