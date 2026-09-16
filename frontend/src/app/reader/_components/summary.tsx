@@ -1,13 +1,13 @@
 "use client";
 
-import { Star, RefreshCw, Volume2 } from "lucide-react";
+import { Star, Volume2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { configureSpeech, sanitizeSpeechText, useSpeech } from "../_hooks/use-speech";
 import { useStepGesture } from "../_hooks/use-step-gesture";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { request } from "@/lib/request";
 import { SummaryItem } from "./summary-item";
 
@@ -89,6 +89,9 @@ export function Summary() {
   const { jumpToSentence } = useReader();
   const { play, step, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
+  const [isReadingSummaries, setIsReadingSummaries] = useState(false);
+  // 用 ref 立即上锁，避免 React 状态更新前的快速连点重复启动朗读。
+  const isReadingSummariesRef = useRef(false);
 
   const handleToggle = () => {
     if (isPlaying) {
@@ -107,31 +110,43 @@ export function Summary() {
   });
 
   const handleReadSummaries = async () => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    // 摘要正在朗读时忽略后续点击，不重新开始也不取消当前朗读。
+    if (isContentLoading || isSummarizing || summaries.length === 0 || isReadingSummariesRef.current) return;
 
-    for (const summary of summaries) {
-      await speakSummaries(summary.summary);
+    isReadingSummariesRef.current = true;
+    setIsReadingSummaries(true);
+
+    try {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+
+      for (const summary of summaries) {
+        await speakSummaries(summary.summary);
+      }
+    } finally {
+      isReadingSummariesRef.current = false;
+      setIsReadingSummaries(false);
     }
   };
 
+  const canReadSummaries = !isContentLoading && !isSummarizing && !isReadingSummaries && summaries.length > 0;
+
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 compact:w-48 md:w-80 compact:h-full compact:border-l compact:border-b-0 compact:order-0">
-      <div className="hidden compact:flex p-4 flex-none border-b border-base-200 items-center justify-between">
+      <div
+        className={`hidden compact:flex p-4 flex-none border-b border-base-200 items-center justify-between ${canReadSummaries ? 'cursor-pointer' : ''}`}
+        onClick={() => void handleReadSummaries()}
+        title="朗读摘要"
+      >
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <Star className="w-4 h-4 text-warning" /> 摘要
         </h2>
         {!isContentLoading && (
           <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); void handleReadSummaries(); }}
-              disabled={isSummarizing || summaries.length === 0}
-              className="btn btn-ghost btn-xs btn-circle"
-              title="朗读摘要"
-            >
+            <span className="btn btn-ghost btn-xs btn-circle" aria-hidden="true">
               {!isSummarizing && <Volume2 className="w-4 h-4 opacity-60" />}
-            </button>
+            </span>
             {/* <button
               onClick={(e) => { e.stopPropagation(); handleSummarize(); }}
               disabled={isSummarizing}
