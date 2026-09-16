@@ -6,8 +6,9 @@ import { useReaderStore, type AISummary } from "../_store/store";
 import { useReader } from "../_hooks/use-reader";
 import { useSummaryHighlight } from "../_hooks/use-summary-highlight";
 import { configureSpeech, sanitizeSpeechText, useSpeech } from "../_hooks/use-speech";
+import { useSoundEffect } from "../_hooks/use-sound-effect";
 import { useStepGesture } from "../_hooks/use-step-gesture";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { request } from "@/lib/request";
 import { SummaryItem } from "./summary-item";
 
@@ -15,6 +16,7 @@ import { SummaryItem } from "./summary-item";
  * 封装摘要重刷逻辑的 Hook
  */
 function useSummarize() {
+  const { prepare, play } = useSoundEffect({ sound: "success" });
   const { mode, article_id, book_id, path, setSummaries } = useReaderStore(
     useShallow((state) => ({
       mode: state.mode,
@@ -28,7 +30,8 @@ function useSummarize() {
   const [isSummarizing, setIsSummarizing] = useState(false);
 
   const handleSummarize = async () => {
-    if (isSummarizing) return;
+    // 在按钮点击时解锁音频，等异步请求成功后才可以可靠地播放提示音。
+    prepare();
     setIsSummarizing(true);
     try {
       const result = await request<{ success: boolean; summaries: AISummary[] }>('/api/reader/summarize', {
@@ -43,9 +46,11 @@ function useSummarize() {
 
       if (result.summaries) {
         setSummaries(result.summaries);
+        play();
       }
-    } catch (e) {
+    } catch {
       // 错误已由 request.ts 内部处理
+      play("error");
     } finally {
       setIsSummarizing(false);
     }
@@ -68,6 +73,72 @@ const speakSummaries = (text: string) => new Promise<void>((resolve) => {
   window.speechSynthesis.speak(utterance);
 });
 
+interface UseReadSummariesOptions {
+  summaries: AISummary[];
+  path: string | null;
+  disabled: boolean;
+}
+
+/**
+ * 管理摘要朗读及章节切换时的清理。
+ */
+function useReadSummaries({ summaries, path, disabled }: UseReadSummariesOptions) {
+  const [isReading, setIsReading] = useState(false);
+  // 立即上锁，避免 React 状态更新前的快速连点重复启动朗读。
+  const isReadingRef = useRef(false);
+  // 作废旧朗读队列，避免 cancel 后旧 Promise 恢复并继续读下一条。
+  const sessionRef = useRef(0);
+  const readingPathRef = useRef(path);
+
+  useEffect(() => {
+    if (readingPathRef.current === path) return;
+
+    readingPathRef.current = path;
+    if (!isReadingRef.current) return;
+
+    // 章节切换时同时停止浏览器语音和摘要的异步循环。
+    sessionRef.current += 1;
+    isReadingRef.current = false;
+    setIsReading(false);
+    window.speechSynthesis?.cancel();
+  }, [path]);
+
+  const readSummaries = async () => {
+    // 不可用、没有摘要或当前仍在朗读时，忽略本次点击。
+    if (disabled || summaries.length === 0 || isReadingRef.current) return;
+
+    // 为本轮朗读分配唯一标识，章节切换后可借此让旧队列退出。
+    const sessionId = ++sessionRef.current;
+    isReadingRef.current = true;
+    setIsReading(true);
+
+    try {
+      // 清理可能残留的浏览器语音队列，再从当前摘要开始朗读。
+      window.speechSynthesis?.cancel();
+
+      for (const summary of summaries) {
+        // 如果章节已切换，本轮会话已失效，不再开始下一条摘要。
+        if (sessionId !== sessionRef.current) return;
+        await speakSummaries(summary.summary);
+        // cancel 后 await 仍可能恢复；再次检查以避免继续读后续摘要。
+        if (sessionId !== sessionRef.current) return;
+      }
+    } finally {
+      // 旧会话不应重置新会话的朗读状态。
+      if (sessionId !== sessionRef.current) return;
+
+      // 所有摘要朗读完成，解除点击锁定。
+      isReadingRef.current = false;
+      setIsReading(false);
+    }
+  };
+
+  return {
+    canReadSummaries: !disabled && !isReading && summaries.length > 0,
+    readSummaries,
+  };
+}
+
 /**
  * 重点列表组件 (AI 核心摘要)
  */
@@ -77,21 +148,25 @@ export function Summary() {
     summarySentenceId,
     data,
     isContentLoading,
+    path,
   } = useReaderStore(
     useShallow((state) => ({
       summaries: state.summaries,
       summarySentenceId: state.summarySentenceId,
       data: state.data,
       isContentLoading: state.isContentLoading,
+      path: state.path,
     }))
   );
   const { isSummarizing, handleSummarize } = useSummarize();
   const { jumpToSentence } = useReader();
   const { play, step, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
-  const [isReadingSummaries, setIsReadingSummaries] = useState(false);
-  // 用 ref 立即上锁，避免 React 状态更新前的快速连点重复启动朗读。
-  const isReadingSummariesRef = useRef(false);
+  const { canReadSummaries, readSummaries } = useReadSummaries({
+    summaries,
+    path,
+    disabled: isContentLoading || isSummarizing,
+  });
 
   const handleToggle = () => {
     if (isPlaying) {
@@ -109,34 +184,11 @@ export function Summary() {
     onSwipeRight: () => step(1),
   });
 
-  const handleReadSummaries = async () => {
-    // 摘要正在朗读时忽略后续点击，不重新开始也不取消当前朗读。
-    if (isContentLoading || isSummarizing || summaries.length === 0 || isReadingSummariesRef.current) return;
-
-    isReadingSummariesRef.current = true;
-    setIsReadingSummaries(true);
-
-    try {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-
-      for (const summary of summaries) {
-        await speakSummaries(summary.summary);
-      }
-    } finally {
-      isReadingSummariesRef.current = false;
-      setIsReadingSummaries(false);
-    }
-  };
-
-  const canReadSummaries = !isContentLoading && !isSummarizing && !isReadingSummaries && summaries.length > 0;
-
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 compact:w-48 md:w-80 compact:h-full compact:border-l compact:border-b-0 compact:order-0">
       <div
         className={`hidden compact:flex p-4 flex-none border-b border-base-200 items-center justify-between ${canReadSummaries ? 'cursor-pointer' : ''}`}
-        onClick={() => void handleReadSummaries()}
+        onClick={() => void readSummaries()}
         title="朗读摘要"
       >
         <h2 className="text-sm font-semibold flex items-center gap-2">
