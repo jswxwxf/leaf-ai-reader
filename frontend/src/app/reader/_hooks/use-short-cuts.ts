@@ -1,4 +1,9 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
+import type { BookData } from "@/lib/book";
+import { getNextChapter } from "../_components/speecher";
+import { useReaderStore } from "../_store/store";
 
 /** 找到目标元素后模拟点击，并阻止默认滚动和长按重复触发。 */
 function handleElementClick(event: KeyboardEvent, selector: string) {
@@ -7,6 +12,36 @@ function handleElementClick(event: KeyboardEvent, selector: string) {
 
   event.preventDefault();
   if (!event.repeat) target.click();
+}
+
+/** 管理下一章快捷键的可用性和整页跳转。 */
+function useNextChapter() {
+  const searchParams = useSearchParams();
+  const { mode, data, isContentLoading } = useReaderStore(
+    useShallow((state) => ({
+      mode: state.mode,
+      data: state.data,
+      isContentLoading: state.isContentLoading,
+    }))
+  );
+
+  return useCallback((event: KeyboardEvent) => {
+    if (mode !== "book") return;
+    event.preventDefault();
+    if (event.repeat || isContentLoading || !data) return;
+
+    // 直接查找下一章并导航，不再模拟点击链接。
+    const path = searchParams.get("path");
+    if (!path) return;
+    const bookData = data as BookData;
+    const nextChapter = getNextChapter(bookData.flattenChapters || [], path);
+    if (!nextChapter) return;
+
+    // 整页加载下一章，让阅读器和浏览器语音相关状态重新初始化。
+    window.location.assign(
+      `/reader?book_id=${encodeURIComponent(bookData.id)}&path=${encodeURIComponent(nextChapter.path)}`
+    );
+  }, [mode, data, isContentLoading, searchParams]);
 }
 
 /**
@@ -23,6 +58,8 @@ export function useShortCuts({
   stop: () => void;
   step: (delta: number) => void;
 }) {
+  const handleNextChapter = useNextChapter();
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // 如果焦点在输入元素上，不触发快捷键
@@ -55,11 +92,7 @@ export function useShortCuts({
           "[data-generate-summary]:not(:disabled)"
         );
       } else if (event.code === "ArrowDown") {
-        // 复用现有“下一章”链接的点击行为；末章和文章模式下不会找到可用链接。
-        handleElementClick(
-          event,
-          '[data-next-chapter="true"]'
-        );
+        handleNextChapter(event);
       } else if (
         event.code === "KeyS" &&
         event.shiftKey &&
@@ -76,5 +109,5 @@ export function useShortCuts({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isPlaying, play, stop, step]);
+  }, [isPlaying, play, stop, step, handleNextChapter]);
 }
