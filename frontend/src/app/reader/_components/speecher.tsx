@@ -9,6 +9,17 @@ import { useStepGesture } from "../_hooks/use-step-gesture";
 import { useReaderStore } from "../_store/store";
 import { SpeecherSettings } from "./speecher-settings";
 import type { Chapter, BookData } from "@/lib/book";
+import { normalizePathKey } from "../_utils/utils";
+
+/** 根据当前路径，在展平后的目录中查找下一章。 */
+export function getNextChapter(chapters: Chapter[], path: string): Chapter | undefined {
+  const currentIndex = chapters.findIndex(
+    (chapter) => normalizePathKey(chapter.path) === normalizePathKey(path)
+  );
+  if (currentIndex === -1) return undefined;
+
+  return chapters[currentIndex + 1];
+}
 
 /**
  * 语音播放控制组件 (Speecher) - 集成章节导航版
@@ -35,10 +46,10 @@ export function Speecher() {
 
   if (isBookMode && path) {
     const allChapters = bookData.flattenChapters || [];
+    nextChapter = getNextChapter(allChapters, path);
     const currentIndex = allChapters.findIndex(c => c.path === path);
     if (currentIndex !== -1) {
       prevChapter = allChapters[currentIndex - 1];
-      nextChapter = allChapters[currentIndex + 1];
     }
   }
 
@@ -172,6 +183,7 @@ export function Speecher() {
       {isBookMode ? (
         <div className="flex-1 basis-0 flex justify-end">
           <Link
+            data-next-chapter={nextChapter ? "true" : undefined}
             href={nextChapter ? `/reader?book_id=${bookData.id}&path=${encodeURIComponent(nextChapter.path)}` : "#"}
             scroll={false}
             prefetch={false}

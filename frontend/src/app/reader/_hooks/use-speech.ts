@@ -266,58 +266,7 @@ export function useSpeech() {
     }
   };
 
-  useShortKey({ isPlaying, play, stop, step });
-
   return { play, step, stop, speechSentenceId, isPlaying };
-}
-
-/**
- * 键盘快捷键监听 Hook
- */
-function useShortKey({
-  isPlaying,
-  play,
-  stop,
-  step,
-}: {
-  isPlaying: boolean;
-  play: () => void;
-  stop: () => void;
-  step: (delta: number) => void;
-}) {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // 如果焦点在输入元素上，不触发快捷键
-      const target = event.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      if (event.code === "Space") {
-        event.preventDefault(); // 防止页面滚动
-        if (isPlaying) {
-          stop();
-        } else {
-          play();
-        }
-      } else if (event.code === "ArrowLeft") {
-        event.preventDefault();
-        step(-1);
-      } else if (event.code === "ArrowRight") {
-        event.preventDefault();
-        step(1);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isPlaying, play, stop]);
 }
 
 export function stopSpeech(store: any) {

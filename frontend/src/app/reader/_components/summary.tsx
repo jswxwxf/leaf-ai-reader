@@ -186,6 +186,7 @@ export function Summary() {
   return (
     <aside className="flex flex-col w-full h-auto border-b order-first overflow-hidden shrink-0 border-base-300 bg-base-100 compact:w-48 md:w-80 compact:h-full compact:border-l compact:border-b-0 compact:order-0">
       <div
+        data-read-summaries={canReadSummaries ? "true" : undefined}
         className={`hidden compact:flex p-4 flex-none border-b border-base-200 items-center justify-between ${canReadSummaries ? 'cursor-pointer' : ''}`}
         onClick={() => void readSummaries()}
         title="朗读摘要"
@@ -247,6 +248,7 @@ export function Summary() {
               </p>
               {!isContentLoading && data?.status === 'ready' && (
                 <button
+                  data-generate-summary
                   onClick={handleSummarize}
                   disabled={isSummarizing}
                   className={`btn btn-primary shadow-lg ${isSummarizing ? 'loading' : 'btn-md w-full compact:btn-sm'}`}
@@ -265,7 +267,7 @@ export function Summary() {
         {/* 底部留白区域，点击可触发播放/暂停，仅在触屏设备的 compact 以上垂直布局时有效 */}
         <div
           {...gestureHandlers}
-          className="hidden h-76 shrink-0 cursor-pointer select-none touch-pan-y pointer-coarse:compact:block"
+          className="hidden h-76 md:h-32 shrink-0 cursor-pointer select-none touch-pan-y pointer-coarse:compact:block"
           title={isPlaying ? "点击停止" : "点击播放"}
         />
       </div>
