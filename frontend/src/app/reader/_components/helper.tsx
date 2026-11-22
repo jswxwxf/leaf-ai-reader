@@ -2,11 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 import { redirect, useSearchParams } from 'next/navigation';
-import { type AISummary, useReaderStore } from '../_store/store';
+import { type AISummary, useReaderStore, useReaderStoreRaw } from '../_store/store';
 import { useShallow } from 'zustand/react/shallow';
 import type { BookData } from '@/lib/book';
 import { request } from '@/lib/request';
 import { useReader } from '../_hooks/use-reader';
+import { debounce } from '../_utils/utils';
 
 interface ChapterResponse {
   status: string;
@@ -214,6 +215,20 @@ function usePrefetchChapter({
   }, [bookId, path, flattenChapters]);
 }
 
+function saveBookProgress(bookId: string, bookmark: string, progress: number) {
+  return request(
+    `/api/books/${bookId}/progress`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookmark, progress }),
+    },
+    { silent: true },
+  ).catch((err) => {
+    console.error('[Helper] Failed to update book progress:', err);
+  });
+}
+
 function useBookProgress({
   bookId,
   path,
@@ -226,31 +241,51 @@ function useBookProgress({
   bookmark: BookBookmark | null;
 }) {
   const withSentenceBookmark = bookmark?.start_sId ? bookmark.active_chapter : undefined;
+  const store = useReaderStoreRaw();
+  const normalizedPath = path && normalizePath(path);
+  const index = flattenChapters.findIndex((chapter) => normalizePath(chapter.path) === normalizedPath);
+  const progress = index === -1 ? null : Math.floor(((index + 1) / flattenChapters.length) * 100);
 
   useEffect(() => {
-    if (!bookId || !path || flattenChapters.length === 0) return;
+    if (!bookId || !path || progress === null) return;
 
     // 进章请求只保存章节路径。重开已有句子书签的章节时，跳过写入以保留句子 ID。
-    if (withSentenceBookmark && normalizePath(withSentenceBookmark) === normalizePath(path)) return;
+    if (withSentenceBookmark && normalizePath(withSentenceBookmark) === normalizedPath) return;
 
-    const index = flattenChapters.findIndex(
-      (chapter) => normalizePath(chapter.path) === normalizePath(path),
-    );
-    if (index === -1) return;
+    void saveBookProgress(bookId, path, progress);
+  }, [bookId, path, normalizedPath, progress, withSentenceBookmark]);
 
-    const progress = Math.floor(((index + 1) / flattenChapters.length) * 100);
-    request(
-      `/api/books/${bookId}/progress`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookmark: path, progress }),
-      },
-      { silent: true },
-    ).catch((err) => {
-      console.error('[Helper] Failed to update book progress:', err);
+  useEffect(() => {
+    if (!bookId || !path || progress === null) return;
+
+    const saveSentence = debounce((sentenceId: string) => {
+      const bookmark: BookBookmark = { active_chapter: path, start_sId: sentenceId };
+      void saveBookProgress(bookId, JSON.stringify(bookmark), progress);
+    }, 2000);
+
+    let lastSentenceId: string | null = null;
+    const unsubscribe = store.subscribe((state, previous) => {
+      if (state.mode !== 'book' || state.path !== path || state.isContentLoading) {
+        saveSentence.cancel();
+        lastSentenceId = null;
+        return;
+      }
+
+      // 点击或朗读更新正文句子，滚动更新摘要锚点。只使用本次变化的 ID，避免被旧高亮覆盖。
+      const speechId = state.speechSentenceId !== previous.speechSentenceId ? state.speechSentenceId : null;
+      const summaryId = state.summarySentenceId !== previous.summarySentenceId ? state.summarySentenceId : null;
+      const sentenceId = speechId ?? summaryId;
+      if (!sentenceId || sentenceId === lastSentenceId) return;
+
+      lastSentenceId = sentenceId;
+      saveSentence(sentenceId);
     });
-  }, [bookId, path, flattenChapters, withSentenceBookmark]);
+
+    return () => {
+      unsubscribe();
+      saveSentence.cancel();
+    };
+  }, [bookId, path, progress, store]);
 }
 
 /**

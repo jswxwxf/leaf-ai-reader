@@ -36,6 +36,21 @@ export const isSafari =
  */
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * 等调用停止后执行最后一次。cancel 用于取消仍在等待的调用。
+ */
+export function debounce<Args extends unknown[]>(callback: (...args: Args) => void, ms: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const cancel = () => clearTimeout(timer);
+  const run = (...args: Args) => {
+    cancel();
+    timer = setTimeout(() => callback(...args), ms);
+  };
+
+  return Object.assign(run, { cancel });
+}
+
 export function normalizePathKey(path?: string | null) {
   if (!path) return 'initial';
 
