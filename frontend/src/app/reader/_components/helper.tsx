@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { redirect, useSearchParams } from 'next/navigation';
 import { type AISummary, useReaderStore } from '../_store/store';
 import { useShallow } from 'zustand/react/shallow';
-import { type BookData } from '@/lib/book';
+import type { BookData } from '@/lib/book';
 import { request } from '@/lib/request';
+import { useReader } from '../_hooks/use-reader';
 
 interface ChapterResponse {
   status: string;
@@ -54,6 +55,54 @@ const getChapterCacheKey = (bookId: string, path: string) =>
 
 type FlattenChapters = NonNullable<BookData['flattenChapters']>;
 
+interface BookBookmark {
+  active_chapter: string;
+  start_sId?: string;
+}
+
+function parseBookBookmark(value?: string | null): BookBookmark | null {
+  if (!value?.trim()) return null;
+  // 旧书签就是章节路径，新书签还可以包含该章的句子 ID。
+  if (!value.trimStart().startsWith('{')) return { active_chapter: value };
+
+  try {
+    const bookmark = JSON.parse(value);
+    if (typeof bookmark?.active_chapter !== 'string' || !bookmark.active_chapter.trim()) return null;
+    const start_sId = typeof bookmark.start_sId === 'string' && /^s-\d+$/.test(bookmark.start_sId)
+      ? bookmark.start_sId
+      : undefined;
+    return { active_chapter: bookmark.active_chapter, start_sId };
+  } catch {
+    return null;
+  }
+}
+
+function useResolveChapter(bookData: BookData | null, bookmark: BookBookmark | null) {
+  const searchParams = useSearchParams();
+  const bookIdFromUrl = searchParams.get('book_id');
+  const pathFromUrl = searchParams.get('path');
+  const sentenceId = searchParams.get('sentence_id');
+
+  // 书架入口没有指定章节。优先打开有效的书签章节，否则打开第一章。
+  if (bookIdFromUrl && bookData && !pathFromUrl) {
+    const flattenChapters = bookData.flattenChapters || [];
+    const savedChapter = bookmark && flattenChapters.find(
+      (chapter) => normalizePath(chapter.path) === normalizePath(bookmark.active_chapter),
+    );
+    const targetPath = savedChapter?.path || flattenChapters[0]?.path;
+    if (targetPath) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('path', targetPath);
+      if (!sentenceId && savedChapter && bookmark?.start_sId) {
+        params.set('sentence_id', bookmark.start_sId);
+      }
+      redirect(`/reader?${params}`);
+    }
+  }
+
+  return searchParams;
+}
+
 function useFetchChapter({
   bookId,
   path,
@@ -86,38 +135,6 @@ function useFetchChapter({
       setIsContentLoading(true);
     }
   }, [bookId, path, setPath, setContent, setSummaries, setIsContentLoading]);
-}
-
-function useBookProgress({
-  bookId,
-  path,
-  flattenChapters,
-}: {
-  bookId: string | null;
-  path: string | null;
-  flattenChapters: FlattenChapters;
-}) {
-  useEffect(() => {
-    if (!bookId || !path || flattenChapters.length === 0) return;
-
-    const index = flattenChapters.findIndex(
-      (chapter) => normalizePath(chapter.path) === normalizePath(path),
-    );
-    if (index === -1) return;
-
-    const progress = Math.floor(((index + 1) / flattenChapters.length) * 100);
-    request(
-      `/api/books/${bookId}/progress`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookmark: path, progress }),
-      },
-      { silent: true },
-    ).catch((err) => {
-      console.error('[Helper] Failed to update book progress:', err);
-    });
-  }, [bookId, path, flattenChapters]);
 }
 
 function useCacheChapter({
@@ -197,6 +214,91 @@ function usePrefetchChapter({
   }, [bookId, path, flattenChapters]);
 }
 
+function useBookProgress({
+  bookId,
+  path,
+  flattenChapters,
+  bookmark,
+}: {
+  bookId: string | null;
+  path: string | null;
+  flattenChapters: FlattenChapters;
+  bookmark: BookBookmark | null;
+}) {
+  const withSentenceBookmark = bookmark?.start_sId ? bookmark.active_chapter : undefined;
+
+  useEffect(() => {
+    if (!bookId || !path || flattenChapters.length === 0) return;
+
+    // 进章请求只保存章节路径。重开已有句子书签的章节时，跳过写入以保留句子 ID。
+    if (withSentenceBookmark && normalizePath(withSentenceBookmark) === normalizePath(path)) return;
+
+    const index = flattenChapters.findIndex(
+      (chapter) => normalizePath(chapter.path) === normalizePath(path),
+    );
+    if (index === -1) return;
+
+    const progress = Math.floor(((index + 1) / flattenChapters.length) * 100);
+    request(
+      `/api/books/${bookId}/progress`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookmark: path, progress }),
+      },
+      { silent: true },
+    ).catch((err) => {
+      console.error('[Helper] Failed to update book progress:', err);
+    });
+  }, [bookId, path, flattenChapters, withSentenceBookmark]);
+}
+
+/**
+ * 正文加载后按 URL 中的 sentence_id 定位并高亮原文。
+ * 从书签打开图书和通过链接直达句子共用这里的定位流程。
+ */
+function useBookSentenceMark(
+  searchParams: ReturnType<typeof useSearchParams>,
+) {
+  const bookIdFromUrl = searchParams.get('book_id');
+  const pathFromUrl = searchParams.get('path');
+  const sentenceId = searchParams.get('sentence_id');
+  const lastTarget = useRef<string | null>(null);
+  const { jumpToSentence } = useReader();
+  const { content, path, contentRef, isContentLoading } = useReaderStore(
+    useShallow((state) => ({
+      content: state.content,
+      path: state.path,
+      contentRef: state.contentRef,
+      isContentLoading: state.isContentLoading,
+    })),
+  );
+
+  useEffect(() => {
+    // 只接受正文使用的 s-数字 格式。参数移除后清空记录，之后可再次打开同一目标。
+    if (!sentenceId || !/^s-\d+$/.test(sentenceId)) {
+      lastTarget.current = null;
+      return;
+    }
+    // EPUB 切章时 URL 可能先更新，Store 中暂时还是上一章。等章节匹配、正文加载完成再查找。
+    if (!content || isContentLoading || (bookIdFromUrl && path !== pathFromUrl)) return;
+
+    // 不同书籍和章节都可能有同一个 s-42，因此用书籍、章节和句子 ID 一起识别目标。
+    // 同一目标成功定位一次后，后续渲染无需再次滚动，读者可以继续向下阅读。
+    const target = JSON.stringify([bookIdFromUrl, pathFromUrl, sentenceId]);
+    if (lastTarget.current === target) return;
+    // 只在当前阅读器的正文容器内查找，找到元素后才记录为已定位。
+    const sentence = contentRef?.current?.querySelector(`[id="${sentenceId}"]`);
+    if (!sentence) return;
+
+    lastTarget.current = target;
+    // 复用现有的句子高亮状态更新。这里直接将目标句滚到视口中央，省去打开链接时的平滑滚动动画。
+    jumpToSentence(sentenceId, { scroll: false });
+    sentence.scrollIntoView({ behavior: 'instant', block: 'center' });
+  }, [sentenceId, bookIdFromUrl, path, pathFromUrl, content, contentRef, isContentLoading, jumpToSentence]);
+
+}
+
 /**
  * 阅读器全局逻辑助手 (Helper)
  * 职责：
@@ -205,12 +307,8 @@ function usePrefetchChapter({
  * 3. 静默预读下一章正文到前端内存
  */
 export function Helper() {
-  const searchParams = useSearchParams();
-  const bookIdFromUrl = searchParams.get('book_id');
-  const pathFromUrl = searchParams.get('path');
-
   const {
-    data,
+    bookData,
     content,
     summaries,
     setPath,
@@ -219,7 +317,7 @@ export function Helper() {
     setIsContentLoading,
   } = useReaderStore(
     useShallow((state) => ({
-      data: state.data,
+      bookData: state.mode === 'book' ? state.data as BookData | null : null,
       content: state.content,
       summaries: state.summaries,
       setPath: state.setPath,
@@ -229,8 +327,12 @@ export function Helper() {
     })),
   );
 
-  const bookData = data as BookData;
   const flattenChapters = bookData?.flattenChapters || [];
+  const bookmark = parseBookBookmark(bookData?.bookmark);
+
+  const searchParams = useResolveChapter(bookData, bookmark);
+  const bookIdFromUrl = searchParams.get('book_id');
+  const pathFromUrl = searchParams.get('path');
 
   useFetchChapter({
     bookId: bookIdFromUrl,
@@ -240,22 +342,28 @@ export function Helper() {
     setSummaries,
     setIsContentLoading,
   });
+
   useCacheChapter({
     bookId: bookIdFromUrl,
     path: pathFromUrl,
     content,
     summaries,
   });
+
   usePrefetchChapter({
     bookId: bookIdFromUrl,
     path: pathFromUrl,
     flattenChapters,
   });
+
   useBookProgress({
     bookId: bookIdFromUrl,
     path: pathFromUrl,
     flattenChapters,
+    bookmark,
   });
+  
+  useBookSentenceMark(searchParams);
 
   return null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useReaderStore, useReaderStoreRaw } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
 import { useScrollspy } from "../_hooks/use-scrollspy";
@@ -33,6 +33,8 @@ export function Content() {
   // 直接持有 store 实例（不订阅），用于事件处理器或 Effect 中一次性读取/更新状态
   const rawStore = useReaderStoreRaw();
   const key = normalizePathKey(path);
+  // 同一份正文复用 HTML 对象，避免普通重渲染重建句子节点并丢掉 Scroller 加的高亮。
+  const contentHtml = useMemo(() => ({ __html: content }), [content]);
 
   // 组件挂载时，将容器引用同步到 Store 中供其它 Hook/组件使用
   useEffect(() => {
@@ -45,8 +47,9 @@ export function Content() {
   /**
    * 核心重置逻辑：只有当路径（章节）真正发生变更时，才重置进度。
    * 这样可以避免 content 异步加载完成时的二次触发（误伤）。
+   * 在定位 effect 之前完成清理，避免正文已缓存时清掉新章的目标句。
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
     // 1. 物理中断语音引擎
     window.speechSynthesis?.cancel();
     // 2. 逻辑重置进度和状态
@@ -128,7 +131,7 @@ export function Content() {
           key={key}
           className="max-w-2xl lg:max-w-3xl mx-auto prose prose-neutral lg:prose-lg py-10 pb-[20vh] cursor-pointer break-words"
           onClick={handleContentClick}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={contentHtml}
         />
       )}
 

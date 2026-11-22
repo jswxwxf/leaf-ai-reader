@@ -59,7 +59,7 @@ function useSummarize() {
   return { isSummarizing, handleSummarize };
 }
 
-const speakSummaries = (text: string) => new Promise<void>((resolve) => {
+const speakSummary = (text: string) => new Promise<void>((resolve) => {
   const trimmedText = sanitizeSpeechText(text).trim();
   if (!trimmedText || typeof window === 'undefined' || !window.speechSynthesis) {
     resolve();
@@ -79,11 +79,46 @@ interface UseReadSummariesOptions {
   disabled: boolean;
 }
 
+const DEFAULT_READ_COUNT = 10;
+
+/**
+ * 统计当前视口内至少露出一半面积的摘要卡片。
+ * 没有符合条件的卡片时，返回索引 0 和数量 0，朗读从列表开头开始。
+ */
+function getVisibleSummaries(list: HTMLDivElement | null) {
+  let firstVisibleIndex = 0;
+  let visibleCount = 0;
+  if (list) {
+    // 容器和视口使用同一套坐标，取交集以排除容器伸出屏幕的部分。
+    const bounds = list.getBoundingClientRect();
+    const left = Math.max(0, bounds.left);
+    const top = Math.max(0, bounds.top);
+    const right = Math.min(document.documentElement.clientWidth, bounds.right);
+    const bottom = Math.min(document.documentElement.clientHeight, bounds.bottom);
+
+    list.querySelectorAll("[data-summary-item]").forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const area = rect.width * rect.height;
+      // 计算卡片与可见区域重叠的宽和高。没有重叠的方向按 0 计算，
+      // 因此横向滑动和纵向滚动都可以用同一个面积判断。
+      const visibleWidth = Math.max(0, Math.min(right, rect.right) - Math.max(left, rect.left));
+      const visibleHeight = Math.max(0, Math.min(bottom, rect.bottom) - Math.max(top, rect.top));
+      if (area === 0 || visibleWidth * visibleHeight < area / 2) return;
+
+      // 卡片的 DOM 顺序与 summaries 一致，首个可见索引可直接用来截取朗读队列。
+      if (visibleCount === 0) firstVisibleIndex = index;
+      visibleCount += 1;
+    });
+  }
+  return { firstVisibleIndex, visibleCount };
+}
+
 /**
  * 管理摘要朗读及章节切换时的清理。
  */
 function useReadSummaries({ summaries, path, disabled }: UseReadSummariesOptions) {
   const [isReading, setIsReading] = useState(false);
+  const summaryListRef = useRef<HTMLDivElement>(null);
   // 立即上锁，避免 React 状态更新前的快速连点重复启动朗读。
   const isReadingRef = useRef(false);
   // 作废旧朗读队列，避免 cancel 后旧 Promise 恢复并继续读下一条。
@@ -106,6 +141,11 @@ function useReadSummaries({ summaries, path, disabled }: UseReadSummariesOptions
     // 不可用、没有摘要或当前仍在朗读时，忽略本次点击。
     if (disabled || summaries.length === 0 || isReadingRef.current) return;
 
+    // 点击时确定本轮队列，播放途中滚动不重新计算。
+    const { firstVisibleIndex, visibleCount } = getVisibleSummaries(summaryListRef.current);
+    const readCount = Math.max(DEFAULT_READ_COUNT, visibleCount);
+    const queue = summaries.slice(firstVisibleIndex, firstVisibleIndex + readCount);
+
     // 为本轮朗读分配唯一标识，章节切换后可借此让旧队列退出。
     const sessionId = ++sessionRef.current;
     isReadingRef.current = true;
@@ -115,10 +155,10 @@ function useReadSummaries({ summaries, path, disabled }: UseReadSummariesOptions
       // 清理可能残留的浏览器语音队列，再从当前摘要开始朗读。
       window.speechSynthesis?.cancel();
 
-      for (const summary of summaries) {
+      for (const summary of queue) {
         // 如果章节已切换，本轮会话已失效，不再开始下一条摘要。
         if (sessionId !== sessionRef.current) return;
-        await speakSummaries(summary.summary);
+        await speakSummary(summary.summary);
         // cancel 后 await 仍可能恢复；再次检查以避免继续读后续摘要。
         if (sessionId !== sessionRef.current) return;
       }
@@ -133,6 +173,7 @@ function useReadSummaries({ summaries, path, disabled }: UseReadSummariesOptions
   };
 
   return {
+    summaryListRef,
     canReadSummaries: !disabled && !isReading && summaries.length > 0,
     readSummaries,
   };
@@ -161,7 +202,7 @@ export function Summary() {
   const { jumpToSentence } = useReader();
   const { play, step, stop, isPlaying } = useSpeech();
   const highlightCss = useSummaryHighlight(summaries);
-  const { canReadSummaries, readSummaries } = useReadSummaries({
+  const { summaryListRef, canReadSummaries, readSummaries } = useReadSummaries({
     summaries,
     path,
     disabled: isContentLoading || isSummarizing,
@@ -212,6 +253,7 @@ export function Summary() {
       </div>
       <div className="contents compact:flex compact:flex-1 compact:min-h-0 compact:flex-col">
         <div
+          ref={summaryListRef}
           className="flex-1 flex flex-row compact:min-h-0 compact:flex-col overflow-x-auto compact:overflow-x-hidden compact:overflow-y-auto p-3 space-x-3 compact:space-x-0 space-y-0 compact:space-y-3 custom-scrollbar snap-x snap-mandatory"
           onClickCapture={(event) => {
             // 补充 padding / 间隔区域的点击。
@@ -223,7 +265,7 @@ export function Summary() {
             summaries.map((item, index) => {
               const isActive = summarySentenceId ? summarySentenceId === item.start_sId : index === 0;
               return (
-                <div key={index} className="flex-none w-[25vw] h-full compact:w-full compact:h-auto [&>div]:h-full compact:[&>div]:h-auto [&>div>div]:h-full compact:[&>div>div]:h-auto">
+                <div key={index} data-summary-item className="flex-none w-[25vw] h-full compact:w-full compact:h-auto [&>div]:h-full compact:[&>div]:h-auto [&>div>div]:h-full compact:[&>div>div]:h-auto">
                   <SummaryItem
                     item={item}
                     isActive={isActive}
@@ -264,10 +306,10 @@ export function Summary() {
             title={isPlaying ? "点击停止" : "点击播放"}
           />
         </div>
-        {/* 底部留白区域，点击可触发播放/暂停，仅在触屏设备的 compact 以上垂直布局时有效 */}
+        {/* 底部留白区域，点击可触发播放/暂停，仅在 compact 到 md 之间的触屏布局显示 */}
         <div
           {...gestureHandlers}
-          className="hidden h-76 md:h-32 shrink-0 cursor-pointer select-none touch-pan-y pointer-coarse:compact:block"
+          className="hidden h-76 shrink-0 cursor-pointer select-none touch-pan-y pointer-coarse:compact:max-md:block"
           title={isPlaying ? "点击停止" : "点击播放"}
         />
       </div>
