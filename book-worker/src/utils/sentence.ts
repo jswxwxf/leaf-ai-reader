@@ -1,5 +1,9 @@
 import { parseHTML } from 'linkedom';
 
+const englishAbbreviation = /(?:\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc)\.|(?:\b[A-Za-z]\.){2,}|\b[A-Z]\.)$/i;
+const afterEnglishPeriod = /^[.!?]*[”’"')\]}]*(?:\s|$)/;
+const englishPeriodEnding = /\.[”’"')\]}]*$/;
+
 /**
  * 将文本拆分为句子
  */
@@ -7,7 +11,7 @@ export function splitSentences(text: string): string[] {
 	if (!text.trim()) return [];
 
 	const sentences: string[] = [];
-	const terminators = "。！？；!?……";
+	const terminators = "。！？；.!?……";
 	const closers = "”’』」》）〉】〗｝\"')]}";
 
 	let current = "";
@@ -33,6 +37,10 @@ export function splitSentences(text: string): string[] {
 
 		// 检查是否遇到结束标点
 		if (terminators.includes(char)) {
+			if (char === '.' && (
+				!afterEnglishPeriod.test(text.slice(i + 1)) || englishAbbreviation.test(current)
+			)) continue;
+
 			// 1. 尽可能多地吞掉连续的终结符 (如 …… 或 !!!)
 			while (i + 1 < text.length && terminators.includes(text[i + 1])) {
 				const nextChar = text[++i];
@@ -99,8 +107,14 @@ export function createSentenceWrapper(initialSentenceId: number = 0) {
 	let sentenceId = initialSentenceId;
 
 	return (text: string): string => {
+		let offset = 0;
 		return splitSentences(text)
-			.map(sentence => `<span class="sentence" id="s-${++sentenceId}">${sentence}</span>`)
+			.map((sentence, index, sentences) => {
+				offset = text.indexOf(sentence, offset) + sentence.length;
+				const separator = index < sentences.length - 1 && englishPeriodEnding.test(sentence)
+					&& /\s/.test(text.charAt(offset)) ? ' ' : '';
+				return `<span class="sentence" id="s-${++sentenceId}">${sentence}</span>${separator}`;
+			})
 			.join('');
 	};
 }

@@ -57,7 +57,7 @@ describe('extractMarkdownTitle', () => {
 });
 
 describe('sanitizeMarkdownHtml', () => {
-  it('keeps Markdown semantic structure and safe remote images', () => {
+  it('keeps Markdown block structure and safe remote images while unwrapping emphasis', () => {
     const sanitized = sanitizeMarkdownHtml(`
       <h1 id="s-1" class="sentence">标题</h1>
       <blockquote><p><strong>强调</strong>文本</p></blockquote>
@@ -67,7 +67,7 @@ describe('sanitizeMarkdownHtml', () => {
     `);
 
     expect(sanitized).toContain('<h1 id="s-1" class="sentence">标题</h1>');
-    expect(sanitized).toContain('<blockquote><p><strong>强调</strong>文本</p></blockquote>');
+    expect(sanitized).toContain('<blockquote><p>强调文本</p></blockquote>');
     expect(sanitized).toContain('<table>');
     expect(sanitized).toContain('<pre><code>const value = 1;</code></pre>');
     expect(sanitized).toContain('src="https://example.com/image.png"');
