@@ -6,6 +6,7 @@ import { Summary } from "./summary";
 import { Footer } from "./footer";
 import { Helper } from "./helper";
 import { Shortcuts } from "./shortcuts";
+import { SpeechInitializer } from "./speech-initializer";
 import { ReaderStoreProvider, type SpeechMode } from "../_store/store";
 import { getArticle, getArticleData, type ArticleData } from "@/lib/article";
 import { getBookData, getBookChapters, getFlattenChapters, type BookData } from "@/lib/book";
@@ -78,6 +79,7 @@ export async function Reader({ isPopup = true, article_id, book_id, speechMode }
 		>
 			<Helper />
 			<Shortcuts />
+			<SpeechInitializer />
 			<div className="flex flex-col h-dvh bg-base-100 text-base-content overflow-hidden relative pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
 				<Header isPopup={isPopup} />
 

@@ -139,12 +139,13 @@ export function GlobalModals() {
 
   // Confirm 处理函数
   const handleConfirmAction = () => {
-    _setConfirmConfig({ ...DEFAULT_CONFIRM, visible: false });
+    _setConfirmConfig({ ...confirmConfig, visible: false, resolve: undefined, reject: undefined });
     confirmConfig.resolve?.();
   };
 
   const handleConfirmCancel = () => {
-    _setConfirmConfig({ ...DEFAULT_CONFIRM, visible: false });
+    if (!confirmConfig.visible) return;
+    _setConfirmConfig({ ...confirmConfig, visible: false, resolve: undefined, reject: undefined });
     confirmConfig.reject?.(new Error("User cancelled"));
   };
 

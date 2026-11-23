@@ -23,6 +23,7 @@ const DEFAULT_ACCESS: UserAccess = {
 
 export type ReaderMode = 'article' | 'book';
 export type SpeechMode = 'sentence' | 'paragraph' | 'article';
+export type SpeechLanguage = 'zh-CN' | 'en-US';
 
 export interface AISummary {
 	summary: string;
@@ -61,6 +62,7 @@ export interface ReaderState {
 	isContentLoading: boolean;
 	isPlaying: boolean;
 	speechMode: SpeechMode;
+	language: SpeechLanguage;
 	isChaptersOpen: boolean;
 	contentRef: React.RefObject<HTMLDivElement | null> | null;
 	access: UserAccess;
@@ -81,6 +83,7 @@ export interface ReaderActions {
 	setIsManualScrolling: (isManual: boolean) => void;
 	setIsPlaying: (isPlaying: boolean) => void;
 	setSpeechMode: (mode: SpeechMode) => void;
+	setLanguage: (language: SpeechLanguage) => void;
 	setSummaries: (summaries: AISummary[]) => void;
 	setChaptersOpen: (isOpen: boolean) => void;
 	setContentRef: (ref: React.RefObject<HTMLDivElement | null> | null) => void;
@@ -125,6 +128,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					isContentLoading: false,
 					isPlaying: false,
 					speechMode,
+					language: 'zh-CN',
 					isChaptersOpen: false,
 					contentRef: null,
 					access,
@@ -150,6 +154,7 @@ const createReaderStore = (initialState: InitialState = {}) => {
 					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
 					setIsPlaying: (isPlaying) => set({ isPlaying }),
 					setSpeechMode: (speechMode) => set({ speechMode }),
+					setLanguage: (language) => set({ language }),
 					setSummaries: (summaries) => set({ summaries }),
 					setChaptersOpen: (isChaptersOpen) => set({ isChaptersOpen }),
 					setContentRef: (contentRef) => set({ contentRef }),
