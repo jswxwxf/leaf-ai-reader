@@ -24,6 +24,6 @@
 - [ ] **PRD-020: 自定义总结管理** ([020-custom-summary-management.md](./020-custom-summary-management.md)) — 待规划
 - [ ] **PRD-021: Demo 用户资源限制与功能隔离** ([021-demo-user-resource-guard.md](./021-demo-user-resource-guard.md)) — 待实现
 - [x] **PRD-022: EPUB 句子级续读与句子定位** ([022-epub-summary-bookmark.md](./022-epub-summary-bookmark.md)) — 已完成
-- [ ] **PRD-023: 英文语音朗读** ([023-english-tts.md](./023-english-tts.md)) — 方案草案
+- [x] **PRD-023: 英文语音朗读** ([023-english-tts.md](./023-english-tts.md)) — 已完成首版
 ---
 *注：本文件由 Agent 动态维护，详细任务请点击 PRD 查看。*
