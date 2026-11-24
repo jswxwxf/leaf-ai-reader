@@ -1,35 +1,25 @@
-# PRD-023: 英文语音朗读
+# PRD-023 英文语音朗读
 
-> **状态：方案草案**
+> 状态：正文播放和下一句预合成已接入
 
-## 1. 背景与目标
+## 首期方案
 
-Leaf AI Reader 已使用系统 TTS 朗读中文。英文朗读采用浏览器端 Kokoro‑82M v1.0，目标是提供适合长时间听读的美式英语音色。中文沿用系统 TTS。
+- 中文正文沿用系统 TTS。英文正文在浏览器用 `kokoro-js` 合成，采用 Kokoro-82M v1.0 ONNX、WebGPU + `fp32` 和美式音色 `af_heart`。
+- 首次使用需下载约 326 MB 的模型，显示进度并缓存。下载完成后，由用户再次选择英文。音色和运行依赖齐备后，已获取的正文应能离线朗读。
+- 中英文共用播放、停止、跳句和朗读模式，启动时按语言选引擎。英文按需合成当前句，沿用句级高亮。Media Session 维持关闭。
 
-## 2. 方案范围
+## 当前进度
 
-- 英文正文在用户设备上合成，首期使用美式英语音色 `af_heart`。
-- 采用逐句合成，句级高亮作为首期同步目标。逐词高亮和流式合成留待后续评估。
-- 首次使用需要获取模型、音色和运行依赖。模型下载进度应可感知。资源在本地齐备后，已取得的英文正文可以离线合成和播放。
-- 模型和 ONNX 发布版本采用 Apache 2.0，端侧合成无需按用量支付模型或 API 费用。模型分发仍有带宽成本。
+已支持英文分句、语言选择、模型下载与缓存。正文已接入按语言选择的引擎表和统一停止入口。桌面、移动端的连续播放与离线验收待完成。
 
-## 3. 首期配置
+## 音频预合成
 
-| 项目 | 配置 |
-| --- | --- |
-| 浏览器库 | `kokoro-js` |
-| 模型 | `onnx-community/Kokoro-82M-v1.0-ONNX` |
-| 推理后端 | WebGPU |
-| 模型精度 | `fp32`，模型文件约 326 MB |
+- 当前句开始播放后，`use-speech.ts` 交给 Kokoro 预合成下一句。逐句模式也会预合成，是否自动续播由朗读模式决定。
+- Kokoro 按文本、音色和倍速缓存最多 9 句音频，并复用同一句正在执行的合成。
 
-## 4. 待验证
+## 后续优化
 
-- 在桌面和移动端目标浏览器验证首次下载、缓存复用、真实正文的发音和连续朗读的句间停顿。
-- 断网验证资源齐备后的英文朗读能力。书库和章节的离线访问由各自的产品范围决定。
+- 滑动窗口保留前 3 句的已有音频和当前句，预合成后 5 句。窗口移动时淘汰窗口外的缓存和待处理合成，切章时清空旧窗口。
+- 打开阅读器后，英文模型已缓存且正文和阅读位置就绪时，预合成下一次点播放会读到的句子。
 
-## 5. 参考资料
-
-- [Kokoro 模型说明与许可证](https://huggingface.co/hexgrad/Kokoro-82M)
-- [ONNX 模型文件和大小](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/tree/main/onnx)
-- [kokoro-js 使用文档](https://www.npmjs.com/package/kokoro-js#usage)
-- [Kokoro 美式英语音色](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md#american-english)
+[模型与文件](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX) · [Kokoro JS 文档](https://github.com/hexgrad/kokoro/blob/main/kokoro.js/README.md)

@@ -1,69 +1,25 @@
-import { useReaderStore } from "../_store/store";
+import { useReaderStore, useReaderStoreRaw, type ReaderStore, type SpeechMode } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
-import { scrollIntoViewIfNeeded, isSafari } from "../_utils/utils";
+import { scrollIntoViewIfNeeded } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
-import { useEffect, useRef } from "react";
 import { useWakeLock } from "./use-wake-lock";
-import { useSpeechRetry } from "./use-speech-retry";
+import { systemSpeechEngine } from "../_engines/system-speech-engine";
+import { kokoroEngine } from "../_engines/kokoro-engine";
+import type { SpeechEngine } from "../_engines/engine";
+import { showToast } from "@/app/global-toasts";
 
-/**
- * 清洗 TTS 输入文本，过滤引文序号、emoji 和不适合直接朗读的符号。
- */
-export function sanitizeSpeechText(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/https?:\/\//g, (m) => " ".repeat(m.length))
-    .replace(/\[\d+\]|〔\d+〕|【\d+】|\(\d+\)|[①-⑳⑴-⒇]/g, (m) => " ".repeat(m.length))
-    .replace(/([0-9])\uFE0F?\u20E3/g, (m, digit: string) => digit + " ".repeat(m.length - digit.length))
-    .replace(/\p{Extended_Pictographic}/gu, (m) => " ".repeat(m.length))
-    .replace(/<([^<>]{1,120})>/g, (_m, inner: string) => ` ${inner} `)
-    .replace(/""/g, "， ")
-    .replace(/["']/g, " ")
-    .replaceAll("——", "， ")
-    .replace(/”“|」「|》《/g, "”，");
-}
+export { configureSpeech, sanitizeSpeechText } from "../_engines/system-speech-engine";
 
-export function configureSpeech(utterance: SpeechSynthesisUtterance) {
-  utterance.lang = "zh-CN";
-  // 适配不同浏览器的朗读倍速差异 (Safari 的 rate 基准通常比 Chrome/Edge 快)
-  utterance.rate = isSafari ? 1.32 : 2;
-}
+const engines = { "zh-CN": systemSpeechEngine, "en-US": kokoroEngine };
 
-/**
- * 获取元素的文本内容，并将特定标签（如 sup, sub）的内容替换为等长空格。
- * 目的是在 TTS 朗读时静音跳过这些引文，同时保持字符偏移量不变，确保高亮精准。
- */
-function getTextWithMasking(node: Node): string {
-  let text = "";
-
-  // 通过 for...of 配合 continue 扁平化处理逻辑，消除嵌套深坑
-  for (const child of Array.from(node.childNodes)) {
-    // 1. 处理纯文本节点
-    if (child.nodeType === Node.TEXT_NODE) {
-      text += sanitizeSpeechText(child.textContent || "");
-      continue;
-    }
-
-    // 2. 忽略非元素节点
-    if (child.nodeType !== Node.ELEMENT_NODE) continue;
-
-    // 3. 处理注脚类标签 (SUP/SUB)
-    const isNote = child.nodeName === "SUP" || child.nodeName === "SUB";
-    if (isNote) {
-      const content = child.textContent || "";
-      // 智能阈值：文字够长则清洗后朗读，较短（通常为序号）则静音填充
-      text +=
-        content.length > 8 ? sanitizeSpeechText(content) : " ".repeat(content.length);
-      continue;
-    }
-
-    // 4. 处理普通元素节点（递归）
-    text += getTextWithMasking(child);
+function stopEngines() {
+  for (const engine of Object.values(engines)) {
+    engine.stop();
   }
-
-  return text.toLowerCase();
 }
+
+// 同一个 Reader 的播放和停止入口共享会话编号。
+let speechSession = 0;
 
 function getNextSentence(
   container: HTMLElement,
@@ -75,16 +31,24 @@ function getNextSentence(
   return sentences[currentIndex + delta] as HTMLElement | undefined;
 }
 
+function prepareNextSentence(engine: SpeechEngine, container: HTMLElement, currentId: string) {
+  const nextSentence = getNextSentence(container, currentId);
+  if (!nextSentence) return;
+
+  const nextText = engine.getText(nextSentence);
+  if (nextText) void engine.prepare?.(nextText);
+}
+
 /**
  * 语音朗读核心逻辑 Hook
  */
 export function useSpeech() {
+  const store = useReaderStoreRaw();
   const {
     speechSentenceId,
     setSpeechSentenceId,
     isPlaying,
     setIsPlaying,
-    speechMode,
     contentRef,
   } = useReaderStore(
     useShallow((state) => ({
@@ -92,34 +56,40 @@ export function useSpeech() {
       setSpeechSentenceId: state.setSpeechSentenceId,
       isPlaying: state.isPlaying,
       setIsPlaying: state.setIsPlaying,
-      speechMode: state.speechMode,
       contentRef: state.contentRef,
     }))
   );
 
   const { highlightWord, clearHighlight } = useWordHighlight();
   const { requestWakeLock, releaseWakeLock } = useWakeLock(isPlaying);
-  const { speakWithRetry } = useSpeechRetry({ enabled: isSafari });
-  const speechSessionRef = useRef(0);
 
-  // 用 ref 持有最新值，确保 onend 等异步回调中读取不受闭包陈旧值影响
-  const speechSentenceIdRef = useRef(speechSentenceId);
-  useEffect(() => {
-    speechSentenceIdRef.current = speechSentenceId;
-  }, [speechSentenceId]);
+  // 按 DOM 顺序定位下一句，避免依赖连续编号。
+  const moveToNextSentence = (container: HTMLElement, currentId: string) => {
+    const nextSentence = getNextSentence(container, currentId);
+    if (!nextSentence) {
+      // 已到当前文章或章节末尾，释放屏幕唤醒锁。
+      releaseWakeLock();
+      return false;
+    }
 
-  // 朗读模式会在设置面板中途切换；onend/setTimeout 这类异步回调必须读取最新模式。
-  const speechModeRef = useRef(speechMode);
-  useEffect(() => {
-    speechModeRef.current = speechMode;
-  }, [speechMode]);
+    setSpeechSentenceId(nextSentence.id);
+    return true;
+  };
 
   const play = async () => {
+    const sessionId = ++speechSession;
+    const isCurrentSession = () => sessionId === speechSession;
+    const continuePlay = () => {
+      setTimeout(() => {
+        if (isCurrentSession()) void play();
+      }, 0);
+    };
+
     // 朗读开始时，申请保持屏幕唤醒
     requestWakeLock();
 
-    // 1. 确定当前要读的句子（始终从 ref 读取最新值）
-    const targetId = speechSentenceIdRef.current ?? "s-1";
+    // 定时续播可能持有旧的 play，从 store 直接读取最新句子位置。
+    const targetId = store.getState().speechSentenceId ?? "s-1";
     const container = contentRef?.current;
     if (!container) {
       releaseWakeLock();
@@ -137,44 +107,33 @@ export function useSpeech() {
 
     // 如果全是标点符号、符号或 emoji 则跳过，递归调用 play 直到读到实质内容或触及边界
     if (!/[^\p{P}\p{S}\s\p{Extended_Pictographic}]/u.test(el.textContent)) {
-      const nextEl = getNextSentence(container, targetId);
-
-      if (!nextEl) {
-        releaseWakeLock();
-        return;
-      }
-
-      setSpeechSentenceId(nextEl.id);
-      const currentSpeechMode = speechModeRef.current;
+      if (!moveToNextSentence(container, targetId)) return;
+      const currentSpeechMode = store.getState().speechMode;
       if (currentSpeechMode !== "paragraph" || !isLastSentenceInParagraph(el as HTMLElement)) {
-        setTimeout(play, 0);
+        continuePlay();
       }
       return;
     }
 
-    // 2. 停止当前正在进行的朗读并清理旧高亮
-    window.speechSynthesis.cancel();
-    // iOS Safari 的 cancel 是异步的，留出清理时间避免竞争导致随机跳过字符或句子
-    // if (isSafari) await delay(50);
+    // 停止当前正在进行的朗读并清理旧高亮
+    stopEngines();
 
     setIsPlaying(true);
     clearHighlight();
-    const sessionId = (speechSessionRef.current += 1);
 
-    // 3. 创建朗读任务
-    // 使用 getTextWithMasking 自动完成引文静音、Emoji 过滤及标点归一化
-    // 该函数保证了 1:1 的替换比例，确保 onboundary 的 charIndex 获取到精准的高亮坐标
-    const processedText = getTextWithMasking(el);
-    const isCurrentSession = () => speechSessionRef.current === sessionId;
+    // 续播定时器保留的是创建它时的 play 函数。若在 Hook 顶部读取 language，
+    // 这个函数就会一直读到那次渲染的语言，即使用户已经切换。
+    // 每句开始时直接读取 store，让下一句使用用户最新选择的语言。
+    const engine = engines[store.getState().language];
 
-    // 3.1 词级高亮逻辑 (通过抽取出的 hook 处理)
+    // 词级高亮逻辑 (通过抽取出的 hook 处理)
     const handleBoundary = (event: SpeechSynthesisEvent) => {
       if (!isCurrentSession()) return;
       if (event.name !== 'word') return;
       highlightWord(el, event.charIndex, event.charLength);
     };
 
-    // 4. 当这一句读完时，根据朗读模式决定是否继续播放下一句
+    // 当这一句读完时，根据朗读模式决定是否继续播放下一句
     const handleEnd = () => {
       if (!isCurrentSession()) return;
 
@@ -184,59 +143,26 @@ export function useSpeech() {
       const container = contentRef?.current;
       if (!container) return;
 
-      // 寻找下一个句子的 ID (不再依赖 ID+1，而是基于 DOM 顺序)
-      const nextEl = getNextSentence(container, targetId);
-
-      // 已到文章末尾，停止播放并释放锁
-      if (!nextEl) {
-        releaseWakeLock();
-        return;
-      }
-
-      const nextId = nextEl.id;
-      // 这里读取 ref，确保用户在当前句朗读过程中切换模式后，本次结束决策立即生效。
-      const currentSpeechMode = speechModeRef.current;
-
-      // 无论哪种模式，都将焦点移至下一句
-      setSpeechSentenceId(nextId);
-
-      if (currentSpeechMode === 'sentence') {
-        // 逐句模式：如果当前句太短（小于等于3个字）且不在段落末尾，则自动连读下一句
-        const isShort = (el.textContent?.trim().length || 0) <= 3;
-        const isLastInPara = isLastSentenceInParagraph(el as HTMLElement);
-
-        if (isShort && !isLastInPara) {
-          setTimeout(play, 0);
-        }
-        return;
-      }
-
-      if (currentSpeechMode === 'paragraph') {
-        // 逐段模式：判断是否为段落末尾
-        if (isLastSentenceInParagraph(el as HTMLElement)) {
-          return;
-        }
-        // 段落未完，接力播放
-        setTimeout(play, 0);
-        return;
-      }
-
-      if (currentSpeechMode === 'article') {
-        // 全文模式：接力播放
-        setTimeout(play, 0);
+      // 先将焦点移到下一句，再读取最新模式，以响应播放期间的模式切换。
+      if (moveToNextSentence(container, targetId) && shouldContinue(store.getState().speechMode, el)) {
+        continuePlay();
       }
     };
 
-    // 5. 执行播放、确保当前高亮
-    speakWithRetry({
-      text: processedText,
+    // 执行播放、确保当前高亮
+    const options = {
+      text: engine.getText(el),
       isCurrentSession,
-      configure: (utterance) => {
-        configureSpeech(utterance);
-      },
       onBoundary: handleBoundary,
       onEnd: handleEnd,
-    });
+      onError: (error: unknown) => {
+        if (!isCurrentSession()) return;
+        stop();
+        console.warn("朗读失败", error);
+        showToast({ message: "朗读失败，请重试。", type: "error" });
+      },
+    };
+    const playbackPromise = engine.speak(options);
 
     // --- 核心优化：按需强制滚动 ---
     scrollIntoViewIfNeeded(el);
@@ -244,13 +170,17 @@ export function useSpeech() {
     if (speechSentenceId !== targetId) {
       setSpeechSentenceId(targetId);
     }
+
+    if (!engine.prepare) return;
+    // 等当前句启动播放且释放点播优先标记，再交给引擎预合成下一句。
+    await playbackPromise;
+    if (!isCurrentSession()) return;
+
+    prepareNextSentence(engine, container, targetId);
   };
 
   const stop = () => {
-    speechSessionRef.current += 1;
-    window.speechSynthesis.cancel();
-    setIsPlaying(false);
-    clearHighlight();
+    stopSpeech(store);
     releaseWakeLock();
   };
 
@@ -269,11 +199,27 @@ export function useSpeech() {
   return { play, step, stop, speechSentenceId, isPlaying };
 }
 
-export function stopSpeech(store: any) {
+export function stopSpeech(store: ReaderStore) {
+  speechSession += 1;
   // 停止当前朗读并清除词级高亮
-  window.speechSynthesis?.cancel();
+  stopEngines();
   store.getState().setIsPlaying(false);
-  (CSS as any).highlights?.get("word-focus")?.clear();
+  globalThis.CSS?.highlights?.get("word-focus")?.clear();
+}
+
+/** 根据当前朗读模式，判断这一句播完后是否自动续读。 */
+function shouldContinue(mode: SpeechMode, sentence: HTMLElement): boolean {
+  switch (mode) {
+    case 'sentence':
+      // 逐句模式通常读完就停，段内不超过 3 个字符的短句自动连读。
+      return (sentence.textContent?.trim().length ?? 0) <= 3 && !isLastSentenceInParagraph(sentence);
+    case 'paragraph':
+      // 逐段模式在当前段落的最后一句停下。
+      return !isLastSentenceInParagraph(sentence);
+    case 'article':
+      // 全文模式只要还有下一句就继续。
+      return true;
+  }
 }
 
 /**

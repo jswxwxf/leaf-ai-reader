@@ -18,13 +18,12 @@ export function Content() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // 使用 useShallow 合并订阅，减少重渲染次数
-  const { content, path, isContentLoading, setSpeechSentenceId, setIsPlaying, article_id, book_id, canUseOcr } = useReaderStore(
+  const { content, path, isContentLoading, setSpeechSentenceId, article_id, book_id, canUseOcr } = useReaderStore(
     useShallow((state) => ({
       content: state.content,
       path: state.path,
       isContentLoading: state.isContentLoading,
       setSpeechSentenceId: state.setSpeechSentenceId,
-      setIsPlaying: state.setIsPlaying,
       article_id: state.article_id,
       book_id: state.book_id,
       canUseOcr: state.access.canUseOcr,
@@ -50,16 +49,9 @@ export function Content() {
    * 在定位 effect 之前完成清理，避免正文已缓存时清掉新章的目标句。
    */
   useLayoutEffect(() => {
-    // 1. 物理中断语音引擎
-    window.speechSynthesis?.cancel();
-    // 2. 逻辑重置进度和状态
+    stopSpeech(rawStore);
     setSpeechSentenceId(null);
-    setIsPlaying(false);
-    // 3. 视觉清理高亮
-    if (typeof CSS !== 'undefined' && (CSS as any).highlights) {
-      (CSS as any).highlights.get("word-focus")?.clear();
-    }
-  }, [path, setSpeechSentenceId, setIsPlaying]);
+  }, [path, rawStore, setSpeechSentenceId]);
 
   // 激活滚动监听
   useScrollspy();

@@ -1,18 +1,19 @@
 "use client";
 
-import { useReaderStore } from "../_store/store";
+import { useReaderStore, useReaderStoreRaw } from "../_store/store";
 import { useShallow } from "zustand/react/shallow";
+import { stopSpeech } from "./use-speech";
 
 /**
  * 封装阅读器常用的复合动作和逻辑
  */
 export function useReader() {
-  const { setSummarySentenceId, setSpeechSentenceId, setIsManualScrolling, setIsPlaying, contentRef } = useReaderStore(
+  const store = useReaderStoreRaw();
+  const { setSummarySentenceId, setSpeechSentenceId, setIsManualScrolling, contentRef } = useReaderStore(
     useShallow((state) => ({
       setSummarySentenceId: state.setSummarySentenceId,
       setSpeechSentenceId: state.setSpeechSentenceId,
       setIsManualScrolling: state.setIsManualScrolling,
-      setIsPlaying: state.setIsPlaying,
       contentRef: state.contentRef,
     }))
   );
@@ -23,17 +24,11 @@ export function useReader() {
    */
   const jumpToSentence = (sId: string, options: { scroll?: boolean } = { scroll: true }) => {
     // 1. 停止当前正在进行的朗读并清除词级高亮
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      if (typeof CSS !== "undefined" && (CSS as any).highlights) {
-        (CSS as any).highlights.get("word-focus")?.clear();
-      }
-    }
+    stopSpeech(store);
 
     // 2. 同时更新两个 ID，并锁定滚动同步
     // isManualScrolling 防止在平滑滚动过程中 useScrollspy 又反向改写汇总栏状态
     setIsManualScrolling(true);
-    setIsPlaying(false);
     setSummarySentenceId(sId);
     setSpeechSentenceId(sId);
 
