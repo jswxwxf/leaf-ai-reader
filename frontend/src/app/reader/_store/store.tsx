@@ -2,8 +2,7 @@
 
 import React, { createContext, use, useState } from 'react';
 import { createStore, useStore } from 'zustand';
-import { combine, persist, createJSONStorage } from 'zustand/middleware';
-import { createUrlSearchStorage } from '@/lib/zustand-helpers';
+import { combine } from 'zustand/middleware';
 import { request } from '@/lib/request';
 
 import { type ArticleData } from '@/lib/article';
@@ -111,78 +110,65 @@ const createReaderStore = (initialState: InitialState = {}) => {
 	} = initialState;
 
 	return createStore<ReaderStoreState>()(
-		persist(
-			combine<ReaderState, ReaderActions>(
-				{
-					mode,
-					article_id,
-					book_id,
-					path,
-					data,
-					content,
-					summaries: parseSummaries(data),
-					summarySentenceId: null,
-					speechSentenceId: null,
-					isManualScrolling: false,
-					isLoading: false,
-					isContentLoading: false,
-					isPlaying: false,
-					speechMode,
-					language: 'zh-CN',
-					isChaptersOpen: false,
-					contentRef: null,
-					access,
-				},
-				(set, get) => ({
-					setMode: (mode) => set({ mode }),
-					setArticleId: (id) => set({
-						article_id: id,
-						mode: id ? 'article' : (get().book_id ? 'book' : null)
-					}),
-					setBookId: (id) => set({
-						book_id: id,
-						mode: get().article_id ? 'article' : (id ? 'book' : null)
-					}),
-					setPath: (path) => set({ path }),
-					setData: (data: ArticleData | BookData | null) => {
-						set({ data, summaries: parseSummaries(data) });
-					},
-					setContent: (content) => set({ content }),
-					setIsContentLoading: (isContentLoading) => set({ isContentLoading }),
-					setSummarySentenceId: (summarySentenceId) => set({ summarySentenceId }),
-					setSpeechSentenceId: (speechSentenceId) => set({ speechSentenceId }),
-					setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
-					setIsPlaying: (isPlaying) => set({ isPlaying }),
-					setSpeechMode: (speechMode) => set({ speechMode }),
-					setLanguage: (language) => set({ language }),
-					setSummaries: (summaries) => set({ summaries }),
-					setChaptersOpen: (isChaptersOpen) => set({ isChaptersOpen }),
-					setContentRef: (contentRef) => set({ contentRef }),
-					fetchBookChapter: async (bookId, path) => {
-						const res = await request<{ status: string; content?: string; summary?: any[] }>(
-							`/api/books/${bookId}/chapters/${encodeURIComponent(path)}`
-						);
-						if (res.content) {
-							set({
-								content: res.content,
-								summaries: res.summary || [],
-								isContentLoading: false
-							});
-						}
-					},
-				})
-			),
+		combine<ReaderState, ReaderActions>(
 			{
-				name: 'reader-storage',
-				// 使用之前在 Dashboard 中定义的帮助函数同步到 URL
-				storage: createJSONStorage(() => createUrlSearchStorage(['article_id', 'book_id', 'path', 'speechMode'])),
-				partialize: (state) => ({
-					article_id: state.article_id,
-					book_id: state.book_id,
-					path: state.path,
-					speechMode: state.speechMode
-				})
-			}
+				mode,
+				article_id,
+				book_id,
+				path,
+				data,
+				content,
+				summaries: parseSummaries(data),
+				summarySentenceId: null,
+				speechSentenceId: null,
+				isManualScrolling: false,
+				isLoading: false,
+				isContentLoading: false,
+				isPlaying: false,
+				speechMode,
+				language: 'zh-CN',
+				isChaptersOpen: false,
+				contentRef: null,
+				access,
+			},
+			(set, get) => ({
+				setMode: (mode) => set({ mode }),
+				setArticleId: (id) => set({
+					article_id: id,
+					mode: id ? 'article' : (get().book_id ? 'book' : null)
+				}),
+				setBookId: (id) => set({
+					book_id: id,
+					mode: get().article_id ? 'article' : (id ? 'book' : null)
+				}),
+				setPath: (path) => set({ path }),
+				setData: (data: ArticleData | BookData | null) => {
+					set({ data, summaries: parseSummaries(data) });
+				},
+				setContent: (content) => set({ content }),
+				setIsContentLoading: (isContentLoading) => set({ isContentLoading }),
+				setSummarySentenceId: (summarySentenceId) => set({ summarySentenceId }),
+				setSpeechSentenceId: (speechSentenceId) => set({ speechSentenceId }),
+				setIsManualScrolling: (isManualScrolling) => set({ isManualScrolling }),
+				setIsPlaying: (isPlaying) => set({ isPlaying }),
+				setSpeechMode: (speechMode) => set({ speechMode }),
+				setLanguage: (language) => set({ language }),
+				setSummaries: (summaries) => set({ summaries }),
+				setChaptersOpen: (isChaptersOpen) => set({ isChaptersOpen }),
+				setContentRef: (contentRef) => set({ contentRef }),
+				fetchBookChapter: async (bookId, path) => {
+					const res = await request<{ status: string; content?: string; summary?: any[] }>(
+						`/api/books/${bookId}/chapters/${encodeURIComponent(path)}`
+					);
+					if (res.content) {
+						set({
+							content: res.content,
+							summaries: res.summary || [],
+							isContentLoading: false
+						});
+					}
+				},
+			})
 		)
 	);
 };

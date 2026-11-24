@@ -25,7 +25,7 @@ interface Props {
  * 阅读器主框架组件
  * 作为一个服务器组件，它负责承载 StoreProvider 并将初始参数下发给客户端状态机
  */
-export async function Reader({ isPopup = true, article_id, book_id, speechMode }: Props) {
+export async function Reader({ isPopup = true, article_id, book_id, path, speechMode }: Props) {
 	const user = await getCurrentUser();
 	const access = getUserAccess(user);
 	
@@ -70,6 +70,7 @@ export async function Reader({ isPopup = true, article_id, book_id, speechMode }
 			initialState={{
 				article_id,
 				book_id,
+				path,
 				mode: article_id ? 'article' : (book_id ? 'book' : null),
 				data,
 				content,

@@ -24,6 +24,12 @@ export function SpeecherSettings() {
   })));
 
   const handleModeSelect = (mode: 'sentence' | 'paragraph' | 'article') => {
+    // 只有用户切换朗读模式时才修改 URL，避免正文和朗读状态更新打断翻章。
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('speechMode') !== mode) {
+      url.searchParams.set('speechMode', mode);
+      window.history.replaceState(null, '', url);
+    }
     setSpeechMode(mode);
     setIsOpen(false);
   };
