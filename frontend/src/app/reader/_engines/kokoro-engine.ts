@@ -4,7 +4,7 @@ import type { SpeakOptions, SpeechEngine } from "./engine";
 import type { KokoroRequest, KokoroResponse, SynthesizedAudio } from "./kokoro.worker";
 
 const voice = "af_sarah";
-const speed = 1.4;
+const speed = 1.33;
 const audioCache = new Map<string, SynthesizedAudio>();
 const maxCachedAudio = 9;
 
