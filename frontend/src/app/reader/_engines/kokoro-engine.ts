@@ -1,14 +1,18 @@
-import type { KokoroTTS } from "kokoro-js";
+import { createObservableValue } from "../_utils/observable";
 import type { SpeakOptions, SpeechEngine } from "./engine";
 
-type SynthesizedAudio = Awaited<ReturnType<KokoroTTS["generate"]>>;
+import type { KokoroRequest, KokoroResponse, SynthesizedAudio } from "./kokoro.worker";
 
 const voice = "af_sarah";
-const speed = 1.33;
+const speed = 1.4;
 const audioCache = new Map<string, SynthesizedAudio>();
 const maxCachedAudio = 9;
 
-let modelPromise: Promise<KokoroTTS> | undefined;
+let worker: Worker | undefined;
+let modelPromise: Promise<SynthesizedAudio | undefined> | undefined;
+// undefined 表示空闲，false 表示正在加载，true 表示模型已就绪。
+const ready = createObservableValue<boolean | undefined>(undefined);
+export const subscribeReady = ready.subscribe;
 let synthesisTask: { key: string; promise: Promise<SynthesizedAudio> } | undefined;
 let pendingSession: number | undefined;
 let audioContext: AudioContext | undefined;
@@ -16,20 +20,62 @@ let activeSource: AudioBufferSourceNode | undefined;
 // 每次停止或开始新朗读都会更新编号，异步回调用它判断自己是否仍有效。
 let session = 0;
 
-function loadModel() {
-  // 首次朗读才加载模型，之后复用同一个 Promise 和模型实例。
-  modelPromise ??= import("kokoro-js")
-    .then(({ KokoroTTS }) => KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
-      device: "webgpu",
-      dtype: "fp32",
-    }))
-    .catch((error) => {
-      // 初始化失败时清掉记录，让下一次点击播放可以重试。
-      modelPromise = undefined;
-      throw error;
-    });
+function requestWorker(request: KokoroRequest) {
+  const synthesisWorker = worker ??= new Worker(new URL("./kokoro.worker.ts", import.meta.url), {
+    type: "module",
+  });
+  const { port1: replyReceiver, port2: replySender } = new MessageChannel();
 
+  return new Promise<SynthesizedAudio | undefined>((resolve, reject) => {
+    const cleanup = () => {
+      replyReceiver.close();
+      synthesisWorker.removeEventListener("error", handleError);
+    };
+    const handleError = (event: ErrorEvent) => {
+      cleanup();
+      reject(new Error(event.message || "Kokoro Worker 加载失败"));
+    };
+    synthesisWorker.addEventListener("error", handleError);
+
+    replyReceiver.onmessage = ({ data }: MessageEvent<KokoroResponse>) => {
+      cleanup();
+      if (data.ok) {
+        resolve(data.audio);
+        return;
+      }
+      reject(new Error(data.error));
+    };
+
+    try {
+      synthesisWorker.postMessage(request, [replySender]);
+    } catch (error) {
+      cleanup();
+      replySender.close();
+      reject(error);
+    }
+  });
+}
+
+function loadModel() {
+  if (modelPromise) return modelPromise;
+
+  // 首次朗读才通知 Worker 加载模型，后续请求复用该初始化任务。
+  modelPromise = requestWorker({ type: "load" }).then((result) => {
+    ready.set(true);
+    return result;
+  }).catch((error) => {
+    modelPromise = undefined;
+    ready.set(undefined);
+    throw error;
+  });
+  ready.set(false);
   return modelPromise;
+}
+
+async function synthesize(text: string) {
+  const audio = await requestWorker({ type: "generate", text, voice, speed });
+  if (!audio) throw new Error("Kokoro Worker 未返回音频");
+  return audio;
 }
 
 function stop() {
@@ -48,10 +94,10 @@ function getCacheKey(text: string) {
   return JSON.stringify([text, voice, speed]);
 }
 
-async function generateAudio(model: KokoroTTS, text: string, cacheKey: string) {
+async function generateAudio(text: string, cacheKey: string) {
   // 只合成音频。记录本次推理，供下一次朗读等待，并在推理结束后释放。
   try {
-    synthesisTask = { key: cacheKey, promise: model.generate(text, { voice, speed }) };
+    synthesisTask = { key: cacheKey, promise: synthesize(text) };
 
     const speech = await synthesisTask.promise;
     audioCache.set(cacheKey, speech);
@@ -70,7 +116,7 @@ async function prepare(text: string): Promise<boolean> {
   if (audioCache.has(cacheKey)) return true;
 
   try {
-    const model = await loadModel();
+    await loadModel();
     // 等待模型期间，其他请求可能已经把这句写入缓存。
     if (audioCache.has(cacheKey)) return true;
 
@@ -83,7 +129,7 @@ async function prepare(text: string): Promise<boolean> {
     // 点播可能还在等模型、尚未开始合成。模型忙或有点播在等时，跳过预合成。
     if (synthesisTask || pendingSession === session) return false;
 
-    await generateAudio(model, text, cacheKey);
+    await generateAudio(text, cacheKey);
     return true;
   } catch {
     // 预合成失败后，点播仍可正常重试。
@@ -115,7 +161,7 @@ async function speak({ text, onEnd, onError }: SpeakOptions) {
   try {
     const context = audioContext ??= new AudioContext();
     // 在点击播放的同一次调用中发起 resume，避免等模型加载后才请求播放权限。
-    const [model] = await Promise.all([
+    await Promise.all([
       loadModel(),
       context.state === "running" ? undefined : context.resume(),
     ]);
@@ -130,7 +176,7 @@ async function speak({ text, onEnd, onError }: SpeakOptions) {
     // 等待期间如果用户停止或换句，旧请求直接退出。
     if (currentSession !== session) return;
 
-    const speech = audioCache.get(cacheKey) ?? await generateAudio(model, text, cacheKey);
+    const speech = audioCache.get(cacheKey) ?? await generateAudio(text, cacheKey);
     // 停止或换句后，合成结果仍可留在缓存里，旧会话跳过播放。
     if (currentSession !== session) return;
 
