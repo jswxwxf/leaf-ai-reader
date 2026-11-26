@@ -43,6 +43,12 @@ function requestWorker(request: KokoroRequest) {
         resolve(data.audio);
         return;
       }
+      if (data.restartWorker && worker === synthesisWorker) {
+        synthesisWorker.terminate();
+        worker = undefined;
+        modelPromise = undefined;
+        ready.set(undefined);
+      }
       reject(new Error(data.error));
     };
 
@@ -73,6 +79,8 @@ function loadModel() {
 }
 
 async function synthesize(text: string) {
+  // 点播等待旧合成期间，Worker 可能已因 WebGPU 错误被终止。
+  if (!modelPromise) await loadModel();
   const audio = await requestWorker({ type: "generate", text, voice, speed });
   if (!audio) throw new Error("Kokoro Worker 未返回音频");
   return audio;

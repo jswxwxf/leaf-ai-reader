@@ -15,7 +15,7 @@ export interface SynthesizedAudio {
 /** 加载成功时仅确认完成，合成成功时附带音频，失败时返回错误信息。 */
 export type KokoroResponse =
   | { ok: true; audio?: SynthesizedAudio }
-  | { ok: false; error: string };
+  | { ok: false; error: string; restartWorker: boolean };
 
 let modelPromise: Promise<KokoroTTS> | undefined;
 
@@ -87,7 +87,9 @@ self.addEventListener("message", async ({ data, ports }: MessageEvent<KokoroRequ
 
   const replyError = (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
-    reply({ ok: false, error: message });
+    // GPU 缓冲区映射失败或设备丢失后，需要重建 WebGPU 后端。
+    const restartWorker = /map\s*async|\bdevice\b.{0,24}\blost\b|\blost\b.{0,24}\bdevice\b/i.test(message);
+    reply({ ok: false, error: message, restartWorker });
   };
 
   // 将 Worker 内未捕获的异步错误回传给当前请求。
