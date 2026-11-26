@@ -7,7 +7,8 @@ import { useScrollspy } from "../_hooks/use-scrollspy";
 import { useReaderImages } from "../_hooks/use-reader-images";
 import { Scroller } from "./scroller";
 import styles from "./content.module.css";
-import { stopSpeech } from "../_hooks/use-speech";
+import { engines, stopSpeech } from "../_hooks/use-speech";
+import { useSentenceSelection } from "../_engines/selection-engine";
 import { normalizePathKey } from "../_utils/utils";
 
 /**
@@ -52,6 +53,8 @@ export function Content() {
     stopSpeech(rawStore);
     setSpeechSentenceId(null);
   }, [path, rawStore, setSpeechSentenceId]);
+
+  useSentenceSelection(sectionRef, content, path, isContentLoading, engines);
 
   // 激活滚动监听
   useScrollspy();

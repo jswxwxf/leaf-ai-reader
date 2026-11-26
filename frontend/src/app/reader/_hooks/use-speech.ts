@@ -4,13 +4,13 @@ import { scrollIntoViewIfNeeded } from "../_utils/utils";
 import { useWordHighlight } from "./use-word-highlight";
 import { useWakeLock } from "./use-wake-lock";
 import { systemSpeechEngine } from "../_engines/system-speech-engine";
-import { kokoroEngine } from "../_engines/kokoro-engine";
+import { selectionEngine } from "../_engines/selection-engine";
 import type { SpeechEngine } from "../_engines/engine";
 import { showToast } from "@/app/global-toasts";
 
 export { configureSpeech, sanitizeSpeechText } from "../_engines/system-speech-engine";
 
-const engines = { "zh-CN": systemSpeechEngine, "en-US": kokoroEngine };
+export const engines = { "zh-CN": systemSpeechEngine, "en-US": selectionEngine };
 
 function stopEngines() {
   for (const engine of Object.values(engines)) {
@@ -77,6 +77,10 @@ export function useSpeech() {
   };
 
   const play = async () => {
+    // 定时续播可能持有旧闭包，每句开始时从 store 读取最新语言。
+    const engine = engines[store.getState().language];
+    if (engine === selectionEngine) return;
+
     const sessionId = ++speechSession;
     const isCurrentSession = () => sessionId === speechSession;
     const continuePlay = () => {
@@ -84,9 +88,6 @@ export function useSpeech() {
         if (isCurrentSession()) void play();
       }, 0);
     };
-
-    // 朗读开始时，申请保持屏幕唤醒
-    requestWakeLock();
 
     // 定时续播可能持有旧的 play，从 store 直接读取最新句子位置。
     const targetId = store.getState().speechSentenceId ?? "s-1";
@@ -105,6 +106,8 @@ export function useSpeech() {
       return;
     }
 
+    requestWakeLock();
+
     // 如果全是标点符号、符号或 emoji 则跳过，递归调用 play 直到读到实质内容或触及边界
     if (!/[^\p{P}\p{S}\s\p{Extended_Pictographic}]/u.test(el.textContent)) {
       if (!moveToNextSentence(container, targetId)) return;
@@ -120,11 +123,6 @@ export function useSpeech() {
 
     setIsPlaying(true);
     clearHighlight();
-
-    // 续播定时器保留的是创建它时的 play 函数。若在 Hook 顶部读取 language，
-    // 这个函数就会一直读到那次渲染的语言，即使用户已经切换。
-    // 每句开始时直接读取 store，让下一句使用用户最新选择的语言。
-    const engine = engines[store.getState().language];
 
     // 词级高亮逻辑 (通过抽取出的 hook 处理)
     const handleBoundary = (event: SpeechSynthesisEvent) => {

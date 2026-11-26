@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MessageSquareQuote, AlignLeft, FileText, Check } from "lucide-react";
 import { useReaderStore, type SpeechLanguage } from "../_store/store";
-import { requestSpeechLanguage } from "./speech-initializer";
 
 const modeIcons = {
   sentence: MessageSquareQuote,
@@ -34,12 +33,11 @@ export function SpeecherSettings() {
     setIsOpen(false);
   };
 
-  const handleLanguageSelect = async (nextLanguage: SpeechLanguage) => {
+  const handleLanguageSelect = (nextLanguage: SpeechLanguage) => {
     setIsOpen(false);
     if (nextLanguage === language) return;
 
-    const isReady = await requestSpeechLanguage(nextLanguage);
-    if (isReady) setLanguage(nextLanguage);
+    setLanguage(nextLanguage);
   };
 
   const ModeIcon = modeIcons[speechMode];
